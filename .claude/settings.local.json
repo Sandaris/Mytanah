@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Recurse \"c:\\\\Users\\\\User\\\\Documents\\\\APU\\\\FYP2\" -Directory)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(C:\\\\Users\\\\User\\\\anaconda3\\\\python.exe \"c:\\\\Users\\\\User\\\\Documents\\\\APU\\\\FYP2\\\\patch_hcr02.py\")",
+      "PowerShell(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\User\\\\Documents\\\\APU\\\\FYP2\\\\processed data\" -Force)"
+    ]
+  }
+}

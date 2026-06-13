@@ -47,7 +47,18 @@
       "Bash(rm -f rf_peek.txt)",
       "Bash(python -m jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=2400 xgBoost.ipynb)",
       "Bash(python)",
-      "Bash(python _insert_summary.py)"
+      "Bash(python _insert_summary.py)",
+      "Bash(python -c \"import jupyter\")",
+      "Bash(python -m jupyter nbconvert --to notebook --execute --inplace regressionTree.ipynb --ExecutePreprocessor.timeout=600)",
+      "Bash(python -m jupyter nbconvert --to notebook --execute --inplace regressionTree.ipynb --ExecutePreprocessor.timeout=1800)",
+      "Bash(powershell -Command 'Get-Process | Where-Object {$_.ProcessName -like '\\\\''*python*'\\\\'' -or $_.ProcessName -like '\\\\''*jupyter*'\\\\''} | Select-Object ProcessName, Id, CPU, StartTime')",
+      "Bash(powershell -Command 'Get-Process | Where-Object {$_.ProcessName -like '\\\\''*python*'\\\\''} | Select-Object Id, CPU, StartTime')",
+      "Bash(powershell -Command 'Get-Process -Id 33536 | Select-Object Id, CPU, StartTime, @{N='\\\\''RuntimeMin'\\\\'';E={\\(\\(Get-Date\\) - $_.StartTime\\).TotalMinutes}}')",
+      "Bash(powershell -Command \"Get-Process python -ErrorAction SilentlyContinue | Select-Object Id, CPU, StartTime\")",
+      "Bash(cat out2.txt)",
+      "Bash(python check_broken.py)",
+      "Bash(python fix_broken.py)",
+      "Bash(python fix_section15.py)"
     ],
     "additionalDirectories": [
       "c:\\Users\\User\\AppData\\Local\\Temp"

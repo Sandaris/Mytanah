@@ -564,6 +564,8 @@ const MalaysiaMap = ({
       position: 'relative', width: '100%', height: '100%',
       cursor: dragRef.current ? 'grabbing' : 'grab', touchAction: 'none',
       backgroundColor: C.raised,
+      // Static image stays as the ultimate fallback (e.g. if the video can't
+      // load or autoplay). The looping <video> below paints over it.
       backgroundImage: selectedState ? 'none' : 'url(./water-bg.png)',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
@@ -573,6 +575,18 @@ const MalaysiaMap = ({
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onMouseLeave={() => { setHoverState(null); setHoverDistrict(null); setTip(null); endDrag(); }}>
+      {/* Looping water backdrop — only at the zoomed-out country view, mirroring
+          the static water image it replaces. Muted + playsInline so it autoplays
+          everywhere; poster shows the still frame until the video is ready. */}
+      {!selectedState && (
+        <video autoPlay loop muted playsInline poster="./water-bg.png"
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', zIndex: 0, pointerEvents: 'none',
+          }}>
+          <source src="./water-bg.mp4" type="video/mp4"/>
+        </video>
+      )}
       <svg ref={svgRef} viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} width="100%" height="100%"
         style={{ display: 'block', background: 'transparent', position: 'relative' }}
         preserveAspectRatio="xMidYMid meet">

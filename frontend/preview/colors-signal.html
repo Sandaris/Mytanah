@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- @dsCard group="Colors" name="Colors — Signal" subtitle="Up / stable / down — muted, never neon" viewport="700x140" -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--cream);}
+  .card{padding:20px 24px;}
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .sw{border-radius:10px;border:1px solid var(--cream-border);overflow:hidden;}
+  .chip{height:60px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-ui);font-size:12px;letter-spacing:.14em;text-transform:uppercase;}
+  .meta{padding:8px 10px;background:var(--cream-raised);font-family:var(--font-ui);font-size:11px;display:flex;justify-content:space-between;color:var(--forest-deep);}
+  .meta b{font-weight:500;}
+  .meta .hex{font-family:var(--font-mono);color:var(--forest-mid);}
+</style></head><body>
+<div class="card">
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:#2D7A4F">Up</div><div class="meta"><b>signal-up</b><span class="hex">#2D7A4F</span></div></div>
+    <div class="sw"><div class="chip" style="background:#8B6914">Stable</div><div class="meta"><b>signal-stable</b><span class="hex">#8B6914</span></div></div>
+    <div class="sw"><div class="chip" style="background:#A63228">Down</div><div class="meta"><b>signal-down</b><span class="hex">#A63228</span></div></div>
+  </div>
+</div>
+</body></html>

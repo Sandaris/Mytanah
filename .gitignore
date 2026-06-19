@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Design system source zip (frontend/ is the unpacked version)
+MyPropertyIQ Design System.zip
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Deploy bundle scratch
+fyp2-deploy.tgz

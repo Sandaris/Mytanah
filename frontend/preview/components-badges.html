@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- @dsCard group="Components" name="Badges & pills" subtitle="Signal states + eyebrow chips" viewport="700x150" -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--cream);}
+  .wrap{padding:20px;display:flex;flex-direction:column;gap:10px;}
+  .pill{display:inline-flex;align-items:center;gap:6px;border-radius:9999px;padding:6px 12px;font-family:var(--font-ui);font-size:12px;font-weight:500;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .dot{width:8px;height:8px;border-radius:50%;}
+  .up{background:#2D7A4F1F;color:#2D7A4F;}
+  .up .dot{background:#2D7A4F;}
+  .stable{background:#8B69141F;color:#8B6914;}
+  .stable .dot{background:#8B6914;}
+  .down{background:#A632281F;color:#A63228;}
+  .down .dot{background:#A63228;}
+  .q{background:var(--forest-deep);color:var(--cream);font-family:var(--font-mono);font-size:12px;padding:6px 12px;border-radius:9999px;}
+  .ey{background:var(--earth-faint,#A27B5C20);color:var(--earth);text-transform:uppercase;letter-spacing:.14em;font-size:10px;padding:5px 10px;border-radius:9999px;font-weight:500;}
+</style></head><body>
+<div class="wrap">
+  <div class="row">
+    <span class="pill up"><span class="dot"></span>Upward Pressure</span>
+    <span class="pill stable"><span class="dot"></span>Stable</span>
+    <span class="pill down"><span class="dot"></span>Downward Pressure</span>
+  </div>
+  <div class="row">
+    <span class="q">Q1 2025</span>
+    <span class="ey">Market Commentary</span>
+    <span class="ey">Property Details</span>
+  </div>
+</div>
+</body></html>

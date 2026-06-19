@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- @dsCard group="Components" name="Sidebar" subtitle="The one persistent dark surface" viewport="700x260" -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--cream);}
+  .wrap{padding:20px;display:grid;grid-template-columns:240px 1fr;gap:16px;}
+  .side{background:var(--forest-deep);border-radius:12px;padding:16px 0;color:var(--cream);}
+  .logo{font-family:var(--font-display);font-size:18px;font-weight:500;padding:0 18px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ffffff14;}
+  .logo svg{flex-shrink:0;}
+  .nav{display:flex;flex-direction:column;padding-top:10px;}
+  .item{display:flex;align-items:center;gap:10px;padding:11px 18px;font-family:var(--font-ui);font-size:14px;color:#DCD7C999;border-left:3px solid transparent;cursor:pointer;}
+  .item.active{background:var(--forest-mid);color:var(--cream);border-left-color:var(--earth);}
+  .item svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+  .foot{font-family:var(--font-ui);font-size:10px;color:#DCD7C966;padding:14px 18px 0;letter-spacing:.04em;}
+  .right{display:flex;align-items:center;justify-content:center;color:var(--forest-mid);font-family:var(--font-display);font-size:18px;font-style:italic;}
+</style></head><body>
+<div class="wrap">
+  <div class="side">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="#A27B5C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16 L16 4 L29 16"/><path d="M6 14 L6 28 L26 28 L26 14"/><path d="M13 28 L13 19 L19 19 L19 28"/></svg>
+      MyPropertyIQ
+    </div>
+    <div class="nav">
+      <div class="item active"><svg viewBox="0 0 24 24"><path d="M3 12 L12 4 L21 12"/><path d="M5 10 V20 H19 V10"/></svg>Valuation</div>
+      <div class="item"><svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>Sentiment Index</div>
+      <div class="item"><svg viewBox="0 0 24 24"><path d="M12 3 L22 21 L2 21 Z"/><line x1="12" y1="10" x2="12" y2="15"/><circle cx="12" cy="18" r="0.6"/></svg>Risk Factor</div>
+    </div>
+    <div class="foot">Data: NAPIC 2021–2025</div>
+  </div>
+  <div class="right">— Sidebar in use —</div>
+</div>
+</body></html>

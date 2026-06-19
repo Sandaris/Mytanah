@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- @dsCard group="Components" name="Buttons" subtitle="Primary, CTA, ghost, link" viewport="700x110" -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--cream);}
+  .wrap{padding:22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;}
+  .btn-primary{background:var(--forest-deep);color:var(--cream);border:0;border-radius:8px;padding:12px 22px;font-family:var(--font-ui);font-weight:600;font-size:14px;cursor:pointer;letter-spacing:.01em;}
+  .btn-primary:hover{background:var(--forest-mid);}
+  .btn-ghost{background:transparent;color:var(--forest-deep);border:1px solid var(--cream-border);border-radius:8px;padding:11px 20px;font-family:var(--font-ui);font-weight:500;font-size:14px;}
+  .btn-cta{background:var(--earth);color:var(--cream);border:0;border-radius:8px;padding:12px 22px;font-family:var(--font-ui);font-weight:600;font-size:14px;}
+  .btn-link{background:none;border:0;color:var(--forest-deep);font-family:var(--font-ui);font-size:13px;padding:8px 4px;text-decoration:none;border-bottom:1px solid transparent;}
+  .btn-link:hover{border-bottom-color:var(--forest-deep);}
+</style></head><body>
+<div class="wrap">
+  <button class="btn-primary">Analyse Property →</button>
+  <button class="btn-cta">Re-estimate</button>
+  <button class="btn-ghost">Cancel</button>
+  <a class="btn-link" href="#">Skip intro →</a>
+</div>
+</body></html>

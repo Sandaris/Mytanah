@@ -1,0 +1,194 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "ui_kits/dashboard/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Cormorant Garamond|DM Sans|JetBrains Mono))/i]",
+        "message": "Font not provided by the design system. Available: Cormorant Garamond, DM Sans, JetBrains Mono."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {},
+    "tokens": [
+      "--accent",
+      "--accent-hover",
+      "--bg",
+      "--border",
+      "--cream",
+      "--cream-border",
+      "--cream-muted",
+      "--cream-raised",
+      "--dur-base",
+      "--dur-fast",
+      "--dur-page",
+      "--dur-slow",
+      "--earth",
+      "--earth-faint",
+      "--earth-light",
+      "--ease-in-out",
+      "--ease-out",
+      "--fg",
+      "--fg-faint",
+      "--fg-muted",
+      "--fg-on-dark",
+      "--font-display",
+      "--font-mono",
+      "--font-ui",
+      "--forest-deep",
+      "--forest-light",
+      "--forest-mid",
+      "--lh-normal",
+      "--lh-snug",
+      "--lh-tight",
+      "--radius-lg",
+      "--radius-md",
+      "--radius-pill",
+      "--radius-sm",
+      "--radius-xl",
+      "--shadow-lg",
+      "--shadow-md",
+      "--shadow-sm",
+      "--shadow-xs",
+      "--signal-down",
+      "--signal-stable",
+      "--signal-up",
+      "--space-1",
+      "--space-10",
+      "--space-2",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-7",
+      "--space-8",
+      "--space-9",
+      "--surface",
+      "--surface-dark",
+      "--t-body",
+      "--t-display",
+      "--t-h1",
+      "--t-h2",
+      "--t-h3",
+      "--t-mono-lg",
+      "--t-mono-md",
+      "--t-small",
+      "--t-xs",
+      "--tracking-wide",
+      "--tracking-wider"
+    ],
+    "tokenKinds": {
+      "--cream": "color",
+      "--cream-raised": "color",
+      "--cream-border": "color",
+      "--cream-muted": "color",
+      "--forest-deep": "color",
+      "--forest-mid": "color",
+      "--forest-light": "color",
+      "--earth": "color",
+      "--earth-light": "color",
+      "--earth-faint": "color",
+      "--signal-up": "color",
+      "--signal-stable": "color",
+      "--signal-down": "color",
+      "--bg": "color",
+      "--surface": "color",
+      "--surface-dark": "color",
+      "--border": "color",
+      "--fg": "color",
+      "--fg-muted": "color",
+      "--fg-faint": "color",
+      "--fg-on-dark": "color",
+      "--accent": "color",
+      "--accent-hover": "color",
+      "--font-display": "font",
+      "--font-ui": "font",
+      "--font-mono": "font",
+      "--t-display": "spacing",
+      "--t-h1": "spacing",
+      "--t-h2": "spacing",
+      "--t-h3": "spacing",
+      "--t-body": "spacing",
+      "--t-small": "spacing",
+      "--t-xs": "spacing",
+      "--t-mono-lg": "spacing",
+      "--t-mono-md": "spacing",
+      "--lh-tight": "font",
+      "--lh-snug": "font",
+      "--lh-normal": "font",
+      "--tracking-wide": "font",
+      "--tracking-wider": "font",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-7": "spacing",
+      "--space-8": "spacing",
+      "--space-9": "spacing",
+      "--space-10": "spacing",
+      "--radius-sm": "radius",
+      "--radius-md": "radius",
+      "--radius-lg": "radius",
+      "--radius-xl": "radius",
+      "--radius-pill": "radius",
+      "--shadow-xs": "shadow",
+      "--shadow-sm": "shadow",
+      "--shadow-md": "shadow",
+      "--shadow-lg": "shadow",
+      "--ease-out": "other",
+      "--ease-in-out": "other",
+      "--dur-fast": "other",
+      "--dur-base": "other",
+      "--dur-slow": "other",
+      "--dur-page": "other"
+    },
+    "fontFamilies": [
+      "Cormorant Garamond",
+      "DM Sans",
+      "JetBrains Mono"
+    ]
+  }
+}

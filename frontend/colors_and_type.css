@@ -1,0 +1,165 @@
+/* ============================================================
+   MyPropertyIQ — Design Tokens
+   Light, warm, editorial. Cream is the world; forest is authority;
+   earth-brown is the accent / CTA. No deviations.
+   ============================================================ */
+
+/* ---- Fonts (Google Fonts) -------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ===== PRIMARY — Cream (dominant surface) ===== */
+  --cream:          #DCD7C9;
+  --cream-raised:   #EDE9E1;
+  --cream-border:   #C8C3B8;
+  --cream-muted:    #B0AA9E;
+
+  /* ===== SECONDARY — Forest Green (authority) ===== */
+  --forest-deep:    #2C3930;
+  --forest-mid:     #3F4F44;
+  --forest-light:   #5C7065;
+
+  /* ===== ACCENT — Earth Brown (CTAs, highlights) ===== */
+  --earth:          #A27B5C;
+  --earth-light:    #C49A7A;
+  --earth-faint:    #A27B5C20;
+
+  /* ===== SIGNALS — semantic, muted (not neon) ===== */
+  --signal-up:      #2D7A4F;
+  --signal-stable:  #8B6914;
+  --signal-down:    #A63228;
+
+  /* ===== Semantic aliases ===== */
+  --bg:             var(--cream);
+  --surface:        var(--cream-raised);
+  --surface-dark:   var(--forest-deep);
+  --border:         var(--cream-border);
+  --fg:             var(--forest-deep);
+  --fg-muted:       var(--forest-mid);
+  --fg-faint:       var(--cream-muted);
+  --fg-on-dark:     var(--cream);
+  --accent:         var(--earth);
+  --accent-hover:   var(--earth-light);
+
+  /* ===== Typography ===== */
+  --font-display:   'Cormorant Garamond', 'Garamond', serif;
+  --font-ui:        'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono:      'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* Type scale */
+  --t-display:      48px;   /* hero label */
+  --t-h1:           32px;   /* page title (Cormorant) */
+  --t-h2:           24px;   /* section title (Cormorant) */
+  --t-h3:           18px;   /* card title (DM Sans 500) */
+  --t-body:         15px;   /* DM Sans 400 */
+  --t-small:        13px;
+  --t-xs:           11px;   /* uppercase tracker labels */
+  --t-mono-lg:      24px;
+  --t-mono-md:      18px;
+
+  --lh-tight:       1.1;   /* @kind font */
+  --lh-snug:        1.3;   /* @kind font */
+  --lh-normal:      1.55;  /* @kind font */
+
+  --tracking-wide:  0.08em;
+  --tracking-wider: 0.14em;
+
+  /* ===== Spacing scale ===== */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  32px;
+  --space-8:  40px;
+  --space-9:  56px;
+  --space-10: 72px;
+
+  /* ===== Radii ===== */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* ===== Shadows (warm, soft) ===== */
+  --shadow-xs: 0 1px 2px rgba(44, 57, 48, 0.06);
+  --shadow-sm: 0 2px 6px rgba(44, 57, 48, 0.08);
+  --shadow-md: 0 8px 20px rgba(44, 57, 48, 0.10);
+  --shadow-lg: 0 32px 80px rgba(44, 57, 48, 0.18);
+
+  /* ===== Motion ===== */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);  /* @kind other */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* @kind other */
+  --dur-fast:    160ms;  /* @kind other */
+  --dur-base:    240ms;  /* @kind other */
+  --dur-slow:    500ms;  /* @kind other */
+  --dur-page:    600ms;  /* @kind other */
+}
+
+/* ============================================================
+   Base / semantic element styles
+   ============================================================ */
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--t-body);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  line-height: var(--lh-tight);
+  text-wrap: balance;
+}
+h1 { font-size: var(--t-h1); font-weight: 500; }
+h2 { font-size: var(--t-h2); }
+h3 {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: var(--t-h3);
+  line-height: var(--lh-snug);
+}
+
+p { color: var(--fg); line-height: var(--lh-normal); text-wrap: pretty; }
+
+/* Editorial italic — used in narrative blocks */
+.editorial {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--fg);
+}
+
+/* Section eyebrow label — earth, uppercase, tracked */
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--accent);
+}
+
+/* Data / numbers */
+.mono, code, .num {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum' 1, 'cv01' 1;
+  color: var(--fg);
+}
+
+/* Disclaimer / fine print */
+.fineprint {
+  font-size: var(--t-xs);
+  color: var(--fg-faint);
+  font-style: italic;
+}
+
+::selection { background: var(--earth); color: var(--cream); }

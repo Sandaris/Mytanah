@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- @dsCard group="Components" name="Metric cards" subtitle="Lower / central / upper estimate" viewport="700x160" -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--cream);}
+  .wrap{padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .card{background:var(--cream-raised);border:1px solid var(--cream-border);border-radius:12px;padding:18px 20px;box-shadow:0 2px 6px rgba(44,57,48,.08);}
+  .lower{border-top:3px solid #A63228;}
+  .central{border-top:3px solid #A27B5C;}
+  .upper{border-top:3px solid #2D7A4F;}
+  .lbl{font-family:var(--font-ui);font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--earth);}
+  .val{font-family:var(--font-mono);font-size:24px;color:var(--forest-deep);margin-top:8px;font-weight:500;}
+  .delta{font-family:var(--font-mono);font-size:12px;color:var(--forest-mid);margin-top:4px;}
+</style></head><body>
+<div class="wrap">
+  <div class="card lower"><div class="lbl">Lower Bound</div><div class="val">RM 380,000</div><div class="delta">−15.6%</div></div>
+  <div class="card central"><div class="lbl">Central Estimate</div><div class="val">RM 450,000</div><div class="delta">±0.0%</div></div>
+  <div class="card upper"><div class="lbl">Upper Bound</div><div class="val">RM 540,000</div><div class="delta">+20.0%</div></div>
+</div>
+</body></html>

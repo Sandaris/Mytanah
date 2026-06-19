@@ -1,0 +1,523 @@
+<!doctype html>
+<!-- @dsCard group="Brand" name="Cinematic intro (Earth → Malaysia)" subtitle="Three.js dotted-globe intro into the dashboard" viewport="1280x800" -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MyPropertyIQ — Intro</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #0a0e0c;
+    color: var(--cream);
+    font-family: var(--font-ui);
+    cursor: default;
+  }
+  #stage { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* ───── overlay text on globe ───── */
+  .hero {
+    position: fixed; inset: 0; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center;
+    text-align: center; padding: 24px;
+    z-index: 5;
+    transition: opacity .8s var(--ease-out);
+  }
+  .hero.fade-out { opacity: 0; }
+  .hero .eyebrow {
+    color: var(--earth);
+    font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+    margin-bottom: 28px;
+    opacity: 0; animation: fadeUp 1.4s var(--ease-out) .4s forwards;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    color: var(--cream);
+    font-weight: 300;
+    font-size: clamp(40px, 6vw, 76px);
+    line-height: 1.05;
+    margin: 0 0 16px;
+    letter-spacing: -0.01em;
+    opacity: 0; animation: fadeUp 1.6s var(--ease-out) .7s forwards;
+  }
+  .hero h1 em {
+    font-style: italic; font-weight: 400;
+    color: var(--earth-light);
+  }
+  .hero .sub {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    color: rgba(220,215,201,.6);
+    margin: 0 0 56px;
+    max-width: 460px;
+    line-height: 1.55;
+    opacity: 0; animation: fadeUp 1.6s var(--ease-out) 1.0s forwards;
+  }
+
+  .actions {
+    pointer-events: auto;
+    display: flex; gap: 16px; align-items: center;
+    opacity: 0; animation: fadeUp 1.8s var(--ease-out) 1.4s forwards;
+  }
+  .btn-begin {
+    background: var(--cream); color: var(--forest-deep);
+    border: 0; border-radius: 9999px;
+    padding: 14px 28px;
+    font-family: var(--font-ui); font-weight: 600; font-size: 14px;
+    letter-spacing: .02em;
+    cursor: pointer;
+    transition: background .2s, transform .2s;
+    position: relative; overflow: hidden;
+  }
+  .btn-begin:hover { background: var(--earth-light); transform: translateY(-1px); }
+  .btn-begin::after{
+    content:''; position:absolute; inset:0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 3.2s ease-in-out infinite;
+  }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+
+  .btn-skip {
+    background: transparent; color: rgba(220,215,201,.55);
+    border: 0;
+    font-family: var(--font-ui); font-size: 12px;
+    letter-spacing: .04em;
+    cursor: pointer;
+    padding: 12px 14px;
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .btn-skip:hover { color: var(--cream); }
+
+  /* ───── top-corner wordmark ───── */
+  .mark {
+    position: fixed; top: 28px; left: 32px; z-index: 10;
+    display: flex; align-items: center; gap: 10px;
+    opacity: 0; animation: fadeUp 1.2s var(--ease-out) .2s forwards;
+  }
+  .mark .name {
+    font-family: var(--font-display);
+    color: var(--cream);
+    font-size: 20px; font-weight: 500;
+  }
+  .skip-top {
+    position: fixed; top: 28px; right: 32px; z-index: 10;
+    opacity: 0; animation: fadeUp 1.2s var(--ease-out) .2s forwards;
+  }
+
+  /* ───── floating coordinate readout ───── */
+  .coords {
+    position: fixed; bottom: 32px; right: 32px;
+    font-family: var(--font-mono);
+    font-size: 11px; color: rgba(220,215,201,.4);
+    text-align: right; line-height: 1.6;
+    z-index: 10;
+    opacity: 0; animation: fadeUp 1.4s var(--ease-out) 1.6s forwards;
+  }
+  .coords b { color: var(--earth); font-weight: 500; }
+  .coords .tick { font-family: var(--font-ui); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(220,215,201,.3); }
+
+  /* ───── radial cream wipe ───── */
+  .wipe {
+    position: fixed; inset: 0; pointer-events: none; z-index: 20;
+    background: radial-gradient(circle at 53% 58%, var(--cream) 0%, var(--cream) var(--r,0%), transparent calc(var(--r,0%) + 6%));
+    transition: opacity .2s;
+    opacity: 0;
+  }
+  .wipe.on { opacity: 1; }
+
+  /* ───── final reveal screen ───── */
+  .reveal {
+    position: fixed; inset: 0; z-index: 30;
+    background: var(--cream); color: var(--forest-deep);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px;
+    animation: fadeIn .6s var(--ease-out);
+  }
+  .reveal.on { display: flex; }
+  .reveal .eyebrow {
+    color: var(--earth);
+    font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .reveal h2 {
+    font-family: var(--font-display);
+    font-weight: 400; font-style: italic;
+    font-size: clamp(28px, 4vw, 44px);
+    color: var(--forest-deep);
+    margin: 0 0 14px;
+  }
+  .loader-line {
+    display: inline-block;
+    width: 240px; height: 1px; background: var(--cream-border);
+    position: relative; overflow: hidden; margin: 28px 0 40px;
+  }
+  .loader-line::after {
+    content:''; position: absolute; left: -40%; top: 0; height: 100%;
+    width: 40%; background: var(--earth);
+    animation: load 1.6s var(--ease-in-out) infinite;
+  }
+  @keyframes load { 0%{left:-40%} 100%{left:100%} }
+  .enter-btn {
+    background: var(--forest-deep); color: var(--cream);
+    border: 0; border-radius: 8px;
+    padding: 14px 28px;
+    font-family: var(--font-ui); font-weight: 600; font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background .2s, transform .2s;
+  }
+  .enter-btn:hover { background: var(--forest-mid); transform: translateY(-1px); }
+  .reveal .check-list {
+    margin: 0 0 40px; padding: 0; list-style: none;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--forest-mid); text-align: left;
+    display: grid; gap: 6px;
+  }
+  .reveal .check-list li::before { content: '✓ '; color: var(--earth); margin-right: 4px; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<!-- Top-left wordmark -->
+<div class="mark">
+  <svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="#A27B5C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 16 L16 4 L29 16"/><path d="M6 14 L6 28 L26 28 L26 14"/><path d="M13 28 L13 19 L19 19 L19 28"/>
+  </svg>
+  <div class="name">MyPropertyIQ</div>
+</div>
+
+<!-- Top-right skip -->
+<div class="skip-top">
+  <a class="btn-skip" id="skip-top" href="../ui_kits/dashboard/index.html">Skip intro →</a>
+</div>
+
+<!-- Centered hero overlay -->
+<div class="hero" id="hero">
+  <div class="eyebrow">Malaysian residential property intelligence</div>
+  <h1>Reading the<br/><em>property market</em>, quarter by quarter.</h1>
+  <p class="sub">NAPIC transaction data, sentiment derived from news and search,
+  six housing-cycle indicators — distilled into three numbers per quarter.</p>
+  <div class="actions">
+    <button class="btn-begin" id="btn-begin">Begin →</button>
+    <a class="btn-skip" id="btn-skip" href="../ui_kits/dashboard/index.html">Skip intro</a>
+  </div>
+</div>
+
+<!-- Coordinate readout -->
+<div class="coords">
+  <div class="tick">Target</div>
+  <div><b id="c-lat">4.21°&nbsp;N</b></div>
+  <div><b id="c-lng">101.97°&nbsp;E</b></div>
+  <div class="tick" style="margin-top:8px">Federation of Malaysia</div>
+</div>
+
+<!-- Cream radial wipe -->
+<div class="wipe" id="wipe"></div>
+
+<!-- Reveal screen -->
+<div class="reveal" id="reveal">
+  <div class="eyebrow">Connecting</div>
+  <h2>Reading Malaysian property market…</h2>
+  <div class="loader-line"></div>
+  <ul class="check-list">
+    <li>NAPIC transactions 2021–2025</li>
+    <li>MHSI smoothed series — 20 quarters</li>
+    <li>HCR composite — 68 quarters</li>
+  </ul>
+  <a class="enter-btn" href="../ui_kits/dashboard/index.html">Enter Dashboard →</a>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const KL_LAT = 3.14;
+const KL_LNG = 101.69;
+
+/* ===== scene ===== */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x0a0e0c, 1);
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 200);
+camera.position.set(0, 0.5, 4.4);
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize); resize();
+
+/* ===== starfield ===== */
+{
+  const N = 1400;
+  const geom = new THREE.BufferGeometry();
+  const pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const r = 40 + Math.random() * 50;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i*3+2] = r * Math.cos(phi);
+  }
+  geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xDCD7C9, size: 0.08, transparent: true, opacity: 0.55,
+    sizeAttenuation: true,
+  });
+  scene.add(new THREE.Points(geom, mat));
+}
+
+/* ===== globe group ===== */
+const globe = new THREE.Group();
+scene.add(globe);
+
+/* solid forest sphere (dim, just to occlude back hemisphere) */
+{
+  const s = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 64, 64),
+    new THREE.MeshBasicMaterial({ color: 0x2C3930 }),
+  );
+  globe.add(s);
+}
+
+/* wireframe latitude/longitude lines */
+{
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0xDCD7C9, transparent: true, opacity: 0.18,
+  });
+  // latitudes
+  for (let lat = -75; lat <= 75; lat += 15) {
+    const phi = (90 - lat) * Math.PI / 180;
+    const r = Math.sin(phi);
+    const y = Math.cos(phi);
+    const pts = [];
+    for (let i = 0; i <= 96; i++) {
+      const t = (i / 96) * Math.PI * 2;
+      pts.push(new THREE.Vector3(r * Math.cos(t) * 1.001, y * 1.001, r * Math.sin(t) * 1.001));
+    }
+    globe.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+  }
+  // longitudes
+  for (let lng = 0; lng < 360; lng += 15) {
+    const t = lng * Math.PI / 180;
+    const pts = [];
+    for (let i = 0; i <= 96; i++) {
+      const phi = (i / 96) * Math.PI;
+      pts.push(new THREE.Vector3(
+        Math.sin(phi) * Math.cos(t) * 1.001,
+        Math.cos(phi) * 1.001,
+        Math.sin(phi) * Math.sin(t) * 1.001,
+      ));
+    }
+    globe.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+  }
+}
+
+/* land "dot field" — procedurally place dots where land roughly is.
+   We use a small set of coarse landmass polygons described as
+   (centerLat, centerLng, radius, count). Good-enough for an editorial
+   intro; no external textures. */
+const LANDMASSES = [
+  // North America
+  { lat: 45, lng:-100, r: 22, n: 90 }, { lat: 30, lng: -95, r: 14, n: 50 },
+  { lat: 60, lng:-100, r: 18, n: 60 }, { lat: 25, lng: -80, r: 10, n: 30 },
+  // South America
+  { lat: -10, lng: -55, r: 18, n: 80 }, { lat: -30, lng: -65, r: 12, n: 45 },
+  // Europe
+  { lat: 50, lng: 10, r: 12, n: 50 }, { lat: 55, lng: 30, r: 12, n: 50 },
+  // Africa
+  { lat: 5, lng: 20, r: 18, n: 90 }, { lat: -15, lng: 25, r: 18, n: 80 },
+  { lat: 25, lng: 15, r: 14, n: 60 },
+  // Asia
+  { lat: 35, lng: 90, r: 22, n: 120 }, { lat: 25, lng: 78, r: 14, n: 60 },
+  { lat: 55, lng: 90, r: 22, n: 110 }, { lat: 35, lng: 130, r: 8, n: 25 },
+  // SE Asia (where Malaysia lives — slightly denser)
+  { lat: 3, lng: 110, r: 8, n: 40 }, { lat: -2, lng: 115, r: 8, n: 38 },
+  // Australia
+  { lat: -25, lng: 135, r: 14, n: 60 },
+];
+
+function latLngToVec(lat, lng, r = 1.005) {
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (lng + 180) * Math.PI / 180;
+  return new THREE.Vector3(
+    -r * Math.sin(phi) * Math.cos(theta),
+     r * Math.cos(phi),
+     r * Math.sin(phi) * Math.sin(theta),
+  );
+}
+
+{
+  const positions = [];
+  for (const m of LANDMASSES) {
+    for (let i = 0; i < m.n; i++) {
+      // random point inside circle on sphere using lat/lng jitter
+      const dr = Math.sqrt(Math.random()) * m.r;
+      const da = Math.random() * Math.PI * 2;
+      const lat = m.lat + dr * Math.cos(da);
+      const lng = m.lng + (dr * Math.sin(da)) / Math.cos(m.lat * Math.PI/180);
+      const v = latLngToVec(lat, lng, 1.008);
+      positions.push(v.x, v.y, v.z);
+    }
+  }
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xDCD7C9, size: 0.022, sizeAttenuation: true,
+    transparent: true, opacity: 0.85,
+  });
+  globe.add(new THREE.Points(geom, mat));
+}
+
+/* atmosphere — soft cream halo */
+{
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(1.06, 64, 64),
+    new THREE.ShaderMaterial({
+      transparent: true,
+      side: THREE.BackSide,
+      uniforms: { c: { value: new THREE.Color(0xDCD7C9) } },
+      vertexShader: `varying vec3 vN; void main(){ vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+      fragmentShader: `varying vec3 vN; uniform vec3 c; void main(){ float a = pow(0.6 - dot(vN, vec3(0,0,1.)), 2.0); gl_FragColor = vec4(c, a * 0.35); }`,
+    }),
+  );
+  globe.add(halo);
+}
+
+/* Malaysia marker — earth-brown ring + pulsing dot */
+const markerGroup = new THREE.Group();
+{
+  const v = latLngToVec(KL_LAT, KL_LNG, 1.012);
+  markerGroup.position.copy(v);
+  markerGroup.lookAt(v.clone().multiplyScalar(2));
+
+  // pulsing ring
+  const ringGeo = new THREE.RingGeometry(0.018, 0.022, 32);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xA27B5C, transparent: true, opacity: 0.9, side: THREE.DoubleSide,
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  markerGroup.add(ring);
+  markerGroup.userData.ring = ring;
+
+  // dot
+  const dotGeo = new THREE.CircleGeometry(0.012, 24);
+  const dot = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color: 0xC49A7A }));
+  markerGroup.add(dot);
+
+  // small line up
+  const lineGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0.08),
+  ]);
+  markerGroup.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0xA27B5C })));
+
+  globe.add(markerGroup);
+}
+
+/* ===== animation state ===== */
+let phase = 'idle';  // 'idle' | 'zooming' | 'wiping' | 'done'
+let zoomT = 0;       // 0..1
+const zoomDur = 3200;   // ms
+const wipeDur = 900;    // ms
+let zoomStart = 0;
+let wipeStart = 0;
+
+/* Initial framing: tilt globe so Malaysia is roughly center-front */
+globe.rotation.y = -KL_LNG * Math.PI / 180 - Math.PI / 2 - 0.1;
+globe.rotation.x = 0.18;
+
+/* ===== render loop ===== */
+const tmpV = new THREE.Vector3();
+function ease(t){ return 1 - Math.pow(1 - t, 3); }
+let last = performance.now();
+function tick(now) {
+  const dt = (now - last) / 1000; last = now;
+
+  // gentle drift in idle
+  if (phase === 'idle') {
+    globe.rotation.y += dt * 0.04;
+  }
+
+  // marker pulse
+  const pulse = 1 + Math.sin(now / 380) * 0.25;
+  markerGroup.userData.ring.scale.set(pulse, pulse, pulse);
+  markerGroup.userData.ring.material.opacity = 0.4 + 0.5 * Math.abs(Math.sin(now / 380));
+
+  if (phase === 'zooming') {
+    const t = Math.min(1, (now - zoomStart) / zoomDur);
+    const e = ease(t);
+    // pull camera from (0, 0.5, 4.4) toward (0, 0, 1.55) and aim slightly down
+    camera.position.set(0, 0.5 - 0.5 * e, 4.4 - 2.85 * e);
+    camera.lookAt(0, 0.05 + 0.05 * e, 0);
+    // ease globe rotation to put KL dead-center
+    globe.rotation.y = THREE.MathUtils.lerp(globe.rotation.y, -KL_LNG * Math.PI / 180 - Math.PI / 2, 0.04);
+    globe.rotation.x = THREE.MathUtils.lerp(globe.rotation.x, KL_LAT * Math.PI / 180, 0.04);
+    zoomT = e;
+    if (t >= 1) startWipe();
+  }
+
+  if (phase === 'wiping') {
+    const t = Math.min(1, (now - wipeStart) / wipeDur);
+    const r = (t * 120).toFixed(2) + '%';
+    document.getElementById('wipe').style.setProperty('--r', r);
+    if (t >= 1) {
+      phase = 'done';
+      document.getElementById('reveal').classList.add('on');
+    }
+  }
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* ===== controls ===== */
+function startZoom() {
+  if (phase !== 'idle') return;
+  document.getElementById('hero').classList.add('fade-out');
+  phase = 'zooming';
+  zoomStart = performance.now();
+}
+function startWipe() {
+  phase = 'wiping';
+  wipeStart = performance.now();
+  document.getElementById('wipe').classList.add('on');
+}
+
+document.getElementById('btn-begin').addEventListener('click', startZoom);
+
+/* Auto-start after 6s if user is idle */
+setTimeout(() => { if (phase === 'idle') startZoom(); }, 7000);
+
+/* drag to spin (idle only, just for delight) */
+let drag = null;
+renderer.domElement.addEventListener('pointerdown', e => { if (phase==='idle') drag = { x: e.clientX, y: e.clientY, ry: globe.rotation.y, rx: globe.rotation.x }; });
+window.addEventListener('pointermove', e => {
+  if (!drag) return;
+  globe.rotation.y = drag.ry + (e.clientX - drag.x) * 0.005;
+  globe.rotation.x = Math.max(-0.6, Math.min(0.6, drag.rx + (e.clientY - drag.y) * 0.004));
+});
+window.addEventListener('pointerup', () => drag = null);
+</script>
+</body>
+</html>

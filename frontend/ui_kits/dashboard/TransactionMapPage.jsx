@@ -128,7 +128,9 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
   /* cascade handlers — each resets every level below it and clears prior results.
      Selecting the blank option (or pressing Clear) deselects that level. */
   const selectState = (state) => {
-    setSel({ state: state || '', district: '', propertyType: '', mukim: '', area: '', road: '' });
+    // propertyType is orthogonal to the geographic cascade — keep it so the user
+    // doesn't lose their pick (and re-forget it) when they change location.
+    setSel(s => ({ state: state || '', district: '', propertyType: s.propertyType, mukim: '', area: '', road: '' }));
     setSearched(null); setTxns(null);
     if (state) {
       if (onEngage) onEngage(); // reveal the dashboard chrome on first engagement
@@ -137,7 +139,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
     }
   };
   const selectDistrict = (district) => {
-    setSel(s => ({ ...s, district: district || '', propertyType: '', mukim: '', area: '', road: '' }));
+    setSel(s => ({ ...s, district: district || '', mukim: '', area: '', road: '' }));
     setSearched(null); setTxns(null);
     if (district) {
       setPanelOpen(true); // surface the panel so the user can refine
@@ -231,7 +233,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
   let hint;
   if (!sel.state) hint = isVal ? 'Select a state to begin a valuation.' : 'Select a state to explore property transactions.';
   else if (!sel.district) hint = `${sel.state}. Choose a district to continue.`;
-  else if (!sel.propertyType) hint = `${sel.district}, ${sel.state}. Select a property type to continue.`;
+  else if (!sel.propertyType) hint = `${sel.district}, ${sel.state}. Pick a property type below (optionally refine by mukim / scheme / road first).`;
   else if (searched) hint = isVal
     ? `Valuation ready for ${searched.area || searched.mukim || searched.district}.`
     : `Showing ${searched.road || searched.area || searched.mukim || searched.district}.`;
@@ -316,15 +318,11 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
             }}>{hint}</div>
 
             <div style={{ margin: '16px 0 18px', display: 'grid', gap: 13 }}>
-              <StepSelect label="① Property Type · required" value={sel.propertyType}
-                placeholder="Select a property type" options={PROPERTY_TYPES_ALL}
-                onChange={selectPropertyType} onClear={() => selectPropertyType('')}/>
-
-              <StepSelect label="② State" value={sel.state} placeholder="Select state"
+              <StepSelect label="① State" value={sel.state} placeholder="Select state"
                 options={geo ? geo.stateNames : []} onChange={selectState}
                 onClear={() => selectState('')}/>
 
-              <StepSelect label="③ District" value={sel.district}
+              <StepSelect label="② District" value={sel.district}
                 placeholder={sel.state ? 'Select district' : 'Select a state first'}
                 options={districts} onChange={selectDistrict}
                 disabled={!sel.state} loading={load.d} loadingLabel="Loading districts…"
@@ -333,7 +331,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
               {sel.district && (
                 <div style={{ display: 'grid', gap: 9 }}>
                   <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid }}>
-                    <span style={{ fontWeight: 600, color: C.earth }}>④ Narrow down</span>
+                    <span style={{ fontWeight: 600, color: C.earth }}>③ Narrow down</span>
                     <span> — select a mukim and / or a scheme / area (optional)</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
@@ -372,10 +370,24 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
               )}
 
               {sel.area && (
-                <StepSelect label="⑤ Road Name (optional)" value={sel.road}
+                <StepSelect label="④ Road Name (optional)" value={sel.road}
                   placeholder="Any road" options={roads} onChange={selectRoad}
                   loading={load.r} loadingLabel="Loading road names…" onClear={() => selectRoad('')}/>
               )}
+
+              {/* Property Type sits at the bottom, just above Search, and always
+                  renders regardless of the optional cascade steps above it — so it
+                  stays in view (and gets nudged down as mukim/area/road reveal)
+                  and users stop skipping it. Highlighted until it's chosen. */}
+              <div style={{
+                borderRadius: 8, padding: 12, transition: 'background .2s, border-color .2s',
+                background: sel.propertyType ? 'transparent' : C.earthFaint,
+                border: `1px solid ${sel.propertyType ? C.border : C.earth + '55'}`,
+              }}>
+                <StepSelect label="Property Type · required" value={sel.propertyType}
+                  placeholder="Select a property type" options={PROPERTY_TYPES_ALL}
+                  onChange={selectPropertyType} onClear={() => selectPropertyType('')}/>
+              </div>
 
               <div style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 2 }}>
                 <button onClick={runSearch} disabled={!canSearch} style={{

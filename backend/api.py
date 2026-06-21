@@ -139,28 +139,48 @@ class ValuationResponse(BaseModel):
     comparables: list[Comparable]
 
 
-def _predict_with_band(art, X: pd.DataFrame) -> tuple[float, float, float, float]:
-    """Returns (y_mean, y_lo, y_hi, rel_spread) in the model's native space.
+_Z80 = 1.2816  # z-score for an 80% interval (10th–90th percentile)
 
-    Tries RF per-tree predictions for a true empirical 10/90 band; falls back
-    to ±1.28σ around the point using the saved validation residual std.
+
+def _predict_with_band(art, X: pd.DataFrame) -> tuple[float, float, float, float]:
+    """Returns (y_mean, y_lo, y_hi, rel_spread) in the model's native (log) space.
+
+    Band source, in order of preference:
+      1. trained quantile heads (α=0.1/0.9) -> a per-input 80% band,
+      2. a RandomForest's per-tree spread,
+      3. a fixed ±1.28σ band from the saved validation residual std.
+    `rel_spread` is an equivalent log-σ (half-width / z80) so the confidence
+    thresholds stay comparable across all three paths.
     """
     pipe = art["model"]
+    y_mean = float(pipe.predict(X)[0])
+
+    q_lo, q_hi = art.get("quantile_lo"), art.get("quantile_hi")
+    if q_lo is not None and q_hi is not None:
+        # CQR: widen by the calibrated conformal offset so the band hits its
+        # nominal 80% coverage; clamp to guard against quantile crossing.
+        E = float(art.get("quantile_conformal", 0.0))
+        y_lo = min(float(q_lo.predict(X)[0]) - E, y_mean)
+        y_hi = max(float(q_hi.predict(X)[0]) + E, y_mean)
+        rel_spread = (y_hi - y_lo) / 2.0 / _Z80
+        return y_mean, y_lo, y_hi, rel_spread
+
     steps = pipe.named_steps
     if "rf" in steps:
         pre, rf = steps["pre"], steps["rf"]
         Xt = pre.transform(X)
         tree_preds = np.array([t.predict(Xt)[0] for t in rf.estimators_])
         y_mean = float(tree_preds.mean())
+        half = (np.percentile(tree_preds, 90) - np.percentile(tree_preds, 10)) / 2.0
         return (
             y_mean,
             float(np.percentile(tree_preds, 10)),
             float(np.percentile(tree_preds, 90)),
-            float(tree_preds.std() / max(abs(y_mean), 1e-6)),
+            float(half / _Z80),
         )
-    y_mean = float(pipe.predict(X)[0])
+
     sigma = float(art.get("band_log_std", 0.2))
-    return y_mean, y_mean - 1.28 * sigma, y_mean + 1.28 * sigma, sigma
+    return y_mean, y_mean - _Z80 * sigma, y_mean + _Z80 * sigma, sigma
 
 
 def _find_comparables(req: ValuationRequest, n: int = 5) -> list[Comparable]:
@@ -229,11 +249,15 @@ def valuation_predict(req: ValuationRequest) -> ValuationResponse:
     else:
         price, price_lo, price_hi = y_mean, y_lo, y_hi
 
+    # Confidence = how tight this property's band is vs typical. Thresholds are
+    # the ~33rd/66th percentiles of rel_spread over 2025 validation, so the band
+    # width (now input-specific via the conformal quantile heads) maps to roughly
+    # tightest / middle / widest third.
     if unseen:
         confidence = "low"
-    elif rel_spread < 0.05:
+    elif rel_spread < 0.18:
         confidence = "high"
-    elif rel_spread < 0.12:
+    elif rel_spread < 0.23:
         confidence = "medium"
     else:
         confidence = "low"

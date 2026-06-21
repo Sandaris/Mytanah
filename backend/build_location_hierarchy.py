@@ -36,9 +36,13 @@ LEVELS = [DISTRICT, MUKIM, SCHEME, ROAD]
 
 
 def clean_text(value: Any) -> str:
+    # Keep the RAW label; only trim leading/trailing whitespace (NaN -> "").
+    # Internal whitespace is preserved on purpose, so distinct raw strings such as
+    # "LORONG  4/49A" vs "LORONG 4/49A" stay separate nodes — nothing is
+    # canonicalized or merged. Matching in api.py is strip-only to match this.
     if pd.isna(value):
         return ""
-    return " ".join(str(value).strip().split())
+    return str(value).strip()
 
 
 def read_locations() -> pd.DataFrame:

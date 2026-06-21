@@ -280,13 +280,6 @@ def valuation_predict(req: ValuationRequest) -> ValuationResponse:
     )
 
 
-def _collapse_ws(value: Any) -> str:
-    """Collapse internal whitespace to match how the location hierarchy normalizes
-    names (build_location_hierarchy.clean_text). Keeps road matching consistent
-    between the tree-backed pickers and the raw-DataFrame queries."""
-    return " ".join(str(value).split())
-
-
 def _node_items(nodes: list[dict[str, Any]], key: str = "name") -> list[dict[str, Any]]:
     return [{"value": str(n[key]), "count": int(n.get("tx_count", 0))} for n in nodes]
 
@@ -427,8 +420,7 @@ def valuation_options(
         if scope is not None and scheme:
             scope = scope[scope["Scheme Name/Area"] == scheme]
         if scope is not None and road_clean and "Road Name" in scope.columns:
-            rc = _collapse_ws(road_clean)
-            scope = scope[scope["Road Name"].fillna("").map(_collapse_ws) == rc]
+            scope = scope[scope["Road Name"].fillna("").astype(str).str.strip() == road_clean]
         mukim_options = counted("Mukim", scope)
         scheme_options = counted("Scheme Name/Area", scope)
 
@@ -647,8 +639,7 @@ def data_query(
     if scheme:
         out = out[out["Scheme Name/Area"] == scheme]
     if road:
-        rc = _collapse_ws(road)
-        out = out[out["Road Name"].fillna("").map(_collapse_ws) == rc]
+        out = out[out["Road Name"].fillna("").astype(str).str.strip() == road.strip()]
     if property_type:
         out = out[out["Property Type"] == property_type]
     if tenure:

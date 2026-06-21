@@ -11,8 +11,7 @@
    agrees with the underlying records. */
 const { useState, useMemo, useEffect } = React;
 
-/* m² ↔ sqft — backend stores Land/Area in sqft, the dashboard renders sq.m. */
-const SQM_TO_SQFT = 10.7639;
+const STRATA_TYPES = new Set(['Condominium/Apartment', 'Flat', 'Low-Cost Flat', 'Town House']);
 
 /* ---- stats helpers ---------------------------------------------------- */
 const valMean = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
@@ -39,19 +38,22 @@ const shortType = (t) => SHORT_TYPE[t] || t;
 
 /* ---- region aggregation (area-level sample) --------------------------- */
 function valComputeRegion(sel) {
-  const { state, district, mukim, area } = sel || {};
+  const { state, district, mukim, area, propertyType } = sel || {};
   let rows = [];
   try { rows = getTransactionsForScope({ state, district, mukim, area }) || []; } catch (e) {}
   if (rows.length < 6) { try { rows = rows.concat(getTransactions({ state, district, mukim, area, road: '' }) || []); } catch (e) {} }
 
-  const median = valMedian(rows.map(r => r.price));
-  const ppsmArr = rows.map(r => r.ppsm).filter(Boolean);
+  const typeRows = propertyType ? rows.filter(r => r.type === propertyType) : [];
+  const valuationRows = typeRows.length ? typeRows : rows;
+
+  const median = valMedian(valuationRows.map(r => r.price));
+  const ppsmArr = valuationRows.map(r => r.ppsm).filter(Boolean);
   const ppsm = ppsmArr.length ? Math.round(valMedian(ppsmArr)) : null;
-  const floorArr = rows.map(r => r.built).filter(Boolean);
+  const floorArr = valuationRows.map(r => r.built).filter(Boolean);
   const medFloor = floorArr.length ? Math.round(valMedian(floorArr)) : null;
-  const landArr = rows.map(r => r.land).filter(Boolean);
+  const landArr = valuationRows.map(r => r.land).filter(Boolean);
   const medLand = landArr.length ? Math.round(valMedian(landArr)) : null;
-  const fhPct = Math.round(100 * rows.filter(r => r.tenure === 'Freehold').length / (rows.length || 1));
+  const fhPct = Math.round(100 * valuationRows.filter(r => r.tenure === 'Freehold').length / (valuationRows.length || 1));
 
   const map = {};
   rows.forEach(r => { (map[r.type] = map[r.type] || []).push(r); });
@@ -69,7 +71,22 @@ function valComputeRegion(sel) {
     const f = yearAvg[0], l = yearAvg[yearAvg.length - 1];
     trendTotal = (l.avg / f.avg - 1) * 100;
   }
-  return { rows, count: rows.length, median, ppsm, medFloor, medLand, fhPct, byType, dominant, yearAvg, trendTotal, baseVal: median || 400000 };
+  return {
+    rows,
+    valuationRows,
+    count: valuationRows.length || rows.length,
+    median,
+    ppsm,
+    medFloor,
+    medLand,
+    fhPct,
+    byType,
+    dominant,
+    selectedType: propertyType || (dominant && dominant.type),
+    yearAvg,
+    trendTotal,
+    baseVal: median || 400000,
+  };
 }
 
 function valModels(base) {
@@ -101,21 +118,26 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
   const [apiError, setApiError]   = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const data = useMemo(() => valComputeRegion(sel),
-    [sel.state, sel.district, sel.mukim, sel.area]);
+    [sel.state, sel.district, sel.mukim, sel.area, sel.propertyType]);
 
-  /* Call the real Random Forest backend whenever the selection (or its derived
-     stats) changes. The other two models keep their illustrative multipliers. */
+  /* Call the live backend whenever the selection (or its derived stats) changes.
+     The other two models keep their illustrative multipliers. */
   useEffect(() => {
-    if (!data.dominant || !sel.district) { setApiResult(null); return; }
+    if (!data.selectedType || !sel.district) { setApiResult(null); return; }
     setApiLoading(true); setApiError(null);
+    const isStrata = STRATA_TYPES.has(data.selectedType);
+    const modelLand = isStrata
+      ? (data.medFloor || data.medLand || 1)
+      : (data.medLand || data.medFloor || 1);
+    const modelArea = isStrata ? null : (data.medFloor || null);
     const payload = {
-      property_type: data.dominant.type,
+      property_type: data.selectedType,
       district: sel.district,
       mukim: sel.mukim || sel.district,
       scheme: sel.area || sel.mukim || sel.district,
       tenure: (data.fhPct >= 50 ? 'Freehold' : 'Leasehold'),
-      land: Math.max(1, Math.round((data.medLand || 150) * SQM_TO_SQFT)),
-      area: data.medFloor ? Math.round(data.medFloor * SQM_TO_SQFT) : null,
+      land: Math.max(1, Math.round(modelLand)),
+      area: modelArea ? Math.round(modelArea) : null,
     };
     let cancelled = false;
     window.API.valuationPredict(payload)
@@ -123,7 +145,7 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
       .catch((e) => { if (!cancelled) setApiError(e.message); })
       .finally(() => { if (!cancelled) setApiLoading(false); });
     return () => { cancelled = true; };
-  }, [sel.district, sel.mukim, sel.area, data.dominant && data.dominant.type, data.fhPct]);
+  }, [sel.district, sel.mukim, sel.area, data.selectedType, data.fhPct, data.medLand, data.medFloor]);
 
   /* Mock model band, then overlay the live RF estimate when ready. */
   const models = useMemo(() => {

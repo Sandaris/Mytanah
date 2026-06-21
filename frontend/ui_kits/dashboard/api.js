@@ -32,6 +32,13 @@
       const q = new URLSearchParams(filters).toString();
       return req('/valuation/options' + (q ? '?' + q : ''));
     },
+    valuationRoads: (filters = {}) => {
+      const clean = Object.fromEntries(
+        Object.entries(filters).filter(([, v]) => v != null && v !== '')
+      );
+      const q = new URLSearchParams(clean).toString();
+      return req('/valuation/roads' + (q ? '?' + q : ''));
+    },
     valuationPredict: (payload) =>
       req('/valuation/predict', { method: 'POST', body: JSON.stringify(payload) }),
 

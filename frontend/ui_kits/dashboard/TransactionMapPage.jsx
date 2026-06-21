@@ -97,6 +97,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
      offline or the chosen mock district/mukim doesn't exist in the dataset. */
   const [apiMukims, setApiMukims] = useState(null);
   const [apiAreas, setApiAreas] = useState(null);
+  const [apiRoads, setApiRoads] = useState(null); // real road names for the current scope
   useEffect(() => {
     if (!sel.district) { setApiMukims(null); setApiAreas(null); return; }
     let cancelled = false;
@@ -115,6 +116,20 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
     return () => { cancelled = true; };
   }, [sel.district, sel.mukim]);
 
+  /* Real road names for whichever road picker is on screen — the scheme-scoped
+     ④ field (when a scheme is chosen) or the district-level "search by road"
+     disclosure. Fetched on demand so the big district list isn't pulled unless
+     needed; falls back to the mock generator if the API is offline. */
+  useEffect(() => {
+    const wantRoads = !!sel.district && (!!sel.area || roadSearchOpen);
+    if (!wantRoads) { setApiRoads(null); return; }
+    let cancelled = false;
+    window.API.valuationRoads({ district: sel.district, mukim: sel.mukim, scheme: sel.area })
+      .then(r => { if (!cancelled) setApiRoads(r.roads || []); })
+      .catch(() => { if (!cancelled) setApiRoads(null); });
+    return () => { cancelled = true; };
+  }, [sel.district, sel.mukim, sel.area, roadSearchOpen]);
+
   // option lists (derived strictly from the current selection)
   // keep the current selection in its own list — a mukim/scheme back-filled from
   // a road may not exist in the live API list, but must stay selectable.
@@ -128,13 +143,19 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
     ? getAreas(sel.state, sel.district, sel.mukim)
     : (sel.district ? getDistrictAreas(sel.state, sel.district) : []);
   const areas = withSelected((apiAreas && apiAreas.length) ? apiAreas : mockAreas, sel.area);
-  const roads = sel.area ? getRoads(sel.state, sel.district, sel.mukim, sel.area) : [];
+  // Scheme-scoped road list for the ④ field — real names from the API, mock as
+  // fallback. Keep the chosen road selectable even if the API list capped it.
+  const mockRoads = sel.area ? getRoads(sel.state, sel.district, sel.mukim, sel.area) : [];
+  const roads = sel.area
+    ? withSelected((apiRoads && apiRoads.length) ? apiRoads : mockRoads, sel.road)
+    : [];
   // District-wide road list — the fallback when the user can't find their
-  // mukim/scheme. Memoised because it walks every scheme in the district.
-  const districtRoads = useMemo(
+  // mukim/scheme. Real names from the API; the mock walk is memoised as fallback.
+  const mockDistrictRoads = useMemo(
     () => (sel.district ? getDistrictRoads(sel.state, sel.district) : []),
     [sel.state, sel.district],
   );
+  const districtRoads = (apiRoads && apiRoads.length) ? apiRoads : mockDistrictRoads;
 
   /* cascade handlers — each resets every level below it and clears prior results.
      Selecting the blank option (or pressing Clear) deselects that level. */
@@ -191,15 +212,29 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
     setSearched(null); setTxns(null); setRoadAutoFill(null);
   };
   /* Pick a road directly under the district (skipping mukim + scheme). People
-     often know their road but not their mukim/scheme, so we look up the road's
-     owning mukim + scheme and back-fill them — the cascade above auto-populates
-     and the area-scoped Road field takes over from here. */
+     often know their road but not their mukim/scheme, so we ask the backend which
+     mukim + scheme own this real road and back-fill them — the cascade above
+     auto-populates and the area-scoped Road field takes over. Mock lookup is the
+     offline fallback. */
   const selectRoadDirect = (road) => {
     setSearched(null); setTxns(null);
     if (!road) { setSel(s => ({ ...s, road: '' })); setRoadAutoFill(null); return; }
-    const path = getRoadPath(sel.state, sel.district, road) || {};
-    setSel(s => ({ ...s, mukim: path.mukim || s.mukim, area: path.area || s.area, road }));
-    setRoadAutoFill(path.area ? { road, mukim: path.mukim || '', area: path.area } : null);
+    setSel(s => ({ ...s, road })); // reflect the road immediately
+    window.API.valuationOptions({ district: sel.district, road })
+      .then(opts => {
+        const mk = (opts.mukim || [])[0];
+        const sc = (opts.scheme || [])[0];
+        if (!sc) throw new Error('no owner');
+        setSel(s => (s.road === road
+          ? { ...s, mukim: mk ? mk.value : s.mukim, area: sc.value }
+          : s));
+        setRoadAutoFill({ road, mukim: mk ? mk.value : '', area: sc.value });
+      })
+      .catch(() => {
+        const path = getRoadPath(sel.state, sel.district, road) || {};
+        setSel(s => (s.road === road ? { ...s, mukim: path.mukim || s.mukim, area: path.area || s.area } : s));
+        setRoadAutoFill(path.area ? { road, mukim: path.mukim || '', area: path.area } : null);
+      });
   };
   const selectPropertyType = (propertyType) => {
     setSel(s => ({ ...s, propertyType: propertyType || '' }));

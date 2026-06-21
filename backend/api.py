@@ -280,13 +280,15 @@ def valuation_options(
     district: str | None = Query(None, description="Filter mukim/scheme to this district"),
     mukim: str | None = Query(None, description="Filter scheme to this mukim"),
     scheme: str | None = Query(None, description="Filter mukim to the parent of this scheme"),
+    road: str | None = Query(None, description="Infer the mukim/scheme that owns this road"),
 ) -> dict[str, Any]:
     """Dropdown payload for the valuation form.
 
     Returns category lists *with transaction counts* so the UI can sort by
     popularity, plus cascading filters (district → mukim → scheme) and numeric
     ranges for slider inputs. Passing `scheme` lets the UI infer the parent
-    mukim when the user already knows the scheme but not the mukim.
+    mukim when the user already knows the scheme but not the mukim; passing
+    `road` lets it infer both the mukim and scheme that own a known road.
     """
     art = state["valuation"]
     df = state["transactions"]
@@ -307,6 +309,8 @@ def valuation_options(
         scope = scope[scope["Mukim"] == mukim]
     if scope is not None and scheme:
         scope = scope[scope["Scheme Name/Area"] == scheme]
+    if scope is not None and road and "Road Name" in scope.columns:
+        scope = scope[scope["Road Name"].astype(str).str.strip() == road.strip()]
 
     payload: dict[str, Any] = {
         "property_type": counted("Property Type", df),
@@ -330,6 +334,38 @@ def valuation_options(
             },
         }
     return payload
+
+
+@app.get("/valuation/roads")
+def valuation_roads(
+    district: str | None = Query(None, description="Scope roads to this district"),
+    mukim: str | None = Query(None, description="Scope roads to this mukim"),
+    scheme: str | None = Query(None, description="Scope roads to this scheme/area"),
+    limit: int = Query(15000, ge=1, le=30000),
+) -> dict[str, Any]:
+    """Real road names for the selected scope (district -> mukim -> scheme).
+
+    The road list is the actual `Road Name` column, not a generated mock. Names
+    are whitespace-trimmed, de-duplicated and sorted; the count can be large at
+    the district level (the UI type-filters client-side), so it's capped by
+    `limit`. `total` reports the true unique count before the cap.
+    """
+    df = state["transactions"]
+    if df is None or "Road Name" not in df.columns:
+        return {"roads": [], "total": 0}
+
+    scope = df
+    if district:
+        scope = scope[scope["District"] == district]
+    if mukim:
+        scope = scope[scope["Mukim"] == mukim]
+    if scheme:
+        scope = scope[scope["Scheme Name/Area"] == scheme]
+
+    names = scope["Road Name"].dropna().astype(str).str.strip()
+    names = names[names != ""]
+    unique_sorted = sorted(names.unique().tolist())
+    return {"roads": unique_sorted[:limit], "total": len(unique_sorted)}
 
 
 class HCRRequest(BaseModel):

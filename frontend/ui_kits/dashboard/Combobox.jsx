@@ -15,7 +15,10 @@ const Combobox = ({ value, placeholder, options, onChange, disabled, size = 'sm'
   const inputRef = useRef(null);
 
   const lg = size === 'lg';
-  const filtered = options.filter(o => o.toLowerCase().includes(q.trim().toLowerCase()));
+  const RENDER_CAP = 300; // real road lists can be thousands — cap rendered rows so the popup stays snappy
+  const matches = options.filter(o => o.toLowerCase().includes(q.trim().toLowerCase()));
+  const filtered = matches.slice(0, RENDER_CAP);
+  const overflow = matches.length - filtered.length;
 
   const place = () => { if (btnRef.current) setRect(btnRef.current.getBoundingClientRect()); };
   const openIt = () => { if (disabled) return; place(); setQ(''); setHi(0); setOpen(true); };
@@ -113,6 +116,12 @@ const Combobox = ({ value, placeholder, options, onChange, disabled, size = 'sm'
                 )}
               </div>
             ))}
+            {overflow > 0 && (
+              <div style={{ padding: '9px 14px', fontFamily: "'DM Sans',sans-serif",
+                fontSize: 11.5, color: C.muted, textAlign: 'center', borderTop: `1px solid ${C.border}` }}>
+                +{overflow.toLocaleString()} more — keep typing to narrow
+              </div>
+            )}
           </div>
         </div>
       )}

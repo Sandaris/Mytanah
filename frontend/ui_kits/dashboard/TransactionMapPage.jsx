@@ -374,8 +374,8 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
                       </span>
                     </div>
                   )}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
-                    <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 11 }}>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                         <Eyebrow style={{ color: C.earth }}>Mukim</Eyebrow>
                         {sel.mukim && !load.m && (
@@ -390,7 +390,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
                         : <Combobox value={sel.mukim} placeholder="Search mukim"
                             options={mukims} onChange={selectMukim}/>}
                     </div>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                         <Eyebrow style={{ color: C.earth }}>Scheme / Area</Eyebrow>
                         {sel.area && !load.a && (

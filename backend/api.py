@@ -19,6 +19,7 @@ Artifacts expected in ./artifacts/ (produced by save_models.py):
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -226,6 +227,8 @@ def valuation_predict(req: ValuationRequest) -> ValuationResponse:
     if art is None:
         raise HTTPException(503, "Valuation model not loaded. Run save_models.py first.")
 
+    req.district = _resolve_district(req.district)  # map map-name -> dataset name
+
     row = {
         "Property Type": req.property_type,
         "District": req.district,
@@ -284,10 +287,56 @@ def _node_items(nodes: list[dict[str, Any]], key: str = "name") -> list[dict[str
     return [{"value": str(n[key]), "count": int(n.get("tx_count", 0))} for n in nodes]
 
 
+def _norm_district(name: str) -> str:
+    """Normalize a district label so the GeoJSON map names and the dataset names
+    line up: drops 'W.P.'/'Bahagian'/'Daerah', folds Hulu<->Ulu, Bharu/Baharu->
+    Bahru, Highlands->Highland, and removes 'dan'."""
+    s = str(name).lower().strip()
+    s = re.sub(r"[.\-,]", " ", s)
+    s = re.sub(r"\bw\s*p\b", " ", s)
+    s = re.sub(r"\bbahagian\b", " ", s)
+    s = re.sub(r"\bdaerah kecil\b", " ", s)
+    s = re.sub(r"\bdaerah\b", " ", s)
+    s = re.sub(r"\bhulu\b", "ulu", s)
+    s = re.sub(r"\b(bharu|baharu|bahru)\b", "baru", s)
+    s = re.sub(r"\bhighlands\b", "highland", s)
+    s = re.sub(r"\bdan\b", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _district_index() -> dict[str, Any]:
+    """Cached {exact names set, normalized->canonical map} from the hierarchy."""
+    idx = state.get("_district_index")
+    if idx is None:
+        tree = state.get("location_hierarchy") or {}
+        names = [d["name"] for d in tree.get("districts", [])]
+        idx = {"exact": set(names), "norm": {}}
+        for n in names:
+            idx["norm"].setdefault(_norm_district(n), n)
+        state["_district_index"] = idx
+    return idx
+
+
+def _resolve_district(name: str | None) -> str | None:
+    """Map a GeoJSON/UI district name to the dataset's district name.
+
+    The map labels some districts differently from the transaction data
+    ('W.P. Kuala Lumpur' -> 'Kuala Lumpur', 'Ulu Langat' -> 'Hulu Langat',
+    'Kuching' -> 'Bahagian Kuching', ...). Resolve by exact then normalized
+    match; unknown names pass through unchanged (graceful empty result)."""
+    if not name:
+        return name
+    idx = _district_index()
+    if name in idx["exact"]:
+        return name
+    return idx["norm"].get(_norm_district(name), name)
+
+
 def _location_district(name: str | None) -> dict[str, Any] | None:
     tree = state.get("location_hierarchy")
     if not tree or not name:
         return None
+    name = _resolve_district(name)
     for district in tree.get("districts", []):
         if district.get("name") == name:
             return district
@@ -376,6 +425,8 @@ def valuation_options(
     df = state["transactions"]
     if art is None:
         raise HTTPException(503, "Valuation model not loaded.")
+
+    district = _resolve_district(district)  # map map-name -> dataset name
 
     def counted(col: str, frame: pd.DataFrame | None, top: int = 500) -> list[dict[str, Any]]:
         if frame is None or col not in frame.columns:
@@ -466,6 +517,7 @@ def valuation_roads(
     `limit`. `total` reports the true unique count before the cap.
     """
     df = state["transactions"]
+    district = _resolve_district(district)  # map map-name -> dataset name
     district_node = _location_district(district)
     if district_node:
         matches = _scheme_matches(district_node, mukim_name=mukim, scheme_name=scheme)
@@ -630,6 +682,8 @@ def data_query(
         raise HTTPException(503, "Transaction dataset not loaded.")
     if sort_by not in SORTABLE:
         raise HTTPException(400, f"sort_by must be one of {sorted(SORTABLE)}")
+
+    district = _resolve_district(district)  # map map-name -> dataset name
 
     out = df
     if district:

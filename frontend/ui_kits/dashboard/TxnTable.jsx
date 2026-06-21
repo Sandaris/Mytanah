@@ -1,7 +1,8 @@
 /* eslint-disable no-undef */
 /* TxnTable.jsx — filter bar + property transaction table for the
-   Malaysia Property Transaction Map tab. Only renders once a Road is
-   selected; handles loading, empty (no records) and filtered-empty states.
+   Malaysia Property Transaction Map tab. Renders after a search has loaded
+   rows at district, mukim, scheme, or road level; handles loading, empty
+   (no records) and filtered-empty states.
    Filters: Year (single or range), Transaction Price (RM min/max),
    Property Type (values sourced from the loaded data, not hardcoded). */
 const { useState: useStateTT } = React;
@@ -45,8 +46,8 @@ const TxnTable = ({
   sel, loading, txns, filtered, availTypes, types, setTypes,
   yearMode, setYearMode, yr, setYr, price, setPrice, years, median, fill,
 }) => {
-  // before any road is chosen → table is hidden entirely
-  if (!sel.road && !loading) return null;
+  // before any search is run, the bottom sheet can stay hidden.
+  if (!txns && !loading) return null;
 
   const toggleType = (t) => setTypes(
     types.includes(t) ? types.filter(x => x !== t) : [...types, t]

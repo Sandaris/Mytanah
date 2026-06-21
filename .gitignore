@@ -17,3 +17,10 @@ Thumbs.db
 
 # Deploy bundle scratch
 fyp2-deploy.tgz
+
+# Office lock files
+~$*
+
+# Location hierarchy edge list — analysis byproduct of build_location_hierarchy.py;
+# only location_hierarchy.json is loaded at runtime
+processed data/location_hierarchy_edges.csv

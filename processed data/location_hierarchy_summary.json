@@ -1,0 +1,32 @@
+{
+  "source": "processed data\\transactions.parquet",
+  "rows_used": 416627,
+  "rows_dropped_missing_required_location": 0,
+  "unique_labels": {
+    "district": 127,
+    "mukim": 1343,
+    "scheme_area": 23689,
+    "road": 114990
+  },
+  "path_counts": {
+    "district_mukim_edges": 1431,
+    "mukim_scheme_edges": 28084,
+    "scheme_road_edges": 141100,
+    "all_edges": 170615
+  },
+  "road_quality": {
+    "blank_or_null_road_rows": 107736,
+    "nonblank_road_rows": 308891,
+    "scheme_paths_with_missing_road_rows": 5665
+  },
+  "ambiguous_labels": {
+    "mukim_labels_under_multiple_districts": 53,
+    "scheme_labels_under_multiple_mukim_paths": 2965,
+    "road_labels_under_multiple_scheme_paths": 13014
+  },
+  "max_children": {
+    "mukims_per_district_max": 85,
+    "schemes_per_mukim_path_max": 845,
+    "roads_per_scheme_path_max": 526
+  }
+}

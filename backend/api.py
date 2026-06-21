@@ -36,6 +36,7 @@ ARTIFACTS = ROOT / "artifacts"
 # Prefer the Parquet for faster startup; fall back to the original Excel.
 _PARQUET = ROOT.parent / "processed data" / "transactions.parquet"
 _XLSX = ROOT.parent / "processed data" / "Open Transaction Data Cleaned.xlsx"
+_LOCATION_HIERARCHY = ROOT.parent / "processed data" / "location_hierarchy.json"
 DATA_FILE = _PARQUET if _PARQUET.exists() else _XLSX
 
 app = FastAPI(title="FYP2 Property API", version="0.1.0")
@@ -53,6 +54,7 @@ state: dict[str, Any] = {
     "hcr": None,
     "hcr_latest": None,
     "transactions": None,
+    "location_hierarchy": None,
 }
 
 
@@ -75,6 +77,9 @@ def load_artifacts() -> None:
             state["transactions"] = pd.read_parquet(DATA_FILE)
         else:
             state["transactions"] = pd.read_excel(DATA_FILE)
+
+    if _LOCATION_HIERARCHY.exists():
+        state["location_hierarchy"] = json.loads(_LOCATION_HIERARCHY.read_text(encoding="utf-8"))
 
 
 @app.get("/health")
@@ -275,6 +280,90 @@ def valuation_predict(req: ValuationRequest) -> ValuationResponse:
     )
 
 
+def _collapse_ws(value: Any) -> str:
+    """Collapse internal whitespace to match how the location hierarchy normalizes
+    names (build_location_hierarchy.clean_text). Keeps road matching consistent
+    between the tree-backed pickers and the raw-DataFrame queries."""
+    return " ".join(str(value).split())
+
+
+def _node_items(nodes: list[dict[str, Any]], key: str = "name") -> list[dict[str, Any]]:
+    return [{"value": str(n[key]), "count": int(n.get("tx_count", 0))} for n in nodes]
+
+
+def _location_district(name: str | None) -> dict[str, Any] | None:
+    tree = state.get("location_hierarchy")
+    if not tree or not name:
+        return None
+    for district in tree.get("districts", []):
+        if district.get("name") == name:
+            return district
+    return None
+
+
+def _location_mukim(district_node: dict[str, Any] | None, name: str | None) -> dict[str, Any] | None:
+    if not district_node or not name:
+        return None
+    for mukim_node in district_node.get("mukims", []):
+        if mukim_node.get("name") == name:
+            return mukim_node
+    return None
+
+
+def _aggregate_options(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    counts: dict[str, int] = {}
+    for item in items:
+        name = str(item.get("name", "")).strip()
+        if not name:
+            continue
+        counts[name] = counts.get(name, 0) + int(item.get("tx_count", 0))
+    return [
+        {"value": name, "count": count}
+        for name, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+
+def _scheme_matches(
+    district_node: dict[str, Any] | None,
+    mukim_name: str | None = None,
+    scheme_name: str | None = None,
+    road_name: str | None = None,
+) -> list[dict[str, Any]]:
+    if not district_node:
+        return []
+    matches: list[dict[str, Any]] = []
+    for mukim_node in district_node.get("mukims", []):
+        if mukim_name and mukim_node.get("name") != mukim_name:
+            continue
+        for scheme_node in mukim_node.get("schemes", []):
+            if scheme_name and scheme_node.get("name") != scheme_name:
+                continue
+            if road_name:
+                roads = [
+                    r for r in scheme_node.get("roads", [])
+                    if str(r.get("name", "")).strip() == road_name.strip()
+                ]
+                for road_node in roads:
+                    matches.append(
+                        {
+                            "mukim": mukim_node,
+                            "scheme": scheme_node,
+                            "road": road_node,
+                            "tx_count": int(road_node.get("tx_count", 0)),
+                        }
+                    )
+            else:
+                matches.append(
+                    {
+                        "mukim": mukim_node,
+                        "scheme": scheme_node,
+                        "road": None,
+                        "tx_count": int(scheme_node.get("tx_count", 0)),
+                    }
+                )
+    return sorted(matches, key=lambda m: (-m["tx_count"], m["mukim"]["name"], m["scheme"]["name"]))
+
+
 @app.get("/valuation/options")
 def valuation_options(
     district: str | None = Query(None, description="Filter mukim/scheme to this district"),
@@ -302,22 +391,56 @@ def valuation_options(
         vc = frame[col].value_counts().head(top)
         return [{"value": str(v), "count": int(c)} for v, c in vc.items()]
 
-    scope = df
-    if scope is not None and district:
-        scope = scope[scope["District"] == district]
-    if scope is not None and mukim:
-        scope = scope[scope["Mukim"] == mukim]
-    if scope is not None and scheme:
-        scope = scope[scope["Scheme Name/Area"] == scheme]
-    if scope is not None and road and "Road Name" in scope.columns:
-        scope = scope[scope["Road Name"].astype(str).str.strip() == road.strip()]
+    district_node = _location_district(district)
+    mukim_node = _location_mukim(district_node, mukim)
+    road_clean = road.strip() if road else None
+
+    mukim_options: list[dict[str, Any]] | None = None
+    scheme_options: list[dict[str, Any]] | None = None
+
+    if district_node:
+        if road_clean:
+            matches = _scheme_matches(district_node, mukim_name=mukim, scheme_name=scheme, road_name=road_clean)
+            mukim_options = _aggregate_options([m["mukim"] | {"tx_count": m["tx_count"]} for m in matches])
+            scheme_options = _aggregate_options([m["scheme"] | {"tx_count": m["tx_count"]} for m in matches])
+        elif scheme:
+            matches = _scheme_matches(district_node, mukim_name=mukim, scheme_name=scheme)
+            mukim_options = _aggregate_options([m["mukim"] | {"tx_count": m["tx_count"]} for m in matches])
+            scheme_options = _aggregate_options([m["scheme"] | {"tx_count": m["tx_count"]} for m in matches])
+        elif mukim_node:
+            mukim_options = _node_items([mukim_node])
+            scheme_options = _node_items(mukim_node.get("schemes", []))
+        else:
+            mukim_options = _node_items(district_node.get("mukims", []))
+            all_schemes = [
+                scheme_node
+                for mukim_candidate in district_node.get("mukims", [])
+                for scheme_node in mukim_candidate.get("schemes", [])
+            ]
+            scheme_options = _aggregate_options(all_schemes)
+    else:
+        scope = df
+        if scope is not None and district:
+            scope = scope[scope["District"] == district]
+        if scope is not None and mukim:
+            scope = scope[scope["Mukim"] == mukim]
+        if scope is not None and scheme:
+            scope = scope[scope["Scheme Name/Area"] == scheme]
+        if scope is not None and road_clean and "Road Name" in scope.columns:
+            rc = _collapse_ws(road_clean)
+            scope = scope[scope["Road Name"].fillna("").map(_collapse_ws) == rc]
+        mukim_options = counted("Mukim", scope)
+        scheme_options = counted("Scheme Name/Area", scope)
+
+    tree = state.get("location_hierarchy")
+    district_options = _node_items(tree.get("districts", [])) if tree else counted("District", df)
 
     payload: dict[str, Any] = {
         "property_type": counted("Property Type", df),
         "tenure": counted("Tenure", df),
-        "district": counted("District", df),
-        "mukim": counted("Mukim", scope),
-        "scheme": counted("Scheme Name/Area", scope),
+        "district": district_options,
+        "mukim": mukim_options or [],
+        "scheme": scheme_options or [],
     }
 
     if df is not None:
@@ -351,6 +474,21 @@ def valuation_roads(
     `limit`. `total` reports the true unique count before the cap.
     """
     df = state["transactions"]
+    district_node = _location_district(district)
+    if district_node:
+        matches = _scheme_matches(district_node, mukim_name=mukim, scheme_name=scheme)
+        road_counts: dict[str, int] = {}
+        for match in matches:
+            for road_node in match["scheme"].get("roads", []):
+                name = str(road_node.get("name", "")).strip()
+                if not name:
+                    continue
+                road_counts[name] = road_counts.get(name, 0) + int(road_node.get("tx_count", 0))
+        roads = [
+            name for name, _ in sorted(road_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+        ]
+        return {"roads": roads[:limit], "total": len(roads)}
+
     if df is None or "Road Name" not in df.columns:
         return {"roads": [], "total": 0}
 
@@ -482,6 +620,9 @@ SORTABLE = {"Price", "Land", "Area", "Transaction Date", "Year"}
 @app.get("/data/query")
 def data_query(
     district: str | None = None,
+    mukim: str | None = None,
+    scheme: str | None = None,
+    road: str | None = None,
     property_type: str | None = None,
     tenure: str | None = None,
     year: int | None = None,
@@ -500,7 +641,14 @@ def data_query(
 
     out = df
     if district:
-        out = out[out["District"].str.contains(district, case=False, na=False)]
+        out = out[out["District"] == district]
+    if mukim:
+        out = out[out["Mukim"] == mukim]
+    if scheme:
+        out = out[out["Scheme Name/Area"] == scheme]
+    if road:
+        rc = _collapse_ws(road)
+        out = out[out["Road Name"].fillna("").map(_collapse_ws) == rc]
     if property_type:
         out = out[out["Property Type"] == property_type]
     if tenure:

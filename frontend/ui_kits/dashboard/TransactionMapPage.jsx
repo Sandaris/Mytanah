@@ -20,6 +20,33 @@ const Spinner = ({ label }) => (
   </div>
 );
 
+const apiTxnToRow = (r, state) => {
+  const land = r.Land == null ? null : Number(r.Land);
+  const built = r.Area == null ? null : Number(r.Area);
+  const price = Number(r.Price || 0);
+  const basis = built || land;
+  const date = (r['Transaction Date'] || '').slice(0, 10);
+  return {
+    state,
+    district: r.District || '',
+    mukim: r.Mukim || '',
+    area: r['Scheme Name/Area'] || '',
+    road: r['Road Name'] || 'Not recorded',
+    type: r['Property Type'] || '',
+    year: Number(r.Year || (date ? date.slice(0, 4) : 0)),
+    date,
+    monthYear: date,
+    price,
+    land,
+    built,
+    tenure: r.Tenure || '',
+    lot: r['Unit Level'] || '',
+    level: r['Unit Level'] || null,
+    ppsf: basis ? Math.round(price / basis) : null,
+    ppsm: basis ? Math.round(price / basis) : null,
+  };
+};
+
 const StepSelect = ({ label, value, placeholder, options, onChange, disabled, loading, loadingLabel, onClear }) => (
   <div>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
@@ -185,26 +212,25 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
     if (mukim) { setLoad(l => ({ ...l, a: true })); delay(() => setLoad(l => ({ ...l, a: false })), 450); }
   };
   const selectArea = (area) => {
-    setSel(s => {
-      // if no mukim was picked, infer the one that owns this scheme/area so the
-      // hierarchy stays consistent. Mock lookup is a synchronous best-effort;
-      // the backend lookup below upgrades it for live schemes.
-      const mukim = s.mukim || (area ? (getAreaMukim(s.state, s.district, area) || '') : '');
-      return { ...s, mukim, area: area || '', road: '' };
-    });
+    // Shortcut: a scheme can be picked directly under a district (mukim skipped).
+    // Keep any mukim the user already chose; if they skipped it, auto back-fill
+    // the REAL parent mukim from the backend (mock lookup is the offline fallback).
+    setSel(s => ({ ...s, area: area || '', road: '' }));
     setSearched(null); setTxns(null); setRoadAutoFill(null);
-    if (area) { setLoad(l => ({ ...l, r: true })); delay(() => setLoad(l => ({ ...l, r: false })), 450); }
+    if (!area) return;
+    setLoad(l => ({ ...l, r: true })); delay(() => setLoad(l => ({ ...l, r: false })), 450);
 
-    // Live mukim inference: ask the backend which mukim owns this scheme.
-    // Only fires when the user picked a scheme but no mukim yet.
-    if (area && sel.district) {
+    if (sel.district && !sel.mukim) {
       window.API.valuationOptions({ district: sel.district, scheme: area })
         .then(opts => {
           const top = (opts.mukim || [])[0];
-          if (!top) return;
+          if (!top) throw new Error('no parent mukim');
           setSel(s => (s.area === area && !s.mukim ? { ...s, mukim: top.value } : s));
         })
-        .catch(() => {});
+        .catch(() => {
+          const mk = getAreaMukim(sel.state, sel.district, area);
+          if (mk) setSel(s => (s.area === area && !s.mukim ? { ...s, mukim: mk } : s));
+        });
     }
   };
   const selectRoad = (road) => {
@@ -252,15 +278,31 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
     if (onEngage) onEngage();
     if (isVal) setPanelOpen(false); // minimise Location Search so it doesn't cover the dashboard
     setLoad(l => ({ ...l, t: true }));
-    delay(() => {
-      if (!isVal) {
-        const rows = getTransactionsForScope(snap);
-        setTxns(rows);
-        setTypes(snap.propertyType ? [snap.propertyType] : [...new Set(rows.map(r => r.type))]);
-        setYearMode('range'); setYr({ single: '', from: '', to: '' }); setPrice({ min: '', max: '' });
-      }
-      setLoad(l => ({ ...l, t: false }));
-    }, 600);
+    if (!isVal) {
+      window.API.dataQuery({
+        district: snap.district,
+        mukim: snap.mukim,
+        scheme: snap.area,
+        road: snap.road,
+        property_type: snap.propertyType,
+        limit: 600,
+      })
+        .then(data => {
+          const rows = (data.rows || []).map(r => apiTxnToRow(r, snap.state));
+          setTxns(rows);
+          setTypes(snap.propertyType ? [snap.propertyType] : [...new Set(rows.map(r => r.type))]);
+          setYearMode('range'); setYr({ single: '', from: '', to: '' }); setPrice({ min: '', max: '' });
+        })
+        .catch(() => {
+          const rows = getTransactionsForScope(snap);
+          setTxns(rows);
+          setTypes(snap.propertyType ? [snap.propertyType] : [...new Set(rows.map(r => r.type))]);
+          setYearMode('range'); setYr({ single: '', from: '', to: '' }); setPrice({ min: '', max: '' });
+        })
+        .finally(() => setLoad(l => ({ ...l, t: false })));
+    } else {
+      delay(() => setLoad(l => ({ ...l, t: false })), 600);
+    }
   };
 
   const availTypes = useMemo(() => txns ? [...new Set(txns.map(r => r.type))].sort() : [], [txns]);

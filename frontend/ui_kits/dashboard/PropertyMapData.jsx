@@ -162,6 +162,30 @@ function getRoads(state, district, mukim, area) {
   return [...out];
 }
 
+/* District-level road index — lets the user skip Mukim AND Scheme/Area and
+   search a Road directly under a District (for when they can't find their
+   mukim/scheme). Walks every scheme's roads, deduping each road to the FIRST
+   (mukim, scheme) that owns it, so picking a road maps back to exactly one
+   path and the cascade above it can be auto-filled. */
+function districtRoadIndex(state, district) {
+  const { areas, areaToMukim } = districtAreaIndex(state, district);
+  const roadToPath = {};
+  for (const area of areas) {
+    const mukim = areaToMukim[area];
+    for (const road of getRoads(state, district, mukim, area)) {
+      if (!(road in roadToPath)) roadToPath[road] = { mukim, area };
+    }
+  }
+  const roads = Object.keys(roadToPath).sort();
+  return { roads, roadToPath };
+}
+function getDistrictRoads(state, district) {
+  return districtRoadIndex(state, district).roads;
+}
+function getRoadPath(state, district, road) {
+  return districtRoadIndex(state, district).roadToPath[road] || null;
+}
+
 function formatRM(n) {
   return 'RM ' + Math.round(n).toLocaleString('en-MY');
 }
@@ -244,5 +268,6 @@ function getTransactionsForScope(path) {
 
 Object.assign(window, {
   getMukims, getAreas, getDistrictAreas, getAreaMukim, getRoads, getTransactions,
+  getDistrictRoads, getRoadPath,
   getTransactionsForScope, formatRM, PROPERTY_TYPES_ALL: PROPERTY_TYPES,
 });

@@ -68,6 +68,8 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
   const [sheetOpen, setSheetOpen] = useState(true);
   const [sheetMax, setSheetMax] = useState(false); // table expanded to full page
   const [searched, setSearched] = useState(null); // snapshot of the selection when Search was pressed
+  const [roadSearchOpen, setRoadSearchOpen] = useState(false); // "can't find mukim/scheme? search by road" disclosure
+  const [roadAutoFill, setRoadAutoFill] = useState(null); // {road, mukim, area} when mukim/scheme were back-filled from a road
 
   // filters
   const [types, setTypes] = useState([]);      // selected property types
@@ -84,7 +86,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
   useEffect(() => {
     const el = bodyRef.current;
     if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
-  }, [sel.district, sel.mukim, sel.area, sel.road, load.m, load.a, load.r]);
+  }, [sel.district, sel.mukim, sel.area, sel.road, load.m, load.a, load.r, roadSearchOpen]);
 
   useEffect(() => {
     loadMalaysiaGeo().then(setGeo).catch(() => setGeoErr(true));
@@ -114,16 +116,25 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
   }, [sel.district, sel.mukim]);
 
   // option lists (derived strictly from the current selection)
+  // keep the current selection in its own list — a mukim/scheme back-filled from
+  // a road may not exist in the live API list, but must stay selectable.
+  const withSelected = (list, val) => (val && !list.includes(val) ? [val, ...list] : list);
   const districts = geo && sel.state ? geo.byName[sel.state].districts.map(d => d.name) : [];
   const mockMukims = sel.district ? getMukims(sel.state, sel.district) : [];
-  const mukims = (apiMukims && apiMukims.length) ? apiMukims : mockMukims;
+  const mukims = withSelected((apiMukims && apiMukims.length) ? apiMukims : mockMukims, sel.mukim);
   // Scheme/Area can be browsed at the mukim level (if a mukim is chosen) OR
   // directly at the district level (Mukim is optional).
   const mockAreas = sel.mukim
     ? getAreas(sel.state, sel.district, sel.mukim)
     : (sel.district ? getDistrictAreas(sel.state, sel.district) : []);
-  const areas = (apiAreas && apiAreas.length) ? apiAreas : mockAreas;
+  const areas = withSelected((apiAreas && apiAreas.length) ? apiAreas : mockAreas, sel.area);
   const roads = sel.area ? getRoads(sel.state, sel.district, sel.mukim, sel.area) : [];
+  // District-wide road list — the fallback when the user can't find their
+  // mukim/scheme. Memoised because it walks every scheme in the district.
+  const districtRoads = useMemo(
+    () => (sel.district ? getDistrictRoads(sel.state, sel.district) : []),
+    [sel.state, sel.district],
+  );
 
   /* cascade handlers — each resets every level below it and clears prior results.
      Selecting the blank option (or pressing Clear) deselects that level. */
@@ -131,7 +142,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
     // propertyType is orthogonal to the geographic cascade — keep it so the user
     // doesn't lose their pick (and re-forget it) when they change location.
     setSel(s => ({ state: state || '', district: '', propertyType: s.propertyType, mukim: '', area: '', road: '' }));
-    setSearched(null); setTxns(null);
+    setSearched(null); setTxns(null); setRoadAutoFill(null);
     if (state) {
       if (onEngage) onEngage(); // reveal the dashboard chrome on first engagement
       if (geo) setRegion(geo.regionOf(state));
@@ -140,7 +151,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
   };
   const selectDistrict = (district) => {
     setSel(s => ({ ...s, district: district || '', mukim: '', area: '', road: '' }));
-    setSearched(null); setTxns(null);
+    setSearched(null); setTxns(null); setRoadAutoFill(null);
     if (district) {
       setPanelOpen(true); // surface the panel so the user can refine
       setLoad(l => ({ ...l, m: true, a: true }));
@@ -149,7 +160,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
   };
   const selectMukim = (mukim) => {
     setSel(s => ({ ...s, mukim: mukim || '', area: '', road: '' }));
-    setSearched(null); setTxns(null);
+    setSearched(null); setTxns(null); setRoadAutoFill(null);
     if (mukim) { setLoad(l => ({ ...l, a: true })); delay(() => setLoad(l => ({ ...l, a: false })), 450); }
   };
   const selectArea = (area) => {
@@ -160,7 +171,7 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
       const mukim = s.mukim || (area ? (getAreaMukim(s.state, s.district, area) || '') : '');
       return { ...s, mukim, area: area || '', road: '' };
     });
-    setSearched(null); setTxns(null);
+    setSearched(null); setTxns(null); setRoadAutoFill(null);
     if (area) { setLoad(l => ({ ...l, r: true })); delay(() => setLoad(l => ({ ...l, r: false })), 450); }
 
     // Live mukim inference: ask the backend which mukim owns this scheme.
@@ -177,7 +188,18 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
   };
   const selectRoad = (road) => {
     setSel(s => ({ ...s, road: road || '' }));
+    setSearched(null); setTxns(null); setRoadAutoFill(null);
+  };
+  /* Pick a road directly under the district (skipping mukim + scheme). People
+     often know their road but not their mukim/scheme, so we look up the road's
+     owning mukim + scheme and back-fill them — the cascade above auto-populates
+     and the area-scoped Road field takes over from here. */
+  const selectRoadDirect = (road) => {
     setSearched(null); setTxns(null);
+    if (!road) { setSel(s => ({ ...s, road: '' })); setRoadAutoFill(null); return; }
+    const path = getRoadPath(sel.state, sel.district, road) || {};
+    setSel(s => ({ ...s, mukim: path.mukim || s.mukim, area: path.area || s.area, road }));
+    setRoadAutoFill(path.area ? { road, mukim: path.mukim || '', area: path.area } : null);
   };
   const selectPropertyType = (propertyType) => {
     setSel(s => ({ ...s, propertyType: propertyType || '' }));
@@ -334,6 +356,24 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
                     <span style={{ fontWeight: 600, color: C.earth }}>③ Narrow down</span>
                     <span> — select a mukim and / or a scheme / area (optional)</span>
                   </div>
+                  {roadAutoFill && (
+                    <div style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 7,
+                      padding: '9px 11px', borderRadius: 8, background: C.earthFaint,
+                      border: `1px solid ${C.earth}40`, fontFamily: "'DM Sans',sans-serif",
+                      fontSize: 11.5, lineHeight: 1.45, color: C.deep,
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.earth}
+                        strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      <span>
+                        Auto-filled from <strong>{roadAutoFill.road}</strong> — Mukim{' '}
+                        <strong>{roadAutoFill.mukim || '—'}</strong>, Scheme / Area{' '}
+                        <strong>{roadAutoFill.area}</strong>. Adjust below if needed.
+                      </span>
+                    </div>
+                  )}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
@@ -366,6 +406,30 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
                             options={areas} onChange={selectArea}/>}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Escape hatch: can't find the mukim/scheme? Search a road directly
+                  under the district — picking one back-fills its mukim & scheme. */}
+              {sel.district && !sel.area && (
+                <div>
+                  <button onClick={() => setRoadSearchOpen(o => !o)} style={disclosureBtn}>
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                      strokeWidth="1.6" style={{ flexShrink: 0, transform: roadSearchOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>
+                      <polyline points="6 4 10 8 6 12"/>
+                    </svg>
+                    Can't find your mukim or scheme? Search by road name
+                  </button>
+                  {roadSearchOpen && (
+                    <div style={{ marginTop: 9 }}>
+                      <Eyebrow style={{ color: C.earth, display: 'block', marginBottom: 6 }}>Road Name</Eyebrow>
+                      <Combobox value={sel.road} placeholder="Search road name"
+                        options={districtRoads} onChange={selectRoadDirect}/>
+                      <div style={{ marginTop: 6, fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid }}>
+                        Pick a road and we'll fill in its mukim &amp; scheme for you.
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -549,6 +613,13 @@ const clearLink = {
   border: 0, background: 'transparent', color: C.muted, cursor: 'pointer',
   fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 600, padding: 0,
   display: 'flex', alignItems: 'center', gap: 3,
+};
+
+const disclosureBtn = {
+  width: '100%', display: 'flex', alignItems: 'center', gap: 7, textAlign: 'left',
+  background: 'transparent', border: `1px dashed ${C.earth}55`, borderRadius: 8,
+  color: C.earth, cursor: 'pointer', padding: '9px 11px',
+  fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600,
 };
 
 Object.assign(window, { TransactionMapPage });

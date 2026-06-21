@@ -549,8 +549,28 @@ def data_query(
 FRONTEND_DIR = ROOT.parent / "frontend"
 DASHBOARD_DIR = FRONTEND_DIR / "ui_kits" / "dashboard"
 
+
+class RevalidateStaticFiles(StaticFiles):
+    """StaticFiles that forces revalidation (`Cache-Control: no-cache`).
+
+    The dashboard is a set of separate `.jsx` files transpiled in the browser.
+    Default StaticFiles sends ETag/Last-Modified but no Cache-Control, so
+    browsers cache the scripts *heuristically* and may serve a stale copy of one
+    file alongside a fresh copy of another after a deploy. A mismatched mix (e.g.
+    a new TransactionMapPage.jsx calling getDistrictRoads while PropertyMapData.jsx
+    is still the old cached version) throws a ReferenceError at render time and
+    blanks the page. `no-cache` keeps the cache but requires an ETag revalidation
+    on every load (cheap 304s), so the files always move forward together.
+    """
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 if FRONTEND_DIR.exists():
-    app.mount("/app", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    app.mount("/app", RevalidateStaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 
 
 @app.get("/")

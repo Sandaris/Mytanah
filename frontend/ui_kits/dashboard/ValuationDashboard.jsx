@@ -81,12 +81,12 @@ const RecentTxnRow = ({ r, i }) => {
    to the right of the year bar chart in the trend card. */
 const YearLineChart = ({ rows }) => {
   if (!rows || rows.length === 0) return null;
-  const W = 320, H = 168, padX = 14, padTop = 18, padBot = 30;
+  const W = 340, H = 186, padL = 22, padR = 34, padTop = 38, padBot = 32;
   const n = rows.length;
   const avgs = rows.map(r => r.avg);
   const lo = Math.min(...avgs), hi = Math.max(...avgs);
   const span = hi - lo || 1;
-  const x = (i) => padX + (n === 1 ? (W - 2 * padX) / 2 : (i / (n - 1)) * (W - 2 * padX));
+  const x = (i) => padL + (n === 1 ? (W - padL - padR) / 2 : (i / (n - 1)) * (W - padL - padR));
   const y = (v) => padTop + (1 - (v - lo) / span) * (H - padTop - padBot);
   const pts = rows.map((r, i) => [x(i), y(r.avg)]);
   const up = rows[n - 1].avg >= rows[0].avg;
@@ -94,8 +94,21 @@ const YearLineChart = ({ rows }) => {
   const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
   const area = `${line} L ${pts[n - 1][0].toFixed(1)} ${(H - padBot).toFixed(1)} L ${pts[0][0].toFixed(1)} ${(H - padBot).toFixed(1)} Z`;
   const gid = 'val-lc-' + (up ? 'up' : 'dn');
+  const segs = rows.slice(1).map((r, i) => {
+    const prev = rows[i];
+    const pct = prev.avg ? ((r.avg - prev.avg) / prev.avg) * 100 : 0;
+    const p0 = pts[i], p1 = pts[i + 1];
+    const labelY = Math.max(16, Math.min(H - padBot - 14, ((p0[1] + p1[1]) / 2) + (pct >= 0 ? -15 : 17)));
+    return {
+      key: prev.y + '-' + r.y,
+      x: (p0[0] + p1[0]) / 2,
+      y: labelY,
+      pct,
+      text: (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%',
+    };
+  });
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'hidden' }}>
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={stroke} stopOpacity="0.20"/>
@@ -105,6 +118,20 @@ const YearLineChart = ({ rows }) => {
       <path d={area} fill={`url(#${gid})`}/>
       <path d={line} fill="none" stroke={stroke} strokeWidth="2.2"
         strokeLinejoin="round" strokeLinecap="round" style={{ transition: 'all .8s cubic-bezier(.16,1,.3,1)' }}/>
+      {segs.map(s => {
+        const sw = Math.max(38, s.text.length * 7 + 14);
+        const color = s.pct >= 0 ? C.up : C.down;
+        return (
+          <g key={s.key}>
+            <rect x={s.x - sw / 2} y={s.y - 8.5} width={sw} height="17" rx="8.5"
+              fill={C.raised} stroke={color} strokeOpacity="0.28"/>
+            <text x={s.x} y={s.y + 3.8} textAnchor="middle"
+              fontFamily="'JetBrains Mono',monospace" fontSize="9.5" fontWeight="600" fill={color}>
+              {s.text}
+            </text>
+          </g>
+        );
+      })}
       {pts.map((p, i) => (
         <circle key={'c' + i} cx={p[0]} cy={p[1]} r="3.4" fill={C.raised} stroke={stroke} strokeWidth="1.8"/>
       ))}
@@ -728,12 +755,23 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
                       fontFamily: "'JetBrains Mono',monospace", fontSize: 11.5, fontWeight: 600,
                       color: yUp ? C.up : C.down, background: (yUp ? C.up : C.down) + '18',
                       padding: '2px 8px', borderRadius: 9999, whiteSpace: 'nowrap',
-                    }}>{(yUp ? '▲ +' : '▼ ') + yGrowth.toFixed(1) + '%'}</span>
+                    }}>P/L {(yUp ? '+' : '') + yGrowth.toFixed(1) + '%'}</span>
                   )}
                 </div>
-                <div style={{ height: 186, display: 'flex', alignItems: 'center' }}>
+                <div style={{ height: 198, display: 'flex', alignItems: 'center' }}>
                   <YearLineChart rows={yearAvg}/>
                 </div>
+                {yearAvg.length > 1 && (
+                  <div style={{
+                    marginTop: 4, display: 'flex', justifyContent: 'space-between', gap: 10,
+                    fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid,
+                  }}>
+                    <span>Overall P/L ({yearAvg[0].y}-{yearAvg[yearAvg.length - 1].y})</span>
+                    <Mono size={11.5} color={yUp ? C.up : C.down}>
+                      {(yUp ? '+' : '') + yGrowth.toFixed(1) + '%'}
+                    </Mono>
+                  </div>
+                )}
               </div>
             </div>
             )}

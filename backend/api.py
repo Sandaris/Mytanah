@@ -18,8 +18,11 @@ Artifacts expected in ./artifacts/ (produced by save_models.py):
 
 from __future__ import annotations
 
+import gc
 import json
 import re
+import threading
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -51,8 +54,7 @@ app.add_middleware(
 )
 
 state: dict[str, Any] = {
-    "valuation": None,
-    "valuation_models": {},
+    "valuation_meta": None,  # shared cat_cols/num_cols/cat_categories (from default model)
     "hcr": None,
     "hcr_latest": None,
     "transactions": None,
@@ -66,18 +68,56 @@ VALUATION_MODEL_FILES = {
     "rf": "valuation_rf.joblib",
     "nn": "valuation_nn.joblib",
 }
+DEFAULT_MODEL = "xgboost"
+
+# Lazy, single-slot model cache. The VM is memory-constrained (~1 GB) and the
+# Random Forest artifact alone is ~200 MB resident, so we never keep more than
+# one valuation model in RAM: a model loads from disk on first request and the
+# least-recently-used one is evicted. The lock serializes load+predict so two
+# concurrent requests can't pull two big models in at once and blow the budget.
+# The frontend computes only the *selected* model and caches results per search,
+# so each model is loaded at most once per search (instant on switch-back).
+_MODEL_CACHE: "OrderedDict[str, Any]" = OrderedDict()
+_MODEL_CACHE_MAX = 1
+_MODEL_LOCK = threading.RLock()
+
+
+def _load_model_cached(key: str) -> Any:
+    """Artifact for `key`, loading from disk (evicting the LRU model) if not
+    resident. Caller must hold _MODEL_LOCK. Unknown/missing keys fall back to
+    the default model."""
+    if key not in VALUATION_MODEL_FILES or not (ARTIFACTS / VALUATION_MODEL_FILES[key]).exists():
+        key = DEFAULT_MODEL
+    path = ARTIFACTS / VALUATION_MODEL_FILES.get(key, "")
+    if not path.exists():
+        return None
+    if key in _MODEL_CACHE:
+        _MODEL_CACHE.move_to_end(key)
+        return _MODEL_CACHE[key]
+    while len(_MODEL_CACHE) >= _MODEL_CACHE_MAX:
+        _MODEL_CACHE.popitem(last=False)
+        gc.collect()  # release the evicted model's arrays before loading the next
+    _MODEL_CACHE[key] = joblib.load(path)
+    return _MODEL_CACHE[key]
+
+
+def _available_models() -> list[str]:
+    return [k for k, f in VALUATION_MODEL_FILES.items() if (ARTIFACTS / f).exists()]
 
 
 @app.on_event("startup")
 def load_artifacts() -> None:
-    models: dict[str, Any] = {}
-    for key, fname in VALUATION_MODEL_FILES.items():
-        path = ARTIFACTS / fname
-        if path.exists():
-            models[key] = joblib.load(path)
-    state["valuation_models"] = models
-    # Default / back-compat handle used by the rest of the API.
-    state["valuation"] = models.get("xgboost") or (next(iter(models.values()), None))
+    # Pre-warm the default model and extract the shared category metadata the
+    # dropdown endpoints need (identical across models — same training split).
+    with _MODEL_LOCK:
+        default = _load_model_cached(DEFAULT_MODEL)
+    if default is not None:
+        state["valuation_meta"] = {
+            "cat_cols": default["cat_cols"],
+            "num_cols": default["num_cols"],
+            "cat_categories": default["cat_categories"],
+            "name": default.get("name"),
+        }
 
     hcr_path = ARTIFACTS / "hcr_model.joblib"
     if hcr_path.exists():
@@ -100,18 +140,16 @@ def load_artifacts() -> None:
 @app.get("/health")
 def health() -> dict[str, Any]:
     df = state["transactions"]
-    val = state["valuation"]
+    meta = state.get("valuation_meta")
     hcr_latest = state["hcr_latest"]
     return {
         "status": "ok",
         "version": app.version,
         "valuation": {
-            "loaded": val is not None,
-            "model": val.get("name") if val else None,
-            "available": {
-                k: {"name": m.get("name"), "val_mape": m.get("val_mape")}
-                for k, m in (state["valuation_models"] or {}).items()
-            },
+            "loaded": meta is not None,
+            "model": meta.get("name") if meta else None,
+            "available": _available_models(),
+            "cached": list(_MODEL_CACHE.keys()),
         },
         "hcr": {
             "model_loaded": state["hcr"] is not None,
@@ -243,11 +281,6 @@ def _find_comparables(req: ValuationRequest, n: int = 5) -> list[Comparable]:
 
 @app.post("/valuation/predict", response_model=ValuationResponse)
 def valuation_predict(req: ValuationRequest) -> ValuationResponse:
-    models = state["valuation_models"] or {}
-    art = models.get(req.model) or state["valuation"]
-    if art is None:
-        raise HTTPException(503, "Valuation model not loaded. Run save_models.py first.")
-
     req.district = _resolve_district(req.district)  # map map-name -> dataset name
 
     row = {
@@ -262,16 +295,27 @@ def valuation_predict(req: ValuationRequest) -> ValuationResponse:
     }
     X = pd.DataFrame([row])
 
-    unseen: list[str] = []
-    for col in art["cat_cols"]:
-        known = art["cat_categories"].get(col, [])
-        if X.at[0, col] not in known and known:
-            unseen.append(col)
-            X.at[0, col] = known[0]
+    # Load + predict under the lock so only one (memory-heavy) model is resident
+    # at a time on the constrained VM. Comparables come from the dataframe and are
+    # built outside the lock.
+    with _MODEL_LOCK:
+        art = _load_model_cached(req.model)
+        if art is None:
+            raise HTTPException(503, "Valuation model not loaded. Run save_models.py first.")
 
-    y_mean, y_lo, y_hi, rel_spread = _predict_with_band(art, X)
+        unseen: list[str] = []
+        for col in art["cat_cols"]:
+            known = art["cat_categories"].get(col, [])
+            if X.at[0, col] not in known and known:
+                unseen.append(col)
+                X.at[0, col] = known[0]
 
-    if art.get("target_log"):
+        y_mean, y_lo, y_hi, rel_spread = _predict_with_band(art, X)
+        target_log = art.get("target_log")
+        model_name = art.get("name", "valuation")
+        model_mape = art.get("val_mape")
+
+    if target_log:
         price = float(np.expm1(y_mean))
         price_lo = float(np.expm1(y_lo))
         price_hi = float(np.expm1(y_hi))
@@ -297,8 +341,8 @@ def valuation_predict(req: ValuationRequest) -> ValuationResponse:
         price_high=round(price_hi, 2),
         price_per_sqft_land=round(price / req.land, 2) if req.land else None,
         price_per_sqft_area=round(price / req.area, 2) if req.area else None,
-        model=art.get("name", "valuation"),
-        val_mape=art.get("val_mape"),
+        model=model_name,
+        val_mape=model_mape,
         confidence=confidence,
         inputs_used={**row, "unseen_categories": unseen},
         comparables=_find_comparables(req, n=5),
@@ -443,16 +487,16 @@ def valuation_options(
     mukim when the user already knows the scheme but not the mukim; passing
     `road` lets it infer both the mukim and scheme that own a known road.
     """
-    art = state["valuation"]
+    meta = state.get("valuation_meta")
     df = state["transactions"]
-    if art is None:
+    if meta is None:
         raise HTTPException(503, "Valuation model not loaded.")
 
     district = _resolve_district(district)  # map map-name -> dataset name
 
     def counted(col: str, frame: pd.DataFrame | None, top: int = 500) -> list[dict[str, Any]]:
         if frame is None or col not in frame.columns:
-            vals = art["cat_categories"].get(col, [])[:top]
+            vals = meta["cat_categories"].get(col, [])[:top]
             return [{"value": v, "count": None} for v in vals]
         vc = frame[col].value_counts().head(top)
         return [{"value": str(v), "count": int(c)} for v, c in vc.items()]

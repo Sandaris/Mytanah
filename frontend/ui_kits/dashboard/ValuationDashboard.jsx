@@ -9,7 +9,7 @@
    and the price + volume trend across 2021–2026. All figures derive from the
    same calibrated transaction layer the map uses, so the dashboard always
    agrees with the underlying records. */
-const { useState, useMemo, useEffect } = React;
+const { useState, useMemo, useEffect, useRef } = React;
 
 const STRATA_TYPES = new Set(['Condominium/Apartment', 'Flat', 'Low-Cost Flat', 'Town House']);
 
@@ -333,12 +333,17 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
     return () => { cancelled = true; };
   }, [sel.district, sel.mukim, sel.area, sel.propertyType]);
 
-  /* Call the live backend for ALL THREE models whenever the selection (or its
-     derived size/tenure) changes. Each card shows its own trained model's
-     estimate; the property is sized from the real recent transactions. */
+  /* Lazy per-model valuation. The VM only holds one (memory-heavy) model in RAM
+     at a time, so the dashboard computes ONLY the selected model and fetches the
+     others when the user switches tabs. Results are cached per search via a
+     signature — switching back is instant, and a property/location/size change
+     clears the cache and recomputes just the selected model. */
+  const resultsRef = useRef({});
+  const sigRef = useRef(null);
+  useEffect(() => { resultsRef.current = apiResults; }, [apiResults]);
+
   useEffect(() => {
-    if (!data.selectedType || !sel.district) { setApiResults({}); return; }
-    setApiLoading(true); setApiError(null);
+    if (!data.selectedType || !sel.district) { setApiResults({}); sigRef.current = null; return; }
     const isStrata = STRATA_TYPES.has(data.selectedType);
     // Size the property from the real recent transactions; fall back to the
     // calibrated layer's medians only if the API returned no usable rows.
@@ -357,26 +362,25 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
       land: Math.max(1, Math.round(modelLand)),
       area: modelArea ? Math.round(modelArea) : null,
     };
+    const sig = JSON.stringify(payloadBase);
+    const sigChanged = sigRef.current !== sig;
+    if (sigChanged) { sigRef.current = sig; setApiResults({}); }  // new search -> drop stale results
+
+    const key = MODEL_DEFS[modelIdx].key;
+    if (!sigChanged && resultsRef.current[key]) { setApiLoading(false); return; }  // cached
+
+    setApiLoading(true); setApiError(null);
     let cancelled = false;
-    Promise.all(
-      MODEL_DEFS.map((def) =>
-        window.API.valuationPredict({ ...payloadBase, model: def.key })
-          .then((r) => ({ key: def.key, r }))
-          .catch((e) => ({ key: def.key, err: e.message }))
-      )
-    ).then((results) => {
-      if (cancelled) return;
-      const map = {};
-      let firstErr = null;
-      results.forEach(({ key, r, err }) => {
-        if (r) map[key] = r; else if (!firstErr) firstErr = err;
-      });
-      setApiResults(map);
-      if (!Object.keys(map).length && firstErr) setApiError(firstErr);
-    }).finally(() => { if (!cancelled) setApiLoading(false); });
+    window.API.valuationPredict({ ...payloadBase, model: key })
+      .then((r) => {
+        if (cancelled) return;
+        setApiResults((prev) => ({ ...(sigChanged ? {} : prev), [key]: r }));
+      })
+      .catch((e) => { if (!cancelled) setApiError(e.message); })
+      .finally(() => { if (!cancelled) setApiLoading(false); });
     return () => { cancelled = true; };
   }, [sel.district, sel.mukim, sel.area, data.selectedType, data.fhPct,
-      data.medLand, data.medFloor, realSizes.land, realSizes.area, realSizes.fhPct]);
+      data.medLand, data.medFloor, realSizes.land, realSizes.area, realSizes.fhPct, modelIdx]);
 
   /* Build the three cards from the live predictions. Until a model's result
      arrives, show a neutral placeholder anchored on the regional median (no
@@ -402,8 +406,11 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
 
   const low = m.point * (1 - m.band);
   const high = m.point * (1 + m.band);
-  const dLow = Math.min(...models.map(x => x.point * (1 - x.band)));
-  const dHigh = Math.max(...models.map(x => x.point * (1 + x.band)));
+  // Scale the comparison band over the models that have actually been computed
+  // (lazy loading means non-selected models may not be fetched yet).
+  const bandModels = models.filter(x => x.live || x === m);
+  const dLow = Math.min(...bandModels.map(x => x.point * (1 - x.band)));
+  const dHigh = Math.max(...bandModels.map(x => x.point * (1 + x.band)));
   const pct = (v) => Math.max(0, Math.min(100, ((v - dLow) / (dHigh - dLow)) * 100));
 
   // Region KPIs from REAL NAPIC data (server-side price stats + recent-txn
@@ -528,7 +535,7 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
               <div style={{ position: 'absolute', top: 19, height: 6, borderRadius: 3,
                 left: pct(low) + '%', width: (pct(high) - pct(low)) + '%',
                 background: C.earth + '55', border: `1px solid ${C.earth}`, transition: 'left .35s, width .35s' }}/>
-              {models.map((x, i) => i !== modelIdx && (
+              {models.map((x, i) => i !== modelIdx && x.live && (
                 <div key={x.label} style={{ position: 'absolute', top: 16, width: 2, height: 12,
                   left: pct(x.point) + '%', background: C.muted, transform: 'translateX(-50%)' }}/>
               ))}

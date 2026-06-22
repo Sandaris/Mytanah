@@ -52,18 +52,32 @@ app.add_middleware(
 
 state: dict[str, Any] = {
     "valuation": None,
+    "valuation_models": {},
     "hcr": None,
     "hcr_latest": None,
     "transactions": None,
     "location_hierarchy": None,
 }
 
+# Selectable valuation models -> artifact filenames. "xgboost" is the default
+# and the back-compat artifact; "rf"/"nn" are optional and skipped if missing.
+VALUATION_MODEL_FILES = {
+    "xgboost": "valuation_model.joblib",
+    "rf": "valuation_rf.joblib",
+    "nn": "valuation_nn.joblib",
+}
+
 
 @app.on_event("startup")
 def load_artifacts() -> None:
-    val_path = ARTIFACTS / "valuation_model.joblib"
-    if val_path.exists():
-        state["valuation"] = joblib.load(val_path)
+    models: dict[str, Any] = {}
+    for key, fname in VALUATION_MODEL_FILES.items():
+        path = ARTIFACTS / fname
+        if path.exists():
+            models[key] = joblib.load(path)
+    state["valuation_models"] = models
+    # Default / back-compat handle used by the rest of the API.
+    state["valuation"] = models.get("xgboost") or (next(iter(models.values()), None))
 
     hcr_path = ARTIFACTS / "hcr_model.joblib"
     if hcr_path.exists():
@@ -94,6 +108,10 @@ def health() -> dict[str, Any]:
         "valuation": {
             "loaded": val is not None,
             "model": val.get("name") if val else None,
+            "available": {
+                k: {"name": m.get("name"), "val_mape": m.get("val_mape")}
+                for k, m in (state["valuation_models"] or {}).items()
+            },
         },
         "hcr": {
             "model_loaded": state["hcr"] is not None,
@@ -121,6 +139,7 @@ class ValuationRequest(BaseModel):
     tenure: str = Field(..., examples=["Freehold"])
     land: float = Field(..., gt=0, description="Plot size in sqft")
     area: float | None = Field(None, ge=0, description="Built-up sqft (optional for high-rise)")
+    model: str = Field("xgboost", description="Which valuation model: xgboost | rf | nn")
 
 
 class Comparable(BaseModel):
@@ -140,6 +159,7 @@ class ValuationResponse(BaseModel):
     price_per_sqft_area: float | None
     currency: str = "RM"
     model: str
+    val_mape: float | None = None  # median abs % error on the 2025 hold-out
     confidence: str  # "high" | "medium" | "low"
     inputs_used: dict[str, Any]
     comparables: list[Comparable]
@@ -223,7 +243,8 @@ def _find_comparables(req: ValuationRequest, n: int = 5) -> list[Comparable]:
 
 @app.post("/valuation/predict", response_model=ValuationResponse)
 def valuation_predict(req: ValuationRequest) -> ValuationResponse:
-    art = state["valuation"]
+    models = state["valuation_models"] or {}
+    art = models.get(req.model) or state["valuation"]
     if art is None:
         raise HTTPException(503, "Valuation model not loaded. Run save_models.py first.")
 
@@ -277,6 +298,7 @@ def valuation_predict(req: ValuationRequest) -> ValuationResponse:
         price_per_sqft_land=round(price / req.land, 2) if req.land else None,
         price_per_sqft_area=round(price / req.area, 2) if req.area else None,
         model=art.get("name", "valuation"),
+        val_mape=art.get("val_mape"),
         confidence=confidence,
         inputs_used={**row, "unseen_categories": unseen},
         comparables=_find_comparables(req, n=5),

@@ -1,8 +1,8 @@
 /* eslint-disable no-undef */
 /* ValuationDashboard.jsx — the Valuation tab's result panel.
    Shown inside the map's bottom sheet once the user has chosen a Scheme/Area.
-   Estimates the property's market value (switchable between three models —
-   Linear Regression, Random Forest, Neural Network) and surfaces the
+   Estimates the property's market value (switchable between three real,
+   API-served models — Random Forest, XGBoost, Neural Network) and surfaces the
    essential market data for the chosen region, mirroring the real NAPIC
    Open Transaction schema: average price by property type, median price,
    price per m² (built-up), median built-up / land area (sq.m), tenure mix,
@@ -75,6 +75,47 @@ const RecentTxnRow = ({ r, i }) => {
   );
 };
 
+/* Compact SVG line chart of the yearly average price — shows the price-growth
+   trajectory across the years. The stroke turns green when the latest year sits
+   above the first (prices grew) and red when it sits below (prices fell). Sits
+   to the right of the year bar chart in the trend card. */
+const YearLineChart = ({ rows }) => {
+  if (!rows || rows.length === 0) return null;
+  const W = 320, H = 168, padX = 14, padTop = 18, padBot = 30;
+  const n = rows.length;
+  const avgs = rows.map(r => r.avg);
+  const lo = Math.min(...avgs), hi = Math.max(...avgs);
+  const span = hi - lo || 1;
+  const x = (i) => padX + (n === 1 ? (W - 2 * padX) / 2 : (i / (n - 1)) * (W - 2 * padX));
+  const y = (v) => padTop + (1 - (v - lo) / span) * (H - padTop - padBot);
+  const pts = rows.map((r, i) => [x(i), y(r.avg)]);
+  const up = rows[n - 1].avg >= rows[0].avg;
+  const stroke = up ? C.up : C.down;
+  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const area = `${line} L ${pts[n - 1][0].toFixed(1)} ${(H - padBot).toFixed(1)} L ${pts[0][0].toFixed(1)} ${(H - padBot).toFixed(1)} Z`;
+  const gid = 'val-lc-' + (up ? 'up' : 'dn');
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={stroke} stopOpacity="0.20"/>
+          <stop offset="100%" stopColor={stroke} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gid})`}/>
+      <path d={line} fill="none" stroke={stroke} strokeWidth="2.2"
+        strokeLinejoin="round" strokeLinecap="round" style={{ transition: 'all .8s cubic-bezier(.16,1,.3,1)' }}/>
+      {pts.map((p, i) => (
+        <circle key={'c' + i} cx={p[0]} cy={p[1]} r="3.4" fill={C.raised} stroke={stroke} strokeWidth="1.8"/>
+      ))}
+      {rows.map((r, i) => (
+        <text key={'t' + i} x={x(i)} y={H - 8} textAnchor="middle"
+          fontFamily="'DM Sans',sans-serif" fontSize="11" fill={C.mid}>{r.y}</text>
+      ))}
+    </svg>
+  );
+};
+
 /* ---- region aggregation (area-level sample) --------------------------- */
 function valComputeRegion(sel) {
   const { state, district, mukim, area, propertyType } = sel || {};
@@ -128,16 +169,17 @@ function valComputeRegion(sel) {
   };
 }
 
-function valModels(base) {
-  return [
-    { label: 'Linear Regression', short: 'Linear', point: base * 0.965, band: 0.15, conf: 81, mae: '8.4%',
-      note: 'Transparent baseline — assumes linear price drivers.' },
-    { label: 'Random Forest', short: 'Forest', point: base * 1.005, band: 0.10, conf: 90, mae: '5.2%',
-      note: 'Ensemble of decision trees, robust to outliers.' },
-    { label: 'Neural Network', short: 'Neural', point: base * 1.035, band: 0.07, conf: 93, mae: '4.1%',
-      note: 'Deep model capturing non-linear interactions.' },
-  ];
-}
+/* The three valuation models served by the backend (/valuation/predict?model=).
+   `key` is the API selector; order here = left-to-right button order. All three
+   are real, trained models — no illustrative placeholders. */
+const MODEL_DEFS = [
+  { key: 'rf', label: 'Random Forest', short: 'Forest',
+    note: 'Tuned ensemble of decision trees — robust to outliers and non-linear price drivers.' },
+  { key: 'xgboost', label: 'XGBoost', short: 'XGBoost',
+    note: 'Gradient-boosted trees with conformal prediction bands — the primary AVM model.' },
+  { key: 'nn', label: 'Neural Network', short: 'Neural',
+    note: 'Multi-layer perceptron capturing non-linear feature interactions.' },
+];
 
 /* ---- small presentational bits --------------------------------------- */
 const StatTile = ({ label, value, sub, accent }) => (
@@ -152,8 +194,8 @@ const StatTile = ({ label, value, sub, accent }) => (
 );
 
 const ValuationDashboard = ({ sel, loading, fullpage }) => {
-  const [modelIdx, setModelIdx] = useState(1); // Random Forest default
-  const [apiResult, setApiResult] = useState(null);   // live /valuation/predict
+  const [modelIdx, setModelIdx] = useState(1); // XGBoost default (primary model)
+  const [apiResults, setApiResults] = useState({}); // { rf, xgboost, nn } live predictions
   const [apiError, setApiError]   = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [recentTxns, setRecentTxns] = useState(null);   // real Open Transaction Data rows
@@ -162,8 +204,41 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
   const [recentTotal, setRecentTotal] = useState(0);   // total matched (may exceed the 1000 shown)
   const [byTypeReal, setByTypeReal] = useState(null); // real avg price per property type
   const [yearReal, setYearReal] = useState(null);     // real yearly avg price for the selected type
+  const [priceReal, setPriceReal] = useState(null);   // real server-side price stats (median, count) for the scope
   const data = useMemo(() => valComputeRegion(sel),
     [sel.state, sel.district, sel.mukim, sel.area, sel.propertyType]);
+
+  /* Real region stats from the NAPIC rows in the "Recent transactions" table
+     (not the synthetic map layer): median plot/built-up size (used to size the
+     model), median RM/m² (built-up), and freehold share. Prefer rows of the
+     selected property type; if the recent list fell back to a wider family/area
+     scope, use whatever it has. Fields are null when the API gave nothing — the
+     callers then fall back to the calibrated layer's medians. */
+  const realSizes = useMemo(() => {
+    const rows = recentTxns || [];
+    const exact = sel.propertyType
+      ? rows.filter((r) => (r['Property Type'] || '') === sel.propertyType)
+      : [];
+    const use = exact.length ? exact : rows;
+    const medOf = (xs) => {
+      const s = xs.filter((v) => v != null && Number(v) > 0).map(Number).sort((a, b) => a - b);
+      if (!s.length) return null;
+      const k = Math.floor(s.length / 2);
+      return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2;
+    };
+    const med = (key) => medOf(use.map((r) => r[key]));
+    const ppsm = medOf(use.map((r) => (Number(r.Area) > 0 ? Number(r.Price) / Number(r.Area) : null)));
+    const fhPct = use.length
+      ? Math.round((100 * use.filter((r) => r.Tenure === 'Freehold').length) / use.length)
+      : null;
+    return {
+      n: use.length,
+      land: med('Land'),
+      area: med('Area'),
+      ppsm: ppsm != null ? Math.round(ppsm) : null,
+      fhPct,
+    };
+  }, [recentTxns, sel.propertyType]);
 
   /* Latest actual transactions for the chosen area, straight from the cleaned
      NAPIC Open Transaction Data (/data/query => transactions.parquet), newest
@@ -227,12 +302,13 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
     return () => { cancelled = true; };
   }, [sel.district, sel.mukim, sel.area]);
 
-  /* Real yearly average price for the SELECTED property type in the area
-     (server-side yearly stats over all matching rows). If that type has no sales
-     here, fall back to the area's all-type yearly trend so the chart isn't blank.
-     `limit: 1` — we only need stats.yearly. Calibrated layer is the offline fallback. */
+  /* Real yearly average price + price stats for the SELECTED property type in the
+     area (server-side over ALL matching rows, not just the page). If that type has
+     no sales here, fall back to the area's all-type stats so nothing goes blank.
+     The single response feeds both the yearly trend chart (stats.yearly) and the
+     KPI tiles / "vs median" (stats.price). Calibrated layer is the offline fallback. */
   useEffect(() => {
-    if (!sel.district) { setYearReal(null); return; }
+    if (!sel.district) { setYearReal(null); setPriceReal(null); return; }
     let cancelled = false;
     const area = { district: sel.district, mukim: sel.mukim, scheme: sel.area };
     const toYears = (yearly) => (yearly || []).map(y => ({ y: y.year, avg: y.mean, n: y.count }));
@@ -240,63 +316,88 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
       .then((d) => {
         if (cancelled) return;
         const yearly = (d.stats && d.stats.yearly) || [];
-        if (sel.propertyType && yearly.length) { setYearReal({ rows: toYears(yearly), scope: 'type' }); return; }
+        if (sel.propertyType && yearly.length) {
+          setYearReal({ rows: toYears(yearly), scope: 'type' });
+          setPriceReal((d.stats && d.stats.price) || null);
+          return;
+        }
         window.API.dataQuery({ ...area, limit: 1 })
           .then((a) => {
             if (cancelled) return;
             setYearReal({ rows: toYears(a.stats && a.stats.yearly), scope: 'area' });
+            setPriceReal((a.stats && a.stats.price) || null);
           })
-          .catch(() => { if (!cancelled) setYearReal(null); });
+          .catch(() => { if (!cancelled) { setYearReal(null); setPriceReal(null); } });
       })
-      .catch(() => { if (!cancelled) setYearReal(null); });
+      .catch(() => { if (!cancelled) { setYearReal(null); setPriceReal(null); } });
     return () => { cancelled = true; };
   }, [sel.district, sel.mukim, sel.area, sel.propertyType]);
 
-  /* Call the live backend whenever the selection (or its derived stats) changes.
-     The other two models keep their illustrative multipliers. */
+  /* Call the live backend for ALL THREE models whenever the selection (or its
+     derived size/tenure) changes. Each card shows its own trained model's
+     estimate; the property is sized from the real recent transactions. */
   useEffect(() => {
-    if (!data.selectedType || !sel.district) { setApiResult(null); return; }
+    if (!data.selectedType || !sel.district) { setApiResults({}); return; }
     setApiLoading(true); setApiError(null);
     const isStrata = STRATA_TYPES.has(data.selectedType);
+    // Size the property from the real recent transactions; fall back to the
+    // calibrated layer's medians only if the API returned no usable rows.
     const modelLand = isStrata
-      ? (data.medFloor || data.medLand || 1)
-      : (data.medLand || data.medFloor || 1);
-    const modelArea = isStrata ? null : (data.medFloor || null);
-    const payload = {
+      ? (realSizes.area || realSizes.land || data.medFloor || data.medLand || 1)
+      : (realSizes.land || realSizes.area || data.medLand || data.medFloor || 1);
+    const modelArea = isStrata ? null : (realSizes.area || data.medFloor || null);
+    // Tenure from the real recent transactions' freehold share; calibrated fallback.
+    const fhShare = realSizes.fhPct != null ? realSizes.fhPct : data.fhPct;
+    const payloadBase = {
       property_type: data.selectedType,
       district: sel.district,
       mukim: sel.mukim || sel.district,
       scheme: sel.area || sel.mukim || sel.district,
-      tenure: (data.fhPct >= 50 ? 'Freehold' : 'Leasehold'),
+      tenure: (fhShare >= 50 ? 'Freehold' : 'Leasehold'),
       land: Math.max(1, Math.round(modelLand)),
       area: modelArea ? Math.round(modelArea) : null,
     };
     let cancelled = false;
-    window.API.valuationPredict(payload)
-      .then((r) => { if (!cancelled) setApiResult(r); })
-      .catch((e) => { if (!cancelled) setApiError(e.message); })
-      .finally(() => { if (!cancelled) setApiLoading(false); });
+    Promise.all(
+      MODEL_DEFS.map((def) =>
+        window.API.valuationPredict({ ...payloadBase, model: def.key })
+          .then((r) => ({ key: def.key, r }))
+          .catch((e) => ({ key: def.key, err: e.message }))
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const map = {};
+      let firstErr = null;
+      results.forEach(({ key, r, err }) => {
+        if (r) map[key] = r; else if (!firstErr) firstErr = err;
+      });
+      setApiResults(map);
+      if (!Object.keys(map).length && firstErr) setApiError(firstErr);
+    }).finally(() => { if (!cancelled) setApiLoading(false); });
     return () => { cancelled = true; };
-  }, [sel.district, sel.mukim, sel.area, data.selectedType, data.fhPct, data.medLand, data.medFloor]);
+  }, [sel.district, sel.mukim, sel.area, data.selectedType, data.fhPct,
+      data.medLand, data.medFloor, realSizes.land, realSizes.area, realSizes.fhPct]);
 
-  /* Mock model band, then overlay the live RF estimate when ready. */
-  const models = useMemo(() => {
-    const base = valModels(data.baseVal);
-    if (apiResult) {
-      const lo = apiResult.price_low, hi = apiResult.price_high, pt = apiResult.predicted_price;
-      const band = Math.max(0.02, (hi - lo) / (2 * pt));
-      base[1] = {
-        ...base[1],
+  /* Build the three cards from the live predictions. Until a model's result
+     arrives, show a neutral placeholder anchored on the regional median (no
+     fabricated point/confidence — `live` stays false so the card reads "…"). */
+  const models = useMemo(() => MODEL_DEFS.map((def) => {
+    const r = apiResults[def.key];
+    if (r && r.predicted_price) {
+      const pt = r.predicted_price;
+      const band = Math.max(0.02, (r.price_high - r.price_low) / (2 * pt));
+      return {
+        ...def,
         point: pt,
         band,
-        conf: apiResult.confidence === 'high' ? 93 : apiResult.confidence === 'medium' ? 88 : 78,
-        note: 'Live Random Forest — ' +
-          (apiResult.comparables?.length || 0) + ' comparables anchored from NAPIC transactions.',
+        conf: r.confidence === 'high' ? 93 : r.confidence === 'medium' ? 88 : 78,
+        mae: r.val_mape != null ? (r.val_mape * 100).toFixed(1) + '%' : '—',
         live: true,
+        note: def.note + ' ' + (r.comparables?.length || 0) + ' NAPIC comparables anchored.',
       };
     }
-    return base;
-  }, [data.baseVal, apiResult]);
+    return { ...def, point: data.baseVal, band: 0.1, conf: null, mae: '—', live: false };
+  }), [apiResults, data.baseVal]);
   const m = models[modelIdx];
 
   const low = m.point * (1 - m.band);
@@ -304,7 +405,17 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
   const dLow = Math.min(...models.map(x => x.point * (1 - x.band)));
   const dHigh = Math.max(...models.map(x => x.point * (1 + x.band)));
   const pct = (v) => Math.max(0, Math.min(100, ((v - dLow) / (dHigh - dLow)) * 100));
-  const valPerSqm = data.medFloor ? Math.round(m.point / data.medFloor) : null;
+
+  // Region KPIs from REAL NAPIC data (server-side price stats + recent-txn
+  // medians), with the calibrated layer only as an offline fallback. These
+  // replace the synthetic `data.*` figures in the tiles and the "vs median".
+  const regMedian = (priceReal && priceReal.median) || data.median;
+  const regCount = (priceReal && priceReal.count) || realSizes.n || data.count;
+  const regPpsm = realSizes.ppsm != null ? realSizes.ppsm : data.ppsm;
+  const regFloor = realSizes.area != null ? Math.round(realSizes.area) : data.medFloor;
+  const regLand = realSizes.land != null ? Math.round(realSizes.land) : data.medLand;
+  const regFhPct = realSizes.fhPct != null ? realSizes.fhPct : data.fhPct;
+  const valPerSqm = regFloor ? Math.round(m.point / regFloor) : null;
 
   // Average price by property type — real aggregates from the Open Transaction
   // Data (server-computed over all matching rows); calibrated layer is the
@@ -325,7 +436,13 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
   const maxYear = Math.max(...yearAvg.map(y => y.avg), 1);
   const minYear = Math.min(...yearAvg.map(y => y.avg), maxYear);
   const maxVol = Math.max(...yearAvg.map(y => y.n), 1);
-  const trendUp = (data.trendTotal || 0) >= 0;
+
+  // Net price growth across the visible years (first → last) — drives the line
+  // chart's colour, the growth badge, and the "Trend" KPI tile.
+  const yGrowth = (yearAvg.length > 1 && yearAvg[0].avg)
+    ? ((yearAvg[yearAvg.length - 1].avg - yearAvg[0].avg) / yearAvg[0].avg) * 100
+    : 0;
+  const yUp = yGrowth >= 0;
 
   const recentArea = sel.area || sel.mukim || sel.district;
   const recentFamily = STRATA_TYPES.has(sel.propertyType) ? 'non-landed' : 'landed';
@@ -343,7 +460,7 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 2, flexWrap: 'wrap' }}>
           <Display size={21} weight={500}>{sel.area || sel.district}</Display>
           <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
-            {[sel.district, sel.state].filter(Boolean).join(', ')} · {data.count} comparable transactions · NAPIC 2021–2026
+            {[sel.district, sel.state].filter(Boolean).join(', ')} · {regCount.toLocaleString('en-MY')} comparable transactions · NAPIC 2021–2026
           </span>
         </div>
       </div>
@@ -383,16 +500,16 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
                   letterSpacing: '.12em', fontWeight: 600,
                 }}>LIVE</span>
               )}
-              {apiLoading && modelIdx === 1 && (
+              {!m.live && apiLoading && (
                 <span style={{ marginLeft: 8, color: C.muted, fontSize: 9, letterSpacing: '.12em' }}>
                   FETCHING…
                 </span>
               )}
             </Eyebrow>
-            {apiError && modelIdx === 1 && (
+            {apiError && !m.live && (
               <div style={{
                 marginTop: 4, fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.down,
-              }}>API error: {apiError} — showing illustrative estimate.</div>
+              }}>API error: {apiError}</div>
             )}
             <div style={{ marginTop: 8 }}>
               <Mono size={34} color={C.deep}>{formatRM(Math.round(m.point / 1000) * 1000)}</Mono>
@@ -426,16 +543,16 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
               display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }}>Confidence</Eyebrow>
-                <Mono size={15} color={C.up}>{m.conf}%</Mono>
+                <Mono size={15} color={C.up}>{m.conf != null ? m.conf + '%' : '—'}</Mono>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }}>MAE</Eyebrow>
+                <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }} title="Median absolute % error on the 2025 hold-out">MdAPE</Eyebrow>
                 <Mono size={15}>{m.mae}</Mono>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }}>vs median</Eyebrow>
-                <Mono size={15} color={m.point >= data.median ? C.up : C.down}>
-                  {(m.point >= data.median ? '+' : '') + ((m.point / data.median - 1) * 100).toFixed(1)}%
+                <Mono size={15} color={m.point >= regMedian ? C.up : C.down}>
+                  {(m.point >= regMedian ? '+' : '') + ((m.point / regMedian - 1) * 100).toFixed(1)}%
                 </Mono>
               </div>
             </div>
@@ -448,12 +565,12 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
         {/* ===== RIGHT — region data ===== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
           <div className="val-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-            <StatTile label="Median price" value={rmCompact(data.median)} sub={`${data.count} sales`}/>
-            <StatTile label="Median RM/m²" value={data.ppsm ? 'RM ' + data.ppsm.toLocaleString() : '—'} sub="built-up"/>
-            <StatTile label="Median built-up" value={data.medFloor ? data.medFloor + ' m²' : '—'}
-              sub={data.medLand ? data.medLand + ' m² land' : 'strata'}/>
-            <StatTile label="Trend ’21→’26" value={(trendUp ? '+' : '') + (data.trendTotal || 0).toFixed(1) + '%'}
-              accent={trendUp ? C.up : C.down} sub={data.fhPct + '% freehold'}/>
+            <StatTile label="Median price" value={rmCompact(regMedian)} sub={`${regCount.toLocaleString('en-MY')} sales`}/>
+            <StatTile label="Median RM/m²" value={regPpsm ? 'RM ' + regPpsm.toLocaleString() : '—'} sub="built-up"/>
+            <StatTile label="Median built-up" value={regFloor ? regFloor + ' m²' : '—'}
+              sub={regLand ? regLand + ' m² land' : 'strata'}/>
+            <StatTile label="Trend ’21→’26" value={(yUp ? '+' : '') + (yGrowth || 0).toFixed(1) + '%'}
+              accent={yUp ? C.up : C.down} sub={(regFhPct != null ? regFhPct : 0) + '% freehold'}/>
           </div>
 
           {/* recent transactions — real NAPIC Open Transaction Data, scoped to the
@@ -550,16 +667,16 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
             )}
           </Card>
 
-          {/* price + volume trend by year — real yearly avg for the selected type */}
+          {/* price trend by year — taller bar chart (left half) paired with a
+              price-growth line chart (right half). Split so the sparse bars read
+              clearly and the up/down trajectory gets its own panel. */}
           <Card style={{ padding: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
               <Display size={16} weight={500}>Average transacted price by year</Display>
               <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid }}>
                 {yearScope === 'type' && sel.propertyType
-                  ? `${shortType(sel.propertyType)} · bar = avg · ● = volume`
-                  : yearScope === 'area'
-                    ? 'all types · bar = avg · ● = volume'
-                    : 'bar = avg price · ● = volume'}
+                  ? shortType(sel.propertyType)
+                  : yearScope === 'area' ? 'all types' : '2021–2026'}
               </span>
             </div>
             {yearAvg.length === 0 ? (
@@ -567,23 +684,50 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
                 No transaction records found for this selection.
               </div>
             ) : (
-            <div style={{ marginTop: 16, display: 'flex', alignItems: 'flex-end', gap: 14, height: 118 }}>
-              {yearAvg.map(y => {
-                const h = 18 + ((y.avg - minYear) / (maxYear - minYear || 1)) * 74;
-                return (
-                  <div key={y.y} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                    <Mono size={10} color={C.mid}>{rmCompact(y.avg)}</Mono>
-                    <div style={{ width: '100%', maxWidth: 46, height: h, background: `linear-gradient(180deg, ${C.light}, ${C.deep})`,
-                      borderRadius: '5px 5px 0 0', transition: 'height .8s cubic-bezier(.16,1,.3,1)' }}/>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.earth,
-                        opacity: 0.35 + 0.65 * (y.n / maxVol), display: 'inline-block' }}/>
-                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.muted }}>{y.n}</span>
-                    </div>
-                    <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.mid }}>{y.y}</span>
-                  </div>
-                );
-              })}
+            <div style={{ marginTop: 22, display: 'flex', gap: 20, alignItems: 'stretch', flexWrap: 'wrap' }}>
+              {/* left — average price (bars) + volume (dots) */}
+              <div style={{ flex: '1 1 248px', minWidth: 0 }}>
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.muted,
+                  textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12 }}>
+                  bar = avg price · ● = volume
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 186 }}>
+                  {yearAvg.map(y => {
+                    const h = 26 + ((y.avg - minYear) / (maxYear - minYear || 1)) * 120;
+                    return (
+                      <div key={y.y} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                        <Mono size={10} color={C.mid}>{rmCompact(y.avg)}</Mono>
+                        <div style={{ width: '100%', maxWidth: 42, height: h, background: `linear-gradient(180deg, ${C.light}, ${C.deep})`,
+                          borderRadius: '5px 5px 0 0', transition: 'height .8s cubic-bezier(.16,1,.3,1)' }}/>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.earth,
+                            opacity: 0.35 + 0.65 * (y.n / maxVol), display: 'inline-block' }}/>
+                          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.muted }}>{y.n}</span>
+                        </div>
+                        <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.mid }}>{y.y}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* right — price-growth trajectory (line) */}
+              <div style={{ flex: '1 1 248px', minWidth: 0, borderLeft: `1px solid ${C.border}`, paddingLeft: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.muted,
+                    textTransform: 'uppercase', letterSpacing: '.07em' }}>price growth</span>
+                  {yearAvg.length > 1 && (
+                    <span style={{
+                      fontFamily: "'JetBrains Mono',monospace", fontSize: 11.5, fontWeight: 600,
+                      color: yUp ? C.up : C.down, background: (yUp ? C.up : C.down) + '18',
+                      padding: '2px 8px', borderRadius: 9999, whiteSpace: 'nowrap',
+                    }}>{(yUp ? '▲ +' : '▼ ') + yGrowth.toFixed(1) + '%'}</span>
+                  )}
+                </div>
+                <div style={{ height: 186, display: 'flex', alignItems: 'center' }}>
+                  <YearLineChart rows={yearAvg}/>
+                </div>
+              </div>
             </div>
             )}
           </Card>

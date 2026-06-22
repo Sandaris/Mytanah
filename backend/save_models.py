@@ -20,19 +20,57 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 
 ROOT = Path(__file__).parent
 ARTIFACTS = ROOT / "artifacts"
 ARTIFACTS.mkdir(exist_ok=True)
+# Prefer the Parquet (fast) for the new tree/NN models; fall back to the xlsx.
 DATA = ROOT.parent / "processed data" / "Open Transaction Data Cleaned.xlsx"
+DATA_PARQUET = ROOT.parent / "processed data" / "transactions.parquet"
 
 
 CAT_COLS = ["Property Type", "District", "Mukim", "Scheme Name/Area", "Tenure"]
 NUM_COLS = ["Land", "Area", "Area_Applicable"]
 QUANTILE_LO, QUANTILE_HI = 0.1, 0.9  # 80% band (matches the old ±1.28σ width)
+Z80 = 1.2816  # 80% two-sided normal z (sigma-band half-width)
+
+
+def _load_frame() -> pd.DataFrame:
+    """Cleaned transactions with the model's engineered columns, from Parquet
+    (fast) when available else the source xlsx. Mirrors the notebook prep:
+    Area_Applicable flag, NaN fills for Area/Land, drop rows missing the target
+    or any categorical."""
+    src = DATA_PARQUET if DATA_PARQUET.exists() else DATA
+    print(f"[data] loading {src.name}...")
+    df = pd.read_parquet(src) if src.suffix == ".parquet" else pd.read_excel(src)
+    df = df.copy()
+    df["Area_Applicable"] = df["Area"].notna().astype(int)
+    df["Area"] = df["Area"].fillna(0.0)
+    df["Land"] = df["Land"].fillna(df["Land"].median())
+    df = df.dropna(subset=["Price"] + CAT_COLS)
+    for c in CAT_COLS:
+        df[c] = df[c].astype(str)
+    return df
+
+
+def _val_metrics(model, val: pd.DataFrame) -> tuple[float, float, float]:
+    """(log-residual std, R², median abs % error) on the 2025 hold-out, in the
+    model's native log target. MdAPE is reported in RM space so it reads as
+    'half the estimates land within X% of the sale price'."""
+    Xv = val[CAT_COLS + NUM_COLS]
+    yv = np.log1p(val["Price"].astype(float)).values
+    pv = model.predict(Xv)
+    band = float(np.std(yv - pv))
+    r2 = float(1 - np.var(yv - pv) / np.var(yv))
+    ape = np.abs(np.expm1(pv) - np.expm1(yv)) / np.maximum(np.expm1(yv), 1.0)
+    mdape = float(np.median(ape))
+    return band, r2, mdape
 
 
 def _pick_device() -> str:
@@ -82,16 +120,7 @@ def _fit_pipe(device: str, X, y, alpha: float | None = None) -> Pipeline:
 
 
 def train_valuation() -> None:
-    print("[valuation] loading data...")
-    df = pd.read_excel(DATA)
-
-    df = df.copy()
-    df["Area_Applicable"] = df["Area"].notna().astype(int)
-    df["Area"] = df["Area"].fillna(0.0)
-    df["Land"] = df["Land"].fillna(df["Land"].median())
-    df = df.dropna(subset=["Price"] + CAT_COLS)
-    for c in CAT_COLS:
-        df[c] = df[c].astype(str)
+    df = _load_frame()
 
     # Chronological split (matches notebook protocol)
     train = df[df["Year"] < 2025]
@@ -130,6 +159,7 @@ def train_valuation() -> None:
     # calibrated on held-out 2025 data. E is added at predict time in api.py.
     z80 = 1.2816  # 80% two-sided normal z (for the sigma-band comparison)
     conformal = 0.0
+    mdape: float | None = None
     nominal = QUANTILE_HI - QUANTILE_LO
     val = df[df["Year"] == 2025]
     if len(val) > 200:
@@ -139,6 +169,8 @@ def train_valuation() -> None:
         ql, qh = q_lo.predict(Xv), q_hi.predict(Xv)
         band_log_std = float(np.std(yv - pv))
         r2 = 1 - np.var(yv - pv) / np.var(yv)
+        ape = np.abs(np.expm1(pv) - np.expm1(yv)) / np.maximum(np.expm1(yv), 1.0)
+        mdape = float(np.median(ape))
 
         # Honest split: calibrate E on half of 2025, measure coverage on the other.
         rng = np.random.default_rng(42)
@@ -177,11 +209,125 @@ def train_valuation() -> None:
             "quantile_hi": q_hi,
             "quantile_alpha": [QUANTILE_LO, QUANTILE_HI],
             "quantile_conformal": conformal,
+            "val_mape": mdape,
             "name": name,
         },
         art_path,
     )
     print(f"[valuation] saved -> {art_path}")
+
+
+def train_rf() -> None:
+    """Tuned Random Forest valuation head -> artifacts/valuation_rf.joblib.
+
+    Light RandomizedSearch on a subsample (full CV over 400k rows is overkill),
+    then refit the best config on the whole pre-2025 train set. The pipeline's
+    regressor step is named 'rf' so api.py builds the prediction band from the
+    per-tree spread (no separate quantile heads needed)."""
+    df = _load_frame()
+    train = df[df["Year"] < 2025]
+    val = df[df["Year"] == 2025]
+    print(f"[rf] train rows: {len(train):,}")
+    X = train[CAT_COLS + NUM_COLS]
+    y = np.log1p(train["Price"].astype(float))
+
+    sub = train.sample(min(40000, len(train)), random_state=42)
+    Xs, ys = sub[CAT_COLS + NUM_COLS], np.log1p(sub["Price"].astype(float))
+    grid = {
+        "rf__n_estimators": [200, 300, 400],
+        "rf__max_depth": [18, 22, 26],
+        "rf__min_samples_leaf": [2, 4, 8],
+        "rf__max_features": ["sqrt", 0.5, 1.0],
+    }
+    base = Pipeline([("pre", _make_pre()),
+                     ("rf", RandomForestRegressor(n_jobs=-1, random_state=42))])
+    print("[rf] tuning on 40k subsample (12 candidates x 3-fold)...")
+    search = RandomizedSearchCV(
+        base, grid, n_iter=12, cv=3, scoring="neg_mean_absolute_error",
+        random_state=42, n_jobs=1, verbose=1,  # RF already uses all cores
+    )
+    search.fit(Xs, ys)
+    best = {k.replace("rf__", ""): v for k, v in search.best_params_.items()}
+    print(f"[rf] best params: {best}")
+
+    print("[rf] refitting best config on full train...")
+    pipe = Pipeline([("pre", _make_pre()),
+                     ("rf", RandomForestRegressor(n_jobs=-1, random_state=42, **best))])
+    pipe.fit(X, y)
+
+    band_log_std, mdape = 0.20, None
+    if len(val) > 200:
+        band_log_std, r2, mdape = _val_metrics(pipe, val)
+        print(f"[rf] validation R2={r2:.3f}  log-residual std={band_log_std:.3f}  MdAPE={mdape:.1%}")
+
+    cat_categories = {c: sorted(train[c].dropna().unique().tolist()) for c in CAT_COLS}
+    out = ARTIFACTS / "valuation_rf.joblib"
+    joblib.dump(
+        {
+            "model": pipe,
+            "num_cols": NUM_COLS,
+            "cat_cols": CAT_COLS,
+            "cat_categories": cat_categories,
+            "target_log": True,
+            "band_log_std": band_log_std,
+            "val_mape": mdape,
+            "name": "Random Forest (tuned)",
+        },
+        out,
+        compress=3,  # trees compress well -> keep the artifact loadable
+    )
+    print(f"[rf] saved -> {out}")
+
+
+def train_nn() -> None:
+    """Multi-layer perceptron valuation head -> artifacts/valuation_nn.joblib.
+
+    Categoricals are ordinal-coded then standardized alongside the numerics so
+    the MLP trains on a common scale. No quantile heads, so api.py falls back to
+    a ±1.28σ band from the saved log-residual std."""
+    df = _load_frame()
+    train = df[df["Year"] < 2025]
+    val = df[df["Year"] == 2025]
+    print(f"[nn] train rows: {len(train):,}")
+    X = train[CAT_COLS + NUM_COLS]
+    y = np.log1p(train["Price"].astype(float))
+
+    pipe = Pipeline([
+        ("pre", _make_pre()),
+        ("scale", StandardScaler()),
+        ("nn", MLPRegressor(
+            hidden_layer_sizes=(128, 64), activation="relu", solver="adam",
+            alpha=1e-3, batch_size=512, learning_rate_init=1e-3, max_iter=120,
+            early_stopping=True, n_iter_no_change=8, validation_fraction=0.1,
+            random_state=42, verbose=False,
+        )),
+    ])
+    print("[nn] fitting MLP (early stopping)...")
+    pipe.fit(X, y)
+    print(f"[nn] converged in {pipe.named_steps['nn'].n_iter_} iters")
+
+    band_log_std, mdape = 0.20, None
+    if len(val) > 200:
+        band_log_std, r2, mdape = _val_metrics(pipe, val)
+        print(f"[nn] validation R2={r2:.3f}  log-residual std={band_log_std:.3f}  MdAPE={mdape:.1%}")
+
+    cat_categories = {c: sorted(train[c].dropna().unique().tolist()) for c in CAT_COLS}
+    out = ARTIFACTS / "valuation_nn.joblib"
+    joblib.dump(
+        {
+            "model": pipe,
+            "num_cols": NUM_COLS,
+            "cat_cols": CAT_COLS,
+            "cat_categories": cat_categories,
+            "target_log": True,
+            "band_log_std": band_log_std,
+            "val_mape": mdape,
+            "name": "Neural Network",
+        },
+        out,
+        compress=3,
+    )
+    print(f"[nn] saved -> {out}")
 
 
 def train_hcr() -> None:
@@ -237,6 +383,15 @@ def train_hcr() -> None:
 
 
 if __name__ == "__main__":
-    train_valuation()
-    train_hcr()
+    import sys
+
+    targets = sys.argv[1:] or ["valuation", "rf", "nn", "hcr"]
+    if "valuation" in targets:
+        train_valuation()
+    if "rf" in targets:
+        train_rf()
+    if "nn" in targets:
+        train_nn()
+    if "hcr" in targets:
+        train_hcr()
     print("done.")

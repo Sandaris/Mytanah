@@ -736,6 +736,23 @@ def data_query(
             }
             for _, r in yearly.iterrows()
         ]
+        # Average / median price per property type (over all matched rows,
+        # not just the returned page) — drives the "avg price by type" card.
+        by_type = (
+            out.groupby("Property Type")["Price"]
+            .agg(["count", "mean", "median"])
+            .reset_index()
+            .sort_values("mean", ascending=False)
+        )
+        stats["by_type"] = [
+            {
+                "type": str(r["Property Type"]),
+                "count": int(r["count"]),
+                "mean": float(r["mean"]),
+                "median": float(r["median"]),
+            }
+            for _, r in by_type.iterrows()
+        ]
         # Price histogram (10 bins on log scale → readable buckets)
         log_prices = np.log10(prices.clip(lower=1))
         counts, edges = np.histogram(log_prices, bins=10)

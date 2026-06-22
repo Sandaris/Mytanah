@@ -23,7 +23,6 @@ from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 
@@ -279,55 +278,52 @@ def train_rf() -> None:
     print(f"[rf] saved -> {out}")
 
 
-def train_nn() -> None:
-    """Multi-layer perceptron valuation head -> artifacts/valuation_nn.joblib.
+def train_ft() -> None:
+    """FT-Transformer valuation head -> artifacts/valuation_ft.joblib.
 
-    Categoricals are ordinal-coded then standardized alongside the numerics so
-    the MLP trains on a common scale. No quantile heads, so api.py falls back to
-    a ±1.28σ band from the saved log-residual std."""
+    Feature-Tokenizer + Transformer (PyTorch): every categorical and numeric
+    feature becomes a token, a learnable [CLS] token is prepended, and a small
+    Transformer encoder attends across them to predict the standardized
+    log-price. See Model Selection/ftTransformer.ipynb for the architecture and
+    the fairness protocol; the training + serving code lives in ft_transformer.py
+    so the artifact is a portable, torch-lazy wrapper. No quantile heads, so
+    api.py falls back to a ±1.28σ band from the saved log-residual std."""
+    from ft_transformer import fit_ft_transformer
+
     df = _load_frame()
     train = df[df["Year"] < 2025]
     val = df[df["Year"] == 2025]
-    print(f"[nn] train rows: {len(train):,}")
-    X = train[CAT_COLS + NUM_COLS]
-    y = np.log1p(train["Price"].astype(float))
+    print(f"[ft] train rows: {len(train):,}")
 
-    pipe = Pipeline([
-        ("pre", _make_pre()),
-        ("scale", StandardScaler()),
-        ("nn", MLPRegressor(
-            hidden_layer_sizes=(128, 64), activation="relu", solver="adam",
-            alpha=1e-3, batch_size=512, learning_rate_init=1e-3, max_iter=120,
-            early_stopping=True, n_iter_no_change=8, validation_fraction=0.1,
-            random_state=42, verbose=False,
-        )),
-    ])
-    print("[nn] fitting MLP (early stopping)...")
-    pipe.fit(X, y)
-    print(f"[nn] converged in {pipe.named_steps['nn'].n_iter_} iters")
+    # Land/Area are standardized; Area_Applicable stays a raw 0/1 token.
+    std_cols = ["Land", "Area"]
+    print("[ft] training FT-Transformer (early stopping on 2025 val RMSE)...")
+    model = fit_ft_transformer(
+        train, val, cat_cols=CAT_COLS, num_cols=NUM_COLS, std_cols=std_cols,
+    )
 
     band_log_std, mdape = 0.20, None
     if len(val) > 200:
-        band_log_std, r2, mdape = _val_metrics(pipe, val)
-        print(f"[nn] validation R2={r2:.3f}  log-residual std={band_log_std:.3f}  MdAPE={mdape:.1%}")
+        band_log_std, r2, mdape = _val_metrics(model, val)
+        print(f"[ft] validation R2={r2:.3f}  log-residual std={band_log_std:.3f}  MdAPE={mdape:.1%}")
 
     cat_categories = {c: sorted(train[c].dropna().unique().tolist()) for c in CAT_COLS}
-    out = ARTIFACTS / "valuation_nn.joblib"
+    out = ARTIFACTS / "valuation_ft.joblib"
     joblib.dump(
         {
-            "model": pipe,
+            "model": model,
             "num_cols": NUM_COLS,
             "cat_cols": CAT_COLS,
             "cat_categories": cat_categories,
             "target_log": True,
             "band_log_std": band_log_std,
             "val_mape": mdape,
-            "name": "Neural Network",
+            "name": "FT-Transformer",
         },
         out,
         compress=3,
     )
-    print(f"[nn] saved -> {out}")
+    print(f"[ft] saved -> {out}")
 
 
 def train_hcr() -> None:
@@ -385,13 +381,13 @@ def train_hcr() -> None:
 if __name__ == "__main__":
     import sys
 
-    targets = sys.argv[1:] or ["valuation", "rf", "nn", "hcr"]
+    targets = sys.argv[1:] or ["valuation", "rf", "ft", "hcr"]
     if "valuation" in targets:
         train_valuation()
     if "rf" in targets:
         train_rf()
-    if "nn" in targets:
-        train_nn()
+    if "ft" in targets:
+        train_ft()
     if "hcr" in targets:
         train_hcr()
     print("done.")

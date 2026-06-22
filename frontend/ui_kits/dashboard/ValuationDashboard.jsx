@@ -2,7 +2,7 @@
 /* ValuationDashboard.jsx — the Valuation tab's result panel.
    Shown inside the map's bottom sheet once the user has chosen a Scheme/Area.
    Estimates the property's market value (switchable between three real,
-   API-served models — Random Forest, XGBoost, Neural Network) and surfaces the
+   API-served models — Random Forest, XGBoost, FT-Transformer) and surfaces the
    essential market data for the chosen region, mirroring the real NAPIC
    Open Transaction schema: average price by property type, median price,
    price per m² (built-up), median built-up / land area (sq.m), tenure mix,
@@ -177,8 +177,8 @@ const MODEL_DEFS = [
     note: 'Tuned ensemble of decision trees — robust to outliers and non-linear price drivers.' },
   { key: 'xgboost', label: 'XGBoost', short: 'XGBoost',
     note: 'Gradient-boosted trees with conformal prediction bands — the primary AVM model.' },
-  { key: 'nn', label: 'Neural Network', short: 'Neural',
-    note: 'Multi-layer perceptron capturing non-linear feature interactions.' },
+  { key: 'ft', label: 'FT-Transformer', short: 'FT-Tx',
+    note: 'Feature-Tokenizer + Transformer — a tabular deep-learning model that turns every feature into a token and attends across them.' },
 ];
 
 /* ---- small presentational bits --------------------------------------- */
@@ -195,7 +195,7 @@ const StatTile = ({ label, value, sub, accent }) => (
 
 const ValuationDashboard = ({ sel, loading, fullpage }) => {
   const [modelIdx, setModelIdx] = useState(1); // XGBoost default (primary model)
-  const [apiResults, setApiResults] = useState({}); // { rf, xgboost, nn } live predictions
+  const [apiResults, setApiResults] = useState({}); // { rf, xgboost, ft } live predictions
   const [apiError, setApiError]   = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [recentTxns, setRecentTxns] = useState(null);   // real Open Transaction Data rows

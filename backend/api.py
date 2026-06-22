@@ -35,6 +35,12 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+# Registers FTTransformerRegressor so joblib.load can resolve the "ft" artifact's
+# class. Cheap at import time: ft_transformer keeps torch lazy (imported only on
+# the first FT prediction), so this does not pull torch into the API process
+# unless someone actually selects the FT-Transformer model.
+import ft_transformer  # noqa: F401
+
 ROOT = Path(__file__).parent
 ARTIFACTS = ROOT / "artifacts"
 # Prefer the Parquet for faster startup; fall back to the original Excel.
@@ -62,11 +68,13 @@ state: dict[str, Any] = {
 }
 
 # Selectable valuation models -> artifact filenames. "xgboost" is the default
-# and the back-compat artifact; "rf"/"nn" are optional and skipped if missing.
+# and the back-compat artifact; "rf"/"ft" are optional and skipped if missing.
+# The "ft" artifact unpickles ft_transformer.FTTransformerRegressor (imported
+# below so joblib.load can resolve the class; torch stays lazy until predict).
 VALUATION_MODEL_FILES = {
     "xgboost": "valuation_model.joblib",
     "rf": "valuation_rf.joblib",
-    "nn": "valuation_nn.joblib",
+    "ft": "valuation_ft.joblib",
 }
 DEFAULT_MODEL = "xgboost"
 
@@ -177,7 +185,7 @@ class ValuationRequest(BaseModel):
     tenure: str = Field(..., examples=["Freehold"])
     land: float = Field(..., gt=0, description="Plot size in sqft")
     area: float | None = Field(None, ge=0, description="Built-up sqft (optional for high-rise)")
-    model: str = Field("xgboost", description="Which valuation model: xgboost | rf | nn")
+    model: str = Field("xgboost", description="Which valuation model: xgboost | rf | ft")
 
 
 class Comparable(BaseModel):

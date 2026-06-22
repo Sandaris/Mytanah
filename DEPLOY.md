@@ -92,6 +92,20 @@ gcloud compute scp \
      --command="sudo systemctl restart fyp2 && sleep 8 && systemctl status fyp2 --no-pager | head -15"
    ```
 
+   **If `requirements.txt` changed**, install into the venv *before* restarting:
+
+   ```bash
+   gcloud compute ssh kw-property-valuation --zone=asia-southeast1-a \
+     --command="/home/kaiwen_pixalink_io/fyp2/backend/.venv/bin/pip install -r /home/kaiwen_pixalink_io/fyp2/backend/requirements.txt"
+   ```
+
+   The FT-Transformer model needs **CPU torch** (`torch==2.11.0+cpu`, pulled via
+   the `--extra-index-url` line in `requirements.txt`). It's a ~190 MB download
+   that imports lazily — torch only loads into the API process the first time
+   someone selects the FT-Transformer tab, so the other models are unaffected.
+   Watch VM RAM after the first FT request (single-slot model cache still holds,
+   but the torch import itself adds ~200 MB resident).
+
    The `sleep 8` matters: the XGBoost-CUDA model takes a few seconds to load
    on cold start, so an immediate `curl` will fail with `local_health=000`
    even though the service is fine.

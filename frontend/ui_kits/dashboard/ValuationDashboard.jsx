@@ -12,6 +12,8 @@
 const { useState, useMemo, useEffect, useRef } = React;
 
 const STRATA_TYPES = new Set(['Condominium/Apartment', 'Flat', 'Low-Cost Flat', 'Town House']);
+const VAL_AVG_GUARD_MIN_TXNS = 3;
+const VAL_AVG_GUARD_MAX_DELTA = 0.50;
 
 /* ---- stats helpers ---------------------------------------------------- */
 const valMean = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
@@ -35,6 +37,25 @@ const SHORT_TYPE = {
   'Low-Cost Flat': 'Low-Cost Flat', 'Cluster House': 'Cluster House', 'Town House': 'Town House',
 };
 const shortType = (t) => SHORT_TYPE[t] || t;
+const buildAvgGuard = (point, rows, selectedType) => {
+  if (!point) return { blocked: false, avg: null, n: 0, delta: 0, scope: 'none' };
+  const valid = (rows || []).filter((r) => Number(r.Price) > 0);
+  const exact = selectedType ? valid.filter((r) => (r['Property Type'] || '') === selectedType) : [];
+  const use = exact.length >= VAL_AVG_GUARD_MIN_TXNS ? exact : valid;
+  const prices = use.map((r) => Number(r.Price));
+  if (prices.length < VAL_AVG_GUARD_MIN_TXNS) {
+    return { blocked: true, avg: null, n: prices.length, delta: 0, scope: exact.length ? 'type' : 'similar' };
+  }
+  const avg = valMean(prices);
+  const delta = avg ? Math.abs(point - avg) / avg : 0;
+  return {
+    blocked: avg > 0 && delta > VAL_AVG_GUARD_MAX_DELTA,
+    avg,
+    n: prices.length,
+    delta,
+    scope: use === exact ? 'type' : 'similar',
+  };
+};
 
 /* Recent real transactions (NAPIC Open Transaction Data) scoped to the
    selection — rendered as a scrollable table, one row per record. */
@@ -223,6 +244,7 @@ const StatTile = ({ label, value, sub, accent }) => (
 const ValuationDashboard = ({ sel, loading, fullpage }) => {
   const [modelIdx, setModelIdx] = useState(1); // XGBoost default (primary model)
   const [apiResults, setApiResults] = useState({}); // { rf, xgboost, ft } live predictions
+  const [apiSig, setApiSig] = useState(null);
   const [apiError, setApiError]   = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [recentTxns, setRecentTxns] = useState(null);   // real Open Transaction Data rows
@@ -279,6 +301,9 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
     if (!sel.district) { setRecentTxns(null); setRecentScope('exact'); return; }
     let cancelled = false;
     setRecentLoading(true);
+    setRecentTxns(null);
+    setRecentTotal(0);
+    setRecentScope('exact');
     const area = {
       district: sel.district, mukim: sel.mukim, scheme: sel.area,
       sort_by: 'Transaction Date', order: 'desc',
@@ -365,22 +390,15 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
      others when the user switches tabs. Results are cached per search via a
      signature — switching back is instant, and a property/location/size change
      clears the cache and recomputes just the selected model. */
-  const resultsRef = useRef({});
-  const sigRef = useRef(null);
-  useEffect(() => { resultsRef.current = apiResults; }, [apiResults]);
-
-  useEffect(() => {
-    if (!data.selectedType || !sel.district) { setApiResults({}); sigRef.current = null; return; }
+  const payloadBase = useMemo(() => {
+    if (!data.selectedType || !sel.district) return null;
     const isStrata = STRATA_TYPES.has(data.selectedType);
-    // Size the property from the real recent transactions; fall back to the
-    // calibrated layer's medians only if the API returned no usable rows.
     const modelLand = isStrata
       ? (realSizes.area || realSizes.land || data.medFloor || data.medLand || 1)
       : (realSizes.land || realSizes.area || data.medLand || data.medFloor || 1);
     const modelArea = isStrata ? null : (realSizes.area || data.medFloor || null);
-    // Tenure from the real recent transactions' freehold share; calibrated fallback.
     const fhShare = realSizes.fhPct != null ? realSizes.fhPct : data.fhPct;
-    const payloadBase = {
+    return {
       property_type: data.selectedType,
       district: sel.district,
       mukim: sel.mukim || sel.district,
@@ -389,31 +407,52 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
       land: Math.max(1, Math.round(modelLand)),
       area: modelArea ? Math.round(modelArea) : null,
     };
-    const sig = JSON.stringify(payloadBase);
-    const sigChanged = sigRef.current !== sig;
-    if (sigChanged) { sigRef.current = sig; setApiResults({}); }  // new search -> drop stale results
+  }, [sel.district, sel.mukim, sel.area, data.selectedType, data.fhPct,
+      data.medLand, data.medFloor, realSizes.land, realSizes.area, realSizes.fhPct]);
+
+  const payloadSig = useMemo(() => payloadBase ? JSON.stringify(payloadBase) : null, [payloadBase]);
+
+  const resultsRef = useRef({});
+  const sigRef = useRef(null);
+  useEffect(() => { resultsRef.current = apiResults; }, [apiResults]);
+
+  useEffect(() => {
+    if (!payloadBase || !payloadSig) {
+      setApiResults({});
+      setApiSig(null);
+      sigRef.current = null;
+      setApiLoading(false);
+      return;
+    }
+    const sigChanged = sigRef.current !== payloadSig;
+    if (sigChanged) {
+      sigRef.current = payloadSig;
+      setApiResults({});
+      setApiSig(null);
+    }  // new search -> drop stale results
 
     const key = MODEL_DEFS[modelIdx].key;
-    if (!sigChanged && resultsRef.current[key]) { setApiLoading(false); return; }  // cached
+    if (!sigChanged && apiSig === payloadSig && resultsRef.current[key]) { setApiLoading(false); return; }  // cached
 
     setApiLoading(true); setApiError(null);
     let cancelled = false;
     window.API.valuationPredict({ ...payloadBase, model: key })
       .then((r) => {
         if (cancelled) return;
-        setApiResults((prev) => ({ ...(sigChanged ? {} : prev), [key]: r }));
+        setApiResults((prev) => ({ ...(sigRef.current === payloadSig ? prev : {}), [key]: r }));
+        setApiSig(payloadSig);
       })
-      .catch((e) => { if (!cancelled) setApiError(e.message); })
+      .catch((e) => { if (!cancelled) setApiError({ sig: payloadSig, message: e.message }); })
       .finally(() => { if (!cancelled) setApiLoading(false); });
     return () => { cancelled = true; };
-  }, [sel.district, sel.mukim, sel.area, data.selectedType, data.fhPct,
-      data.medLand, data.medFloor, realSizes.land, realSizes.area, realSizes.fhPct, modelIdx]);
+  }, [payloadBase, payloadSig, modelIdx, apiSig]);
 
-  /* Build the three cards from the live predictions. Until a model's result
-     arrives, show a neutral placeholder anchored on the regional median (no
-     fabricated point/confidence — `live` stays false so the card reads "…"). */
+  /* Build the three cards from live predictions only. Missing model results
+     stay non-live so the estimate panel can show loading instead of fallback
+     values while the server is responding. */
+  const validApiResults = apiSig === payloadSig ? apiResults : {};
   const models = useMemo(() => MODEL_DEFS.map((def) => {
-    const r = apiResults[def.key];
+    const r = validApiResults[def.key];
     if (r && r.predicted_price) {
       const pt = r.predicted_price;
       const band = Math.max(0.02, (r.price_high - r.price_low) / (2 * pt));
@@ -428,8 +467,25 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
       };
     }
     return { ...def, point: data.baseVal, band: 0.1, conf: null, mae: '—', live: false };
-  }), [apiResults, data.baseVal]);
+  }), [validApiResults, data.baseVal]);
   const m = models[modelIdx];
+  const hasLiveEstimate = m.live;
+  const activeApiError = apiError && apiError.sig === payloadSig ? apiError.message : null;
+  const avgGuard = useMemo(() => (
+    hasLiveEstimate && !recentLoading
+      ? buildAvgGuard(m.point, recentTxns, sel.propertyType)
+      : { blocked: false, avg: null, n: 0, delta: 0, scope: 'none' }
+  ), [hasLiveEstimate, recentLoading, recentTxns, m.point, sel.propertyType]);
+  const guardChecking = hasLiveEstimate && recentLoading;
+  const avgGuardBlocked = hasLiveEstimate && !recentLoading && avgGuard.blocked;
+  const hasDisplayableEstimate = hasLiveEstimate && !guardChecking && !avgGuardBlocked;
+  const estimateLoading = (!hasLiveEstimate && !activeApiError && (loading || apiLoading || !!payloadSig)) || guardChecking;
+  const estimateUnavailable = (!hasLiveEstimate && !!activeApiError) || avgGuardBlocked;
+  const unavailableMessage = avgGuardBlocked
+    ? (avgGuard.avg
+        ? `Data is not available: model estimate differs by ${(avgGuard.delta * 100).toFixed(0)}% from the recent ${avgGuard.scope === 'type' ? shortType(sel.propertyType) : 'similar-property'} average (${rmCompact(avgGuard.avg)}, ${avgGuard.n} transactions).`
+        : `Data is not available: only ${avgGuard.n} recent comparable transaction${avgGuard.n === 1 ? '' : 's'} found for this selection.`)
+    : `API error: ${activeApiError}`;
 
   const low = m.point * (1 - m.band);
   const high = m.point * (1 + m.band);
@@ -527,28 +583,51 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
           <Card borderTop={C.earth} style={{ padding: 20 }}>
             <Eyebrow>
               Estimated Market Value · {m.label}
-              {m.live && (
+              {hasDisplayableEstimate && (
                 <span style={{
                   marginLeft: 8, padding: '1px 7px', borderRadius: 9999,
                   background: C.up + '22', color: C.up, fontSize: 9,
                   letterSpacing: '.12em', fontWeight: 600,
                 }}>LIVE</span>
               )}
-              {!m.live && apiLoading && (
+              {avgGuardBlocked && (
+                <span style={{
+                  marginLeft: 8, padding: '1px 7px', borderRadius: 9999,
+                  background: C.down + '18', color: C.down, fontSize: 9,
+                  letterSpacing: '.12em', fontWeight: 600,
+                }}>DATA UNAVAILABLE</span>
+              )}
+              {estimateLoading && (
                 <span style={{ marginLeft: 8, color: C.muted, fontSize: 9, letterSpacing: '.12em' }}>
                   FETCHING…
                 </span>
               )}
             </Eyebrow>
-            {apiError && !m.live && (
+            {estimateLoading && (
               <div style={{
-                marginTop: 4, fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.down,
-              }}>API error: {apiError}</div>
+                minHeight: 190, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 10,
+                color: C.mid, textAlign: 'center',
+              }}>
+                <span className="tmap-spin" style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  border: `2px solid ${C.border}`, borderTopColor: C.earth, display: 'inline-block',
+                }}/>
+                <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13 }}>
+                  {guardChecking ? 'Checking recent transaction average...' : 'Loading valuation from server...'}
+                </span>
+              </div>
             )}
-            <div style={{ marginTop: 8 }}>
+            {estimateUnavailable && (
+              <div style={{
+                minHeight: 190, display: 'flex', alignItems: 'center',
+                fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, lineHeight: 1.45, color: C.down,
+              }}>{unavailableMessage}</div>
+            )}
+            <div style={{ marginTop: 8, display: hasDisplayableEstimate ? 'block' : 'none' }}>
               <Mono size={34} color={C.deep}>{formatRM(Math.round(m.point / 1000) * 1000)}</Mono>
             </div>
-            <div style={{ marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ marginTop: 4, display: hasDisplayableEstimate ? 'flex' : 'none', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
                 Likely range {rmCompact(low)} – {rmCompact(high)}
               </span>
@@ -556,7 +635,7 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
             </div>
 
             {/* confidence band across all models */}
-            <div style={{ position: 'relative', height: 46, marginTop: 18 }}>
+            <div style={{ position: 'relative', height: 46, marginTop: 18, display: hasDisplayableEstimate ? 'block' : 'none' }}>
               <div style={{ position: 'absolute', top: 20, left: 0, right: 0, height: 4,
                 background: C.cream, borderRadius: 2, border: `1px solid ${C.border}` }}/>
               <div style={{ position: 'absolute', top: 19, height: 6, borderRadius: 3,
@@ -574,7 +653,7 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
             </div>
 
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.border}`,
-              display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+              display: hasDisplayableEstimate ? 'grid' : 'none', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }}>Confidence</Eyebrow>
                 <Mono size={15} color={C.up}>{m.conf != null ? m.conf + '%' : '—'}</Mono>
@@ -590,7 +669,7 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
                 </Mono>
               </div>
             </div>
-            <div style={{ marginTop: 12, fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid, lineHeight: 1.45, fontStyle: 'italic' }}>
+            <div style={{ marginTop: 12, display: hasDisplayableEstimate ? 'block' : 'none', fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid, lineHeight: 1.45, fontStyle: 'italic' }}>
               {m.note}
             </div>
           </Card>

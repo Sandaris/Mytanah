@@ -165,6 +165,87 @@ const RoiTimelineChart = ({ base, extra, principal }) => {
   );
 };
 
+/* ECharts: cumulative Income (rent + appreciation) vs Debt paid (deposit +
+   installments) over the years. Both rise; where Income overtakes Debt is the
+   break-even — when the investment starts to profit. */
+const RoiEarningsChart = ({ pts, breakEven, breakEvenValue }) => {
+  const elRef = React.useRef(null);
+  const chartRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!window.echarts || !elRef.current) return undefined;
+    const chart = window.echarts.init(elRef.current, null, { renderer: 'canvas' });
+    chartRef.current = chart;
+    const ro = new ResizeObserver(() => chart.resize());
+    ro.observe(elRef.current);
+    const t = setTimeout(() => chart.resize(), 300);
+    return () => { clearTimeout(t); ro.disconnect(); chart.dispose(); chartRef.current = null; };
+  }, []);
+  React.useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !window.echarts || !pts || !pts.length) return;
+    const maxT = pts[pts.length - 1].t;
+    const incomeData = pts.map(p => [p.t, Math.round(p.income)]);
+    const paidData = pts.map(p => [p.t, Math.round(p.paid)]);
+    const incGrad = new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: 'rgba(45,122,79,0.26)' }, { offset: 1, color: 'rgba(45,122,79,0)' },
+    ]);
+    const sign = (v) => (v < 0 ? '−' : '') + rmCompact(Math.abs(v));
+    chart.setOption({
+      animationDuration: 1400,
+      backgroundColor: 'transparent',
+      grid: { left: 8, right: 72, top: 28, bottom: 38, containLabel: true },
+      legend: { top: 0, right: 0, textStyle: { color: C.mid, fontFamily: "'DM Sans',sans-serif", fontSize: 11 }, itemWidth: 18, itemHeight: 10 },
+      tooltip: {
+        trigger: 'axis', backgroundColor: C.deep, borderColor: C.deep, padding: [8, 10],
+        textStyle: { color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 12 },
+        axisPointer: { type: 'line', lineStyle: { color: C.earth, width: 1, type: [3, 4] } },
+        formatter: (ps) => {
+          let s = `<div style="font-family:'JetBrains Mono',monospace;font-size:12px">Year ${Math.round(ps[0].value[0])}</div>`;
+          ps.forEach(p => { s += `<div style="margin-top:2px">${p.seriesName}: <b>${sign(p.value[1])}</b></div>`; });
+          const inc = ps.find(p => /Income/.test(p.seriesName));
+          const dbt = ps.find(p => /Debt/.test(p.seriesName));
+          if (inc && dbt) { const gap = inc.value[1] - dbt.value[1]; s += `<div style="margin-top:3px;color:${gap >= 0 ? '#9ED9B0' : '#E6A6A0'}">${gap >= 0 ? 'Profit' : 'Shortfall'}: <b>${sign(gap)}</b></div>`; }
+          return s;
+        },
+      },
+      xAxis: {
+        type: 'value', min: 0, max: maxT, name: 'years', nameLocation: 'middle', nameGap: 26,
+        nameTextStyle: { color: C.mid, fontFamily: "'DM Sans',sans-serif", fontSize: 11 },
+        axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false },
+        axisLabel: { color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 10 },
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: 'value', min: 0,
+        axisLabel: { color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, formatter: (v) => sign(v) },
+        splitLine: { lineStyle: { color: C.border, type: [2, 5] } },
+      },
+      series: [
+        { name: 'Income', type: 'line', smooth: true, showSymbol: false, data: incomeData,
+          lineStyle: { color: C.up, width: 2.8 }, itemStyle: { color: C.up }, areaStyle: { color: incGrad }, z: 3,
+          emphasis: { focus: 'series' },
+          endLabel: { show: true, distance: 6, formatter: (p) => sign(p.value[1]), color: C.up, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700 },
+          markLine: breakEven != null ? {
+            silent: true, symbol: 'none', lineStyle: { color: C.deep, width: 1.2, type: [4, 4] },
+            label: { show: true, position: 'insideEndTop', color: C.deep, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, formatter: `break-even ${breakEven.toFixed(1)}y` },
+            data: [{ xAxis: breakEven }],
+          } : undefined,
+          markPoint: breakEven != null ? {
+            symbol: 'pin', symbolSize: 44, symbolOffset: [0, -2], itemStyle: { color: C.up },
+            label: { show: true, formatter: `${breakEven.toFixed(1)}y`, color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 10, fontWeight: 700 },
+            data: [{ coord: [breakEven, Math.round(breakEvenValue || 0)] }],
+          } : undefined,
+        },
+        { name: 'Debt paid', type: 'line', smooth: true, showSymbol: false, data: paidData,
+          lineStyle: { color: C.down, width: 2, type: [6, 4] }, itemStyle: { color: C.down }, z: 2,
+          endLabel: { show: true, distance: 6, formatter: (p) => sign(p.value[1]), color: C.down, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700 },
+        },
+      ],
+    }, true);
+  }, [pts, breakEven, breakEvenValue]);
+  return <div ref={elRef} style={{ width: '100%', height: 300 }}/>;
+};
+
 const RoiCalculator = ({ seed }) => {
   const source = seed && Number(seed.propertyPrice) > 0 ? seed : ROI_DEFAULT_SEED;
   const [price, setPrice] = roiUseState(Math.round(source.propertyPrice));
@@ -173,9 +254,14 @@ const RoiCalculator = ({ seed }) => {
   const [annualRate, setAnnualRate] = roiUseState(4.2);
   const [years, setYears] = roiUseState(30);
   const [extraMonthly, setExtraMonthly] = roiUseState(0);
+  const [monthlyRent, setMonthlyRent] = roiUseState(Math.max(0, Math.round(source.propertyPrice * 0.0035)));
+  const [appreciation, setAppreciation] = roiUseState(3.0);
 
   roiUseEffect(() => {
-    if (seed && Number(seed.propertyPrice) > 0) setPrice(Math.round(seed.propertyPrice));
+    if (seed && Number(seed.propertyPrice) > 0) {
+      setPrice(Math.round(seed.propertyPrice));
+      setMonthlyRent(Math.max(0, Math.round(seed.propertyPrice * 0.0035)));
+    }
   }, [seed && seed.propertyPrice]);
 
   const safe = roiUseMemo(() => {
@@ -185,8 +271,10 @@ const RoiCalculator = ({ seed }) => {
     const rate = roiClamp(annualRate, 0, 30);
     const yrs = roiClamp(years, 1, 40);
     const extra = Math.max(0, roiNum(extraMonthly, 0));
-    return { p, dep, loan, rate, yrs, extra };
-  }, [price, depositPct, loanPct, annualRate, years, extraMonthly]);
+    const rent = Math.max(0, roiNum(monthlyRent, 0));
+    const appr = roiClamp(appreciation, -5, 20);
+    return { p, dep, loan, rate, yrs, extra, rent, appr };
+  }, [price, depositPct, loanPct, annualRate, years, extraMonthly, monthlyRent, appreciation]);
 
   const deposit = safe.p * safe.dep / 100;
   const principal = safe.p * safe.loan / 100;
@@ -196,6 +284,39 @@ const RoiCalculator = ({ seed }) => {
   const extraSchedule = roiUseMemo(() => (
     roiBuildSchedule({ principal, annualRate: safe.rate, years: safe.yrs, extraMonthly: safe.extra })
   ), [principal, safe.rate, safe.yrs, safe.extra]);
+
+  // Rental ROI — cumulative profit per year: (rent − installment) cash flow
+  // against the deposit, plus property appreciation. Break-even = first year
+  // the "incl. appreciation" line crosses zero.
+  const roi = roiUseMemo(() => {
+    const M = baseSchedule.monthly;
+    const R = safe.rent;
+    const D = deposit;
+    const g = safe.appr / 100;
+    const yrs = Math.round(safe.yrs);
+    const pts = [];
+    let breakEven = null, breakEvenValue = null, prevDiff = null;
+    for (let t = 0; t <= yrs; t++) {
+      const income = R * 12 * t + safe.p * (Math.pow(1 + g, t) - 1);  // rent + appreciation
+      const paid = D + M * 12 * t;                                    // deposit + installments
+      const diff = income - paid;
+      if (prevDiff !== null && breakEven === null && prevDiff < 0 && diff >= 0) {
+        const frac = diff === prevDiff ? 0 : (-prevDiff) / (diff - prevDiff);
+        breakEven = (t - 1) + frac;
+        breakEvenValue = D + M * 12 * breakEven;
+      }
+      pts.push({ t, income, paid });
+      prevDiff = diff;
+    }
+    const netMonthly = R - M;
+    const grossYield = safe.p ? (R * 12 / safe.p) * 100 : 0;
+    const last = pts.length ? pts[pts.length - 1] : { income: 0, paid: D };
+    const finalProfit = last.income - last.paid;
+    const roiOnDeposit = D ? (finalProfit / D) * 100 : 0;
+    const coverage = M ? (R / M) * 100 : 0;
+    return { pts, breakEven, breakEvenValue, netMonthly, grossYield, finalProfit, roiOnDeposit, installment: M, rent: R, coverage };
+  }, [baseSchedule.monthly, deposit, safe.rent, safe.appr, safe.yrs, safe.p]);
+
   const interestSaved = Math.max(0, baseSchedule.totalInterest - extraSchedule.totalInterest);
   const monthsSaved = Math.max(0, baseSchedule.months - extraSchedule.months);
   const location = source.locationLabel || ROI_DEFAULT_SEED.locationLabel;
@@ -219,7 +340,7 @@ const RoiCalculator = ({ seed }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 18, flexWrap: 'wrap' }}>
         <div>
           <Eyebrow>ROI Calculator</Eyebrow>
-          <Display size={30} weight={500}>Reducing-balance loan planner</Display>
+          <Display size={30} weight={500}>Rental ROI &amp; loan planner</Display>
         </div>
         <div style={{
           padding: '9px 13px', borderRadius: 9999, background: C.deep, color: C.cream,
@@ -258,11 +379,65 @@ const RoiCalculator = ({ seed }) => {
               </div>
               <RoiInput label="Extra monthly payment" value={extraMonthly} min={0} step={100}
                 onChange={(v) => setExtraMonthly(Math.max(0, roiNum(v, 0)))} suffix="RM"/>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <RoiInput label="Monthly rental" value={monthlyRent} min={0} step={50}
+                  onChange={(v) => setMonthlyRent(Math.max(0, roiNum(v, 0)))} suffix="RM"/>
+                <RoiInput label="Appreciation / yr" value={appreciation} min={-5} max={20} step={0.1}
+                  onChange={(v) => setAppreciation(roiClamp(v, -5, 20))} suffix="%"/>
+              </div>
             </div>
           </Card>
         </div>
 
         <div style={{ display: 'grid', gap: 14 }}>
+          {/* income vs debt — the headline A-vs-B comparison */}
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'stretch' }}>
+              <div style={{ flex: 1, padding: '15px 18px', background: 'rgba(45,122,79,0.09)' }}>
+                <Eyebrow style={{ color: C.up }}>Income · monthly rental</Eyebrow>
+                <Mono size={26} color={C.up} style={{ display: 'block', marginTop: 6 }}>{roiFmt(roi.rent)}</Mono>
+                <div style={{ marginTop: 4, fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid }}>what the tenant pays you</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', background: C.cream, fontFamily: "'Cormorant Garamond',serif", fontStyle: 'italic', fontSize: 18, color: C.mid }}>vs</div>
+              <div style={{ flex: 1, padding: '15px 18px', background: 'rgba(166,50,40,0.08)', textAlign: 'right' }}>
+                <Eyebrow style={{ color: C.down }}>Debt · monthly installment</Eyebrow>
+                <Mono size={26} color={C.down} style={{ display: 'block', marginTop: 6 }}>{roiFmt(roi.installment)}</Mono>
+                <div style={{ marginTop: 4, fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid }}>what the bank charges you</div>
+              </div>
+            </div>
+            <div style={{ padding: '10px 18px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
+              <span>Rent covers <b style={{ color: roi.coverage >= 100 ? C.up : C.deep }}>{roi.coverage.toFixed(0)}%</b> of the installment</span>
+              <span style={{ color: roi.netMonthly >= 0 ? C.up : C.down, fontWeight: 600 }}>
+                {roi.netMonthly >= 0 ? `Net +${roiFmt(roi.netMonthly)} / mo in your pocket` : `You top up ${roiFmt(Math.abs(roi.netMonthly))} / mo`}
+              </span>
+            </div>
+          </Card>
+
+          <div className="roi-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            <RoiMetric label="Gross yield" value={`${roi.grossYield.toFixed(1)}%`} sub="annual rent ÷ price"/>
+            <RoiMetric label="Break-even" value={roi.breakEven != null ? `${roi.breakEven.toFixed(1)} yr` : `> ${Math.round(safe.yrs)} yr`}
+              sub={roi.breakEven != null ? 'income overtakes debt' : 'not within tenure'} accent={roi.breakEven != null ? C.deep : C.down}/>
+            <RoiMetric label={`Net profit @ ${Math.round(safe.yrs)}yr`} value={`${roi.finalProfit < 0 ? '−' : ''}${roiFmt(Math.abs(roi.finalProfit))}`}
+              sub={`ROI ${roi.roiOnDeposit >= 0 ? '+' : ''}${roi.roiOnDeposit.toFixed(0)}% on deposit`} accent={roi.finalProfit >= 0 ? C.up : C.down}/>
+          </div>
+
+          <Card style={{ padding: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <Display size={18} weight={500}>Income vs debt over time</Display>
+                <div style={{ marginTop: 4, fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.mid }}>
+                  Total income (rent + appreciation) climbing past total paid (deposit + installments). Where they cross, you start to profit.
+                </div>
+              </div>
+              <Mono size={13} color={roi.breakEven != null ? C.up : C.down}>
+                {roi.breakEven != null ? `~${roi.breakEven.toFixed(1)} yr to profit` : 'no profit in tenure'}
+              </Mono>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <RoiEarningsChart pts={roi.pts} breakEven={roi.breakEven} breakEvenValue={roi.breakEvenValue}/>
+            </div>
+          </Card>
+
           <div className="roi-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
             <RoiMetric label="Deposit amount" value={roiFmt(deposit)} sub={`${safe.dep.toFixed(1)}% upfront`}/>
             <RoiMetric label="Loan principal" value={roiFmt(principal)} sub={`${safe.loan.toFixed(1)}% financed`}/>

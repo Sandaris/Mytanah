@@ -60,16 +60,6 @@ const MKT_TENURE = [
   { value: 139779, name: 'Leasehold' },
 ];
 
-// monthly transaction count by year (Jan…Dec); 0 = not yet reported
-const MKT_HEAT_ROWS = [
-  ['2021', [1225, 1278, 2028, 2369, 2665, 808, 2405, 3365, 4335, 5693, 8108, 15084]],
-  ['2022', [7399, 6580, 10463, 10802, 9349, 11402, 10616, 11597, 10845, 9724, 9843, 9954]],
-  ['2023', [7923, 8496, 10936, 9447, 10788, 10415, 10267, 10548, 9955, 10596, 9690, 9120]],
-  ['2024', [9579, 8309, 9171, 8581, 9784, 8956, 10101, 8916, 6954, 5544, 3036, 751]],
-  ['2025', [4301, 2589, 790, 4766, 2923, 709, 5961, 3134, 624, 5635, 2985, 742]],
-  ['2026', [3456, 1762, 450, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
-];
-
 // average price per state (RM) — every district mapped to its state, all
 // 416,627 rows. [state, mean price, median price, transaction count] — avg desc.
 const STATE_AVG = [
@@ -131,13 +121,18 @@ const MktChart = ({ option, height = 260 }) => {
 // ---- choropleth ↔ bar morph: average price by state (the showpiece) -------
 const StatePriceMorph = () => {
   const elRef = React.useRef(null);
+  const chartRef = React.useRef(null);
+  const optionsRef = React.useRef(null);
+  const [view, setView] = React.useState('map');   // 'map' | 'bar'
+  const [ready, setReady] = React.useState(false);
   React.useEffect(() => {
     if (!window.echarts || !elRef.current) return undefined;
     const chart = window.echarts.init(elRef.current, null, { renderer: 'canvas' });
+    chartRef.current = chart;
     const ro = new ResizeObserver(() => chart.resize());
     ro.observe(elRef.current);
     const t0 = setTimeout(() => chart.resize(), 320);
-    let timer = null, disposed = false;
+    let disposed = false;
 
     const asc = [...STATE_AVG].sort((a, b) => a[1] - b[1]); // ascending → highest at top of the bar list
     const items = asc.map(d => ({ name: d[0], value: d[1] }));
@@ -182,20 +177,48 @@ const StatePriceMorph = () => {
       },
     };
 
+    optionsRef.current = { map: mapOption, bar: barOption };
+
     chart.showLoading({ text: 'Loading map…', textColor: C.mid, color: C.earth, maskColor: 'rgba(255,255,255,0)' });
     fetch('./malaysia-states.geojson').then(r => r.json()).then(geo => {
       if (disposed) return;
       window.echarts.registerMap('malaysia', geo);
       chart.hideLoading();
-      let cur = mapOption;
-      chart.setOption(cur);
+      chart.setOption(mapOption);
       chart.resize();
-      timer = setInterval(() => { cur = (cur === mapOption ? barOption : mapOption); chart.setOption(cur, true); }, 10000);
+      setReady(true);
     }).catch(() => { if (!disposed) chart.hideLoading(); });
 
-    return () => { disposed = true; clearTimeout(t0); if (timer) clearInterval(timer); ro.disconnect(); chart.dispose(); };
+    return () => { disposed = true; clearTimeout(t0); ro.disconnect(); chart.dispose(); chartRef.current = null; };
   }, []);
-  return <div ref={elRef} style={{ width: '100%', height: 470 }}/>;
+
+  // morph between the two views whenever the toggle flips (universalTransition)
+  React.useEffect(() => {
+    if (!ready || !chartRef.current || !optionsRef.current) return;
+    chartRef.current.setOption(view === 'map' ? optionsRef.current.map : optionsRef.current.bar, true);
+  }, [view, ready]);
+
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+        <div style={{
+          display: 'inline-flex', gap: 4, background: C.cream, padding: 4, borderRadius: 9999,
+          border: `1px solid ${C.border}`, boxShadow: '0 3px 12px rgba(44,57,48,.14)',
+        }}>
+          {[['map', 'Map'], ['bar', 'Ranking']].map(([id, label]) => (
+            <button key={id} onClick={() => setView(id)} style={{
+              border: 0, borderRadius: 9999, padding: '6px 20px',
+              background: view === id ? C.deep : 'transparent',
+              color: view === id ? C.cream : C.mid,
+              fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600,
+              cursor: 'pointer', transition: 'all .2s',
+            }}>{label}</button>
+          ))}
+        </div>
+      </div>
+      <div ref={elRef} style={{ width: '100%', height: 430 }}/>
+    </div>
+  );
 };
 
 const Kpi = ({ label, value, sub, accent }) => (
@@ -333,29 +356,6 @@ const MarketOverviewPage = () => {
     };
   }, []);
 
-  const heatOption = React.useMemo(() => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const data = [];
-    MKT_HEAT_ROWS.forEach((r, yi) => r[1].forEach((v, mi) => data.push([mi, yi, v > 0 ? v : '-'])));
-    return {
-      backgroundColor: 'transparent',
-      tooltip: { ...MKT_TT, position: 'top', formatter: (p) => `${months[p.value[0]]} ${MKT_HEAT_ROWS[p.value[1]][0]}<br/><b>${p.value[2] === '-' ? 'not yet reported' : mFmt(p.value[2])}</b>` },
-      grid: { left: 46, right: 18, top: 14, bottom: 62 },
-      xAxis: { type: 'category', data: months, splitArea: { show: true }, axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false }, axisLabel: { ...MKT_AXM } },
-      yAxis: { type: 'category', data: MKT_HEAT_ROWS.map(r => r[0]), splitArea: { show: true }, axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false }, axisLabel: { ...MKT_AXM } },
-      visualMap: {
-        min: 0, max: 15000, calculable: true, orient: 'horizontal', left: 'center', bottom: 6,
-        inRange: { color: [C.cream, C.earthLight, C.earth, C.mid, C.deep] },
-        textStyle: { color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 9 },
-      },
-      series: [{
-        type: 'heatmap', data, label: { show: false },
-        itemStyle: { borderColor: C.cream, borderWidth: 1 },
-        emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(44,57,48,0.4)' } },
-      }],
-    };
-  }, []);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <style>{`
@@ -380,7 +380,7 @@ const MarketOverviewPage = () => {
         <Kpi label="Freehold share" value={`${MKT.freehold}%`} accent={C.up} sub={`Leasehold ${MKT.leasehold}%`}/>
       </div>
 
-      <ChartCard title="Average price by state" note="auto-morphs: map ↔ ranking · drag / scroll to explore the map">
+      <ChartCard title="Average price by state" note="toggle map / ranking · drag / scroll to explore the map">
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 2, marginBottom: 2 }}>
           <span style={{
             fontFamily: "'DM Sans',sans-serif", fontSize: 10.5, fontWeight: 600, letterSpacing: '.08em',
@@ -425,9 +425,6 @@ const MarketOverviewPage = () => {
         <MktChart option={distOption} height={360}/>
       </ChartCard>
 
-      <ChartCard title="Monthly transaction volume" note="year × month · darker = busier">
-        <MktChart option={heatOption} height={300}/>
-      </ChartCard>
     </div>
   );
 };

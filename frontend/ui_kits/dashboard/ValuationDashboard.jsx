@@ -96,72 +96,94 @@ const RecentTxnRow = ({ r, i }) => {
   );
 };
 
-/* Compact SVG line chart of the yearly average price — shows the price-growth
-   trajectory across the years. The stroke turns green when the latest year sits
-   above the first (prices grew) and red when it sits below (prices fell). Sits
-   to the right of the year bar chart in the trend card. */
+/* ECharts line chart of the yearly average price — the price-growth trajectory
+   across the years, in the life-expectancy example's style: a smooth animated
+   draw, an end label with the latest price, and focus-on-hover. Green when the
+   latest year sits above the first (prices grew), red when below. Keeps the
+   YoY % pill labels + year labels, and adds a per-year hover (avg price, volume,
+   YoY %). Sits to the right of the year bar chart in the trend card. */
 const YearLineChart = ({ rows }) => {
-  if (!rows || rows.length === 0) return null;
-  const W = 340, H = 186, padL = 22, padR = 34, padTop = 38, padBot = 32;
-  const n = rows.length;
-  const avgs = rows.map(r => r.avg);
-  const lo = Math.min(...avgs), hi = Math.max(...avgs);
-  const span = hi - lo || 1;
-  const x = (i) => padL + (n === 1 ? (W - padL - padR) / 2 : (i / (n - 1)) * (W - padL - padR));
-  const y = (v) => padTop + (1 - (v - lo) / span) * (H - padTop - padBot);
-  const pts = rows.map((r, i) => [x(i), y(r.avg)]);
-  const up = rows[n - 1].avg >= rows[0].avg;
-  const stroke = up ? C.up : C.down;
-  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-  const area = `${line} L ${pts[n - 1][0].toFixed(1)} ${(H - padBot).toFixed(1)} L ${pts[0][0].toFixed(1)} ${(H - padBot).toFixed(1)} Z`;
-  const gid = 'val-lc-' + (up ? 'up' : 'dn');
-  const segs = rows.slice(1).map((r, i) => {
-    const prev = rows[i];
-    const pct = prev.avg ? ((r.avg - prev.avg) / prev.avg) * 100 : 0;
-    const p0 = pts[i], p1 = pts[i + 1];
-    const labelY = Math.max(16, Math.min(H - padBot - 14, ((p0[1] + p1[1]) / 2) + (pct >= 0 ? -15 : 17)));
-    return {
-      key: prev.y + '-' + r.y,
-      x: (p0[0] + p1[0]) / 2,
-      y: labelY,
-      pct,
-      text: (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%',
-    };
-  });
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'hidden' }}>
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={stroke} stopOpacity="0.20"/>
-          <stop offset="100%" stopColor={stroke} stopOpacity="0"/>
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${gid})`}/>
-      <path d={line} fill="none" stroke={stroke} strokeWidth="2.2"
-        strokeLinejoin="round" strokeLinecap="round" style={{ transition: 'all .8s cubic-bezier(.16,1,.3,1)' }}/>
-      {segs.map(s => {
-        const sw = Math.max(38, s.text.length * 7 + 14);
-        const color = s.pct >= 0 ? C.up : C.down;
-        return (
-          <g key={s.key}>
-            <rect x={s.x - sw / 2} y={s.y - 8.5} width={sw} height="17" rx="8.5"
-              fill={C.raised} stroke={color} strokeOpacity="0.28"/>
-            <text x={s.x} y={s.y + 3.8} textAnchor="middle"
-              fontFamily="'JetBrains Mono',monospace" fontSize="9.5" fontWeight="600" fill={color}>
-              {s.text}
-            </text>
-          </g>
-        );
-      })}
-      {pts.map((p, i) => (
-        <circle key={'c' + i} cx={p[0]} cy={p[1]} r="3.4" fill={C.raised} stroke={stroke} strokeWidth="1.8"/>
-      ))}
-      {rows.map((r, i) => (
-        <text key={'t' + i} x={x(i)} y={H - 8} textAnchor="middle"
-          fontFamily="'DM Sans',sans-serif" fontSize="11" fill={C.mid}>{r.y}</text>
-      ))}
-    </svg>
-  );
+  const elRef = React.useRef(null);
+  const chartRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!window.echarts || !elRef.current) return undefined;
+    const chart = window.echarts.init(elRef.current, null, { renderer: 'canvas' });
+    chartRef.current = chart;
+    const ro = new ResizeObserver(() => chart.resize());
+    ro.observe(elRef.current);
+    const raf = requestAnimationFrame(() => chart.resize());
+    const t = setTimeout(() => chart.resize(), 300);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); ro.disconnect(); chart.dispose(); chartRef.current = null; };
+  }, []);
+  React.useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !window.echarts) return;
+    if (!rows || rows.length === 0) { chart.clear(); return; }
+    const n = rows.length;
+    const up = rows[n - 1].avg >= rows[0].avg;
+    const color = up ? C.up : C.down;
+    const grad = new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: up ? 'rgba(45,122,79,0.22)' : 'rgba(166,50,40,0.22)' },
+      { offset: 1, color: up ? 'rgba(45,122,79,0)' : 'rgba(166,50,40,0)' },
+    ]);
+    const data = rows.map((r, i) => ({
+      value: Math.round(r.avg), year: r.y, n: r.n,
+      pct: i ? ((r.avg - rows[i - 1].avg) / (rows[i - 1].avg || 1)) * 100 : null,
+    }));
+    // colour each YoY % pill by its own direction (green up / red down), like the
+    // old chart; the first year has no prior year, so it shows no pill.
+    data.forEach((d, i) => {
+      if (i === 0) { d.label = { show: false }; return; }
+      const c = d.pct >= 0 ? C.up : C.down;
+      d.label = { color: c, borderColor: c };
+    });
+    chart.setOption({
+      animationDuration: 2000, animationEasing: 'cubicOut',
+      backgroundColor: 'transparent',
+      grid: { left: 6, right: 58, top: 30, bottom: 6, containLabel: true },
+      tooltip: {
+        trigger: 'axis', backgroundColor: C.deep, borderColor: C.deep, padding: [8, 10],
+        textStyle: { color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 12 },
+        axisPointer: { type: 'line', lineStyle: { color: C.earth, width: 1, type: [3, 4] } },
+        formatter: (ps) => {
+          const d = ps[0].data; const p = d.pct;
+          return `<div style="font-family:'JetBrains Mono',monospace;font-size:12px">${d.year}</div>` +
+            `<div style="margin-top:3px">Avg price: <b>${rmCompact(d.value)}</b></div>` +
+            `<div>${d.n} transaction${d.n === 1 ? '' : 's'}</div>` +
+            (p != null ? `<div style="margin-top:3px;color:${p >= 0 ? '#9ED9B0' : '#E6A6A0'}">YoY ${p >= 0 ? '+' : ''}${p.toFixed(1)}%</div>` : '');
+        },
+      },
+      xAxis: {
+        type: 'category', data: rows.map(r => r.y), boundaryGap: false,
+        axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false },
+        axisLabel: { color: C.mid, fontFamily: "'DM Sans',sans-serif", fontSize: 11 },
+      },
+      yAxis: { type: 'value', scale: true, show: false },
+      series: [{
+        type: 'line', name: 'Average price', smooth: true, data,
+        showSymbol: true, symbol: 'circle', symbolSize: 7,
+        lineStyle: { color, width: 2.4 },
+        itemStyle: { color: C.raised, borderColor: color, borderWidth: 2 },
+        areaStyle: { color: grad },
+        emphasis: { focus: 'series' },
+        // YoY % change pills at each point (the old segment labels, preserved)
+        label: {
+          show: true, position: 'top', distance: 7,
+          formatter: (p) => (p.data.pct != null ? (p.data.pct >= 0 ? '+' : '') + p.data.pct.toFixed(1) + '%' : ''),
+          color, fontFamily: "'JetBrains Mono',monospace", fontSize: 9.5, fontWeight: 700,
+          backgroundColor: C.raised, borderColor: color, borderWidth: 1, borderRadius: 8, padding: [2, 5],
+        },
+        // latest average price labelled at the line end (life-expectancy style)
+        endLabel: {
+          show: true, distance: 6,
+          formatter: (p) => rmCompact(p.data.value),
+          color, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700,
+        },
+        labelLayout: { moveOverlap: 'shiftY' },
+      }],
+    }, true);
+  }, [rows]);
+  return <div ref={elRef} style={{ width: '100%', height: 196 }}/>;
 };
 
 /* ---- region aggregation (area-level sample) --------------------------- */

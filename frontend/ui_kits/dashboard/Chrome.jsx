@@ -37,6 +37,15 @@ const Icon = {
       <line x1="14" y1="16" x2="16" y2="16"/>
     </svg>
   ),
+  Bars: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||18} height={p.size||18} fill="none"
+      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="21" x2="21" y2="21"/>
+      <rect x="5" y="11" width="3.4" height="8"/>
+      <rect x="10.3" y="6" width="3.4" height="13"/>
+      <rect x="15.6" y="14" width="3.4" height="5"/>
+    </svg>
+  ),
   HouseMark: () => (
     <svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke={C.earth}
       strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -48,10 +57,9 @@ const Icon = {
 
 const NAV = [
   { id: 'valuation', label: 'Valuation', icon: Icon.Home },
+  { id: 'market', label: 'Market Overview', icon: Icon.Bars },
   { id: 'roi', label: 'ROI Calculator', icon: Icon.Calculator },
   { id: 'sentiment', label: 'Sentiment Index', icon: Icon.Trend },
-  { id: 'risk', label: 'Risk Factor', icon: Icon.Alert },
-  { id: 'txnmap', label: 'Transaction Map', icon: Icon.Map },
 ];
 
 const Sidebar = ({ active, onNav }) => (

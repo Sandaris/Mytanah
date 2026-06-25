@@ -7,12 +7,12 @@ const HCR_LATEST = {
 };
 
 const HCR_INDICATORS = [
-  { key: 'sales_vol_yoy', label: 'Transaction volume YoY', unit: '%', chart: 'bar', values: [{ period: '2023 Q4', value: 10.46 }, { period: '2024 Q1', value: 16.61 }, { period: '2024 Q2', value: -3.20 }, { period: '2024 Q3', value: 2.70 }, { period: '2024 Q4', value: 1.63 }, { period: '2025 Q1', value: -5.61 }, { period: '2025 Q2', value: 3.26 }, { period: '2025 Q3', value: -5.16 }] },
-  { key: 'unsold_co', label: 'Completed unsold units', unit: ' units', chart: 'line', values: [{ period: '2023 Q4', value: 25816.00 }, { period: '2024 Q1', value: 24208.00 }, { period: '2024 Q2', value: 22642.00 }, { period: '2024 Q3', value: 21968.00 }, { period: '2024 Q4', value: 23149.00 }, { period: '2025 Q1', value: 23515.00 }, { period: '2025 Q2', value: 26911.00 }, { period: '2025 Q3', value: 28672.00 }] },
-  { key: 'unsold_uc', label: 'Under-construction unsold units', unit: ' units', chart: 'line', values: [{ period: '2023 Q4', value: 51132.00 }, { period: '2024 Q1', value: 54320.00 }, { period: '2024 Q2', value: 57934.00 }, { period: '2024 Q3', value: 60552.00 }, { period: '2024 Q4', value: 60934.00 }, { period: '2025 Q1', value: 62753.00 }, { period: '2025 Q2', value: 65033.00 }, { period: '2025 Q3', value: 69356.00 }] },
-  { key: 'planned_supply_yoy', label: 'Planned supply YoY', unit: '%', chart: 'bar', values: [{ period: '2023 Q4', value: -4.55 }, { period: '2024 Q1', value: -0.47 }, { period: '2024 Q2', value: 4.39 }, { period: '2024 Q3', value: 6.93 }, { period: '2024 Q4', value: 3.57 }, { period: '2025 Q1', value: -3.20 }, { period: '2025 Q2', value: -20.01 }, { period: '2025 Q3', value: -37.07 }] },
-  { key: 'impaired_ratio', label: 'Property loan impaired ratio', unit: '%', chart: 'line', values: [{ period: '2023 Q4', value: 1.36 }, { period: '2024 Q1', value: 1.34 }, { period: '2024 Q2', value: 1.32 }, { period: '2024 Q3', value: 1.25 }, { period: '2024 Q4', value: 1.20 }, { period: '2025 Q1', value: 1.17 }, { period: '2025 Q2', value: 1.14 }, { period: '2025 Q3', value: 1.12 }] },
-  { key: 'credit_gdp_yoy', label: 'Credit-to-GDP YoY', unit: '%', chart: 'bar', values: [{ period: '2023 Q4', value: 3.24 }, { period: '2024 Q1', value: 3.65 }, { period: '2024 Q2', value: 1.22 }, { period: '2024 Q3', value: -1.21 }, { period: '2024 Q4', value: -1.38 }, { period: '2025 Q1', value: -1.20 }, { period: '2025 Q2', value: 0.25 }, { period: '2025 Q3', value: 1.86 }] },
+  { key: 'sales_vol_yoy', label: 'Transaction volume YoY', desc: 'Number of residential properties sold each quarter, shown as year-on-year (YoY) growth. Represents the housing demand of the period.', unit: '%', chart: 'bar', values: [{ period: '2023 Q4', value: 10.46 }, { period: '2024 Q1', value: 16.61 }, { period: '2024 Q2', value: -3.20 }, { period: '2024 Q3', value: 2.70 }, { period: '2024 Q4', value: 1.63 }, { period: '2025 Q1', value: -5.61 }, { period: '2025 Q2', value: 3.26 }, { period: '2025 Q3', value: -5.16 }] },
+  { key: 'unsold_co', label: 'Completed unsold units', desc: 'Completed but unsold units — the market overhang. A direct indication of excess supply.', unit: ' units', chart: 'line', values: [{ period: '2023 Q4', value: 25816.00 }, { period: '2024 Q1', value: 24208.00 }, { period: '2024 Q2', value: 22642.00 }, { period: '2024 Q3', value: 21968.00 }, { period: '2024 Q4', value: 23149.00 }, { period: '2025 Q1', value: 23515.00 }, { period: '2025 Q2', value: 26911.00 }, { period: '2025 Q3', value: 28672.00 }] },
+  { key: 'unsold_uc', label: 'Under-construction unsold units', desc: 'Unsold units still under construction. Also a supply signal, but milder than overhang — these are still in the midst of being marketed.', unit: ' units', chart: 'line', values: [{ period: '2023 Q4', value: 51132.00 }, { period: '2024 Q1', value: 54320.00 }, { period: '2024 Q2', value: 57934.00 }, { period: '2024 Q3', value: 60552.00 }, { period: '2024 Q4', value: 60934.00 }, { period: '2025 Q1', value: 62753.00 }, { period: '2025 Q2', value: 65033.00 }, { period: '2025 Q3', value: 69356.00 }] },
+  { key: 'planned_supply_yoy', label: 'Planned supply YoY', desc: 'Incoming residential supply approved to enter the market, shown as YoY change. Signals future supply and hence potential downward pressure on future prices.', unit: '%', chart: 'bar', values: [{ period: '2023 Q4', value: -4.55 }, { period: '2024 Q1', value: -0.47 }, { period: '2024 Q2', value: 4.39 }, { period: '2024 Q3', value: 6.93 }, { period: '2024 Q4', value: 3.57 }, { period: '2025 Q1', value: -3.20 }, { period: '2025 Q2', value: -20.01 }, { period: '2025 Q3', value: -37.07 }] },
+  { key: 'impaired_ratio', label: 'Property loan impaired ratio', desc: 'Loans that have missed repayment as a percentage of all outstanding residential loans. Indicates the credit risk of the property market (potential for a housing bubble).', unit: '%', chart: 'line', values: [{ period: '2023 Q4', value: 1.36 }, { period: '2024 Q1', value: 1.34 }, { period: '2024 Q2', value: 1.32 }, { period: '2024 Q3', value: 1.25 }, { period: '2024 Q4', value: 1.20 }, { period: '2025 Q1', value: 1.17 }, { period: '2025 Q2', value: 1.14 }, { period: '2025 Q3', value: 1.12 }] },
+  { key: 'credit_gdp_yoy', label: 'Credit-to-GDP YoY', desc: 'Outstanding household loans relative to annual GDP, shown as quarterly YoY change. A measure of household indebtedness and hence another indication of credit risk.', unit: '%', chart: 'bar', values: [{ period: '2023 Q4', value: 3.24 }, { period: '2024 Q1', value: 3.65 }, { period: '2024 Q2', value: 1.22 }, { period: '2024 Q3', value: -1.21 }, { period: '2024 Q4', value: -1.38 }, { period: '2025 Q1', value: -1.20 }, { period: '2025 Q2', value: 0.25 }, { period: '2025 Q3', value: 1.86 }] },
 ];
 
 const HCR_CYCLE = [
@@ -238,88 +238,127 @@ const RegimePanel = ({ latest }) => {
   );
 };
 
-const CycleComponentChart = () => {
-  const pts = HCR_CYCLE.map(p => ({ ...p, event: hcrEventForYear(p.year) }));
-  const [hover, setHover] = React.useState(null);
-  if (!pts.length) return null;
+// ---- Apache ECharts wrapper (CDN global `echarts`) ------------------------
+// Inits once on mount, re-applies the (memoised) option when it changes, and
+// resizes with its container. Renders nothing useful if echarts didn't load.
+const EChart = ({ option, height = 160 }) => {
+  const elRef = React.useRef(null);
+  const chartRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!window.echarts || !elRef.current) return undefined;
+    const chart = window.echarts.init(elRef.current, null, { renderer: 'canvas' });
+    chartRef.current = chart;
+    const ro = new ResizeObserver(() => chart.resize());
+    ro.observe(elRef.current);
+    return () => { ro.disconnect(); chart.dispose(); chartRef.current = null; };
+  }, []);
+  React.useEffect(() => {
+    if (chartRef.current && option) chartRef.current.setOption(option, true);
+  }, [option]);
+  return <div ref={elRef} style={{ width: '100%', height }}/>;
+};
 
-  const W = 980, H = 330, xL = 56, xR = W - 24, yT = 28, yB = H - 42;
-  const minYear = 1988, maxYear = 2026;
-  const minC = Math.min(...pts.map(p => p.cyc), -14);
-  const maxC = Math.max(...pts.map(p => p.cyc), 16);
-  const sx = (year) => xL + ((year - minYear) / (maxYear - minYear)) * (xR - xL);
-  const sy = (cyc) => yB - ((cyc - minC) / (maxC - minC)) * (yB - yT);
-  const zero = sy(0);
-  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${sx(p.year).toFixed(1)} ${sy(p.cyc).toFixed(1)}`).join(' ');
-  const fill = `M${sx(pts[0].year).toFixed(1)} ${zero.toFixed(1)} ${pts.map(p => `L${sx(p.year).toFixed(1)} ${sy(p.cyc).toFixed(1)}`).join(' ')} L${sx(pts[pts.length - 1].year).toFixed(1)} ${zero.toFixed(1)} Z`;
-  const nearest = (clientX, rect) => {
-    const svgX = ((clientX - rect.left) / rect.width) * W;
-    return pts.reduce((best, p) => Math.abs(sx(p.year) - svgX) < Math.abs(sx(best.year) - svgX) ? p : best, pts[0]);
+// vertical fade for area fills
+const _grad = (top, bot) => new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+  { offset: 0, color: top }, { offset: 1, color: bot },
+]);
+
+const CycleComponentChart = () => {
+  // map an HP-period boundary (fractional year) to the nearest quarter label
+  const periodAtYear = (yr) => {
+    let best = HCR_CYCLE[0];
+    for (const p of HCR_CYCLE) if (Math.abs(p.year - yr) < Math.abs(best.year - yr)) best = p;
+    return best.period;
   };
+  const option = React.useMemo(() => ({
+    backgroundColor: 'transparent',
+    grid: { left: 52, right: 22, top: 22, bottom: 78 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: C.deep,
+      borderColor: C.deep,
+      padding: [10, 12],
+      textStyle: { color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 12 },
+      axisPointer: { type: 'line', lineStyle: { color: C.earth, width: 1.1, type: [3, 4] } },
+      // same description the old SVG tooltip showed: quarter, cycle value,
+      // above/below-trend reading, and the historical event for that year.
+      formatter: (ps) => {
+        const p = ps.find(x => x.seriesName === 'cycle') || ps[0];
+        const v = +p.data;
+        const period = p.axisValue;
+        const yy = parseInt(period, 10);
+        const q = parseInt(period.split('Q')[1], 10) || 1;
+        const ev = hcrEventForYear(yy + (q - 1) * 0.25);
+        const above = v >= 0;
+        return (
+          `<div style="font-family:'JetBrains Mono',monospace;font-size:12px">${period}</div>` +
+          `<div style="margin-top:4px">Cycle: <b>${above ? '+' : ''}${v.toFixed(2)}k</b></div>` +
+          `<div>${above ? 'Above trend / upward pressure' : 'Below trend / low-price pressure'}</div>` +
+          (ev ? `<div style="margin-top:5px;color:${C.earthLight}">${ev}</div>` : '')
+        );
+      },
+    },
+    // sign colouring (green above / red below) is done with two zero-anchored
+    // area series below — visualMap clashes with markLine/markArea in echarts 5.
+    xAxis: {
+      type: 'category',
+      data: HCR_CYCLE.map(p => p.period),
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: C.border } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 10,
+        interval: (i, v) => v.endsWith('Q1') && parseInt(v, 10) % 5 === 0,
+        formatter: (v) => v.split(' ')[0],
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 10,
+        formatter: (v) => (v > 0 ? '+' : '') + v,
+      },
+      splitLine: { lineStyle: { color: C.border, type: [2, 5] } },
+    },
+    dataZoom: [
+      { type: 'slider', bottom: 18, height: 22, borderColor: 'transparent',
+        backgroundColor: 'rgba(200,195,184,0.16)', fillerColor: 'rgba(162,123,92,0.16)',
+        dataBackground: { lineStyle: { color: C.border }, areaStyle: { color: 'rgba(162,123,92,0.10)' } },
+        selectedDataBackground: { lineStyle: { color: C.earth }, areaStyle: { color: 'rgba(162,123,92,0.20)' } },
+        handleStyle: { color: C.cream, borderColor: C.earth },
+        moveHandleStyle: { color: C.earth },
+        textStyle: { color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 9 } },
+    ],
+    series: [
+      // green fill above the zero line
+      { name: 'pos', type: 'line', silent: true, showSymbol: false, z: 1,
+        data: HCR_CYCLE.map(p => (p.cyc >= 0 ? +p.cyc.toFixed(2) : 0)),
+        lineStyle: { width: 0 }, areaStyle: { color: 'rgba(45,122,79,0.22)', origin: 0 } },
+      // red fill below the zero line
+      { name: 'neg', type: 'line', silent: true, showSymbol: false, z: 1,
+        data: HCR_CYCLE.map(p => (p.cyc <= 0 ? +p.cyc.toFixed(2) : 0)),
+        lineStyle: { width: 0 }, areaStyle: { color: 'rgba(166,50,40,0.20)', origin: 0 } },
+      // the cyclical line itself + zero line + historical-context bands
+      { name: 'cycle', type: 'line', showSymbol: false, symbol: 'circle', symbolSize: 7, z: 3,
+        data: HCR_CYCLE.map(p => +p.cyc.toFixed(2)),
+        lineStyle: { color: C.deep, width: 1.8 }, emphasis: { focus: 'series', scale: 1.4 },
+        markLine: { silent: true, symbol: 'none', label: { show: false },
+          lineStyle: { color: C.deep, width: 1.2 }, data: [{ yAxis: 0 }] },
+        markArea: { silent: true, itemStyle: { color: C.earth, opacity: 0.07 },
+          data: HCR_PERIODS.map(e => [{ xAxis: periodAtYear(e.from) }, { xAxis: periodAtYear(e.to) }]) },
+      },
+    ],
+  }), []);
 
   return (
     <Card style={{ padding: 22 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
         <Display size={22} weight={500}>HP-filter cyclical component</Display>
         <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.mid }}>
-          Mean price minus HP trend, RM '000
+          Mean price minus HP trend, RM '000 · drag the slider to zoom
         </span>
       </div>
-      <div style={{ position: 'relative', marginTop: 14 }}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }}
-          onMouseLeave={() => setHover(null)}
-          onMouseMove={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const p = nearest(e.clientX, rect);
-            setHover({ p, left: (sx(p.year) / W) * 100, x: sx(p.year), y: sy(p.cyc) });
-          }}>
-          <defs>
-            <clipPath id="hcr-cycle-up"><rect x={xL} y={yT} width={xR - xL} height={zero - yT}/></clipPath>
-            <clipPath id="hcr-cycle-down"><rect x={xL} y={zero} width={xR - xL} height={yB - zero}/></clipPath>
-          </defs>
-          {HCR_PERIODS.map(e => (
-            <rect key={e.label} x={sx(e.from)} y={yT} width={Math.max(1, sx(e.to) - sx(e.from))}
-              height={yB - yT} fill={C.earth} opacity="0.07"/>
-          ))}
-          {[-10, -5, 0, 5, 10, 15].map(v => (
-            <g key={v}>
-              <line x1={xL} x2={xR} y1={sy(v)} y2={sy(v)}
-                stroke={v === 0 ? C.deep : C.border} strokeWidth={v === 0 ? 1.2 : 1} strokeDasharray={v === 0 ? '' : '2 5'}/>
-              <text x={xL - 8} y={sy(v) + 3} textAnchor="end"
-                fontFamily="'JetBrains Mono',monospace" fontSize="10" fill={C.mid}>{v > 0 ? '+' : ''}{v}</text>
-            </g>
-          ))}
-          <path d={fill} fill={C.up} opacity="0.28" clipPath="url(#hcr-cycle-up)"/>
-          <path d={fill} fill={C.down} opacity="0.24" clipPath="url(#hcr-cycle-down)"/>
-          <path d={line} fill="none" stroke={C.deep} strokeWidth="1.8" strokeLinejoin="round"/>
-          {[1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025].map(y => (
-            <g key={y}>
-              <line x1={sx(y)} x2={sx(y)} y1={yB} y2={yB + 5} stroke={C.mid}/>
-              <text x={sx(y)} y={H - 14} textAnchor="middle" fontFamily="'JetBrains Mono',monospace" fontSize="10" fill={C.mid}>{y}</text>
-            </g>
-          ))}
-          {hover && (
-            <g>
-              <line x1={hover.x} x2={hover.x} y1={yT} y2={yB} stroke={C.earth} strokeWidth="1.1" strokeDasharray="3 4"/>
-              <circle cx={hover.x} cy={hover.y} r="4.4" fill={hover.p.cyc >= 0 ? C.up : C.down}
-                stroke={C.raised} strokeWidth="2"/>
-            </g>
-          )}
-        </svg>
-        {hover && (
-          <div style={{
-            position: 'absolute', left: `min(calc(${hover.left}% + 8px), calc(100% - 250px))`, top: 16,
-            width: 242, padding: '10px 12px', borderRadius: 8, background: C.deep, color: C.cream,
-            fontFamily: "'DM Sans',sans-serif", fontSize: 12, lineHeight: 1.42,
-            boxShadow: '0 16px 40px rgba(20,28,22,.28)', pointerEvents: 'none',
-          }}>
-            <Mono size={12} color={C.cream}>{hcrQuarter(hover.p)}</Mono>
-            <div style={{ marginTop: 4 }}>Cycle: <b>{hover.p.cyc >= 0 ? '+' : ''}{hover.p.cyc.toFixed(2)}k</b></div>
-            <div>{hover.p.cyc >= 0 ? 'Above trend / upward pressure' : 'Below trend / low-price pressure'}</div>
-            {hover.p.event && <div style={{ marginTop: 5, color: C.earthLight }}>{hover.p.event}</div>}
-          </div>
-        )}
-      </div>
+      <EChart option={option} height={360}/>
     </Card>
   );
 };
@@ -331,14 +370,61 @@ const IndicatorChart = ({ ind }) => {
   const up = latest.value >= prev.value;
   const accent = up ? C.down : C.up;
   const base = C.earth;
-  const W = 330, H = 138, xL = 18, xR = W - 18, yT = 16, yB = H - 28;
-  const lo = Math.min(...vals.map(v => v.value), 0);
-  const hi = Math.max(...vals.map(v => v.value), 0);
-  const span = hi - lo || 1;
-  const sx = (i) => xL + (i / Math.max(1, vals.length - 1)) * (xR - xL);
-  const sy = (v) => yB - ((v - lo) / span) * (yB - yT);
-  const zero = sy(0);
-  const line = vals.map((v, i) => `${i ? 'L' : 'M'}${sx(i).toFixed(1)} ${sy(v.value).toFixed(1)}`).join(' ');
+
+  const option = React.useMemo(() => {
+    const periods = vals.map(v => v.period);
+    const data = vals.map(v => +v.value);
+    const lastIdx = vals.length - 1;
+    const common = {
+      backgroundColor: 'transparent',
+      grid: { left: 8, right: 12, top: 16, bottom: 22 },
+      tooltip: {
+        trigger: 'axis', backgroundColor: C.deep, borderColor: C.deep, padding: [8, 10],
+        textStyle: { color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 12 },
+        axisPointer: {
+          type: ind.chart === 'bar' ? 'shadow' : 'line',
+          lineStyle: { color: C.earth, width: 1, type: [3, 4] },
+          shadowStyle: { color: 'rgba(162,123,92,0.10)' },
+        },
+        formatter: (ps) => {
+          const p = ps[0];
+          return `<div style="font-family:'JetBrains Mono',monospace;font-size:11px">${p.axisValue}</div>` +
+            `<div style="margin-top:2px">${ind.label}: <b>${hcrNum(+p.data, ind.unit)}</b></div>`;
+        },
+      },
+      xAxis: {
+        type: 'category', data: periods, boundaryGap: ind.chart === 'bar',
+        axisLine: { show: false }, axisTick: { show: false },
+        axisLabel: {
+          color: C.muted, fontFamily: "'JetBrains Mono',monospace", fontSize: 9,
+          interval: (i) => i === 0 || i === lastIdx, formatter: (v) => v,
+        },
+      },
+      yAxis: { type: 'value', show: false, scale: true },
+    };
+    if (ind.chart === 'bar') {
+      return { ...common, series: [{
+        type: 'bar', data, barWidth: '56%',
+        itemStyle: {
+          borderRadius: [4, 4, 0, 0],
+          color: (p) => (p.dataIndex === lastIdx ? accent : 'rgba(162,123,92,0.5)'),
+        },
+        markLine: { silent: true, symbol: 'none', label: { show: false },
+          lineStyle: { color: C.border, width: 1 }, data: [{ yAxis: 0 }] },
+      }] };
+    }
+    return { ...common, series: [{
+      type: 'line', data, smooth: true, showSymbol: false, symbol: 'circle',
+      lineStyle: { color: base, width: 2 },
+      areaStyle: { color: _grad('rgba(162,123,92,0.30)', 'rgba(162,123,92,0.02)') },
+      emphasis: { focus: 'series' },
+      markLine: { silent: true, symbol: 'none', label: { show: false },
+        lineStyle: { color: C.border, width: 1 }, data: [{ yAxis: 0 }] },
+      // glow the latest point: red for an uptrend, green for a downtrend
+      markPoint: { symbol: 'circle', symbolSize: 9, silent: true, label: { show: false },
+        data: [{ coord: [lastIdx, latest.value], itemStyle: { color: accent } }] },
+    }] };
+  }, [ind, accent]);
 
   return (
     <Card style={{ padding: 16 }}>
@@ -349,41 +435,15 @@ const IndicatorChart = ({ ind }) => {
         </div>
         <Mono size={13} color={accent}>{hcrNum(latest.value, ind.unit)}</Mono>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', marginTop: 10, overflow: 'visible' }}>
-        <defs>
-          <filter id={`glow-${ind.key}`} x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="3" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-        <line x1={xL} x2={xR} y1={zero} y2={zero} stroke={C.border} strokeWidth="1"/>
-        {ind.chart === 'bar' ? vals.map((v, i) => {
-          const latestBar = i === vals.length - 1;
-          const y0 = sy(Math.max(v.value, 0)), y1 = sy(Math.min(v.value, 0));
-          const h = Math.max(2, Math.abs(y1 - y0));
-          return (
-            <rect key={v.period} x={sx(i) - 9} y={Math.min(y0, y1)} width="18" height={h} rx="4"
-              fill={latestBar ? accent : base} opacity={latestBar ? 1 : 0.48}
-              filter={latestBar ? `url(#glow-${ind.key})` : ''}/>
-          );
-        }) : (
-          <>
-            <path d={line} fill="none" stroke={base} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" opacity="0.72"/>
-            {vals.map((v, i) => {
-              const latestDot = i === vals.length - 1;
-              return <circle key={v.period} cx={sx(i)} cy={sy(v.value)} r={latestDot ? 4.4 : 2.7}
-                fill={latestDot ? accent : C.raised} stroke={latestDot ? accent : base} strokeWidth="1.7"
-                filter={latestDot ? `url(#glow-${ind.key})` : ''}/>;
-            })}
-          </>
-        )}
-        <text x={xL} y={H - 7} fontFamily="'JetBrains Mono',monospace" fontSize="9.5" fill={C.muted}>{vals[0].period}</text>
-        <text x={xR} y={H - 7} textAnchor="end" fontFamily="'JetBrains Mono',monospace" fontSize="9.5" fill={C.muted}>{latest.period}</text>
-        <text x={xR - 4} y={Math.max(10, sy(latest.value) - 8)} textAnchor="end"
-          fontFamily="'JetBrains Mono',monospace" fontSize="10.5" fontWeight="700" fill={accent}>
-          {hcrNum(latest.value, ind.unit)}
-        </text>
-      </svg>
+      <EChart option={option} height={124}/>
+      {ind.desc && (
+        <div style={{
+          marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`,
+          fontFamily: "'DM Sans',sans-serif", fontSize: 12, lineHeight: 1.5, color: C.mid,
+        }}>
+          {ind.desc}
+        </div>
+      )}
     </Card>
   );
 };

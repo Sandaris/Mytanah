@@ -24,6 +24,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/d3@7.8.5/dist/d3.min.js"></script>
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://unpkg.com/echarts@5.5.1/dist/echarts.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -33,8 +34,7 @@
 <script type="text/babel" src="Chrome.jsx"></script>
 <script type="text/babel" src="Intro.jsx"></script>
 <script type="text/babel" src="SentimentPage.jsx"></script>
-<script type="text/babel" src="RiskPage.jsx"></script>
-<script type="text/babel" src="CyclicalData.jsx"></script>
+<script type="text/babel" src="MarketOverviewPage.jsx"></script><script type="text/babel" src="CyclicalData.jsx"></script>
 <script type="text/babel" src="CyclicalChart.jsx"></script>
 <script type="text/babel" src="MalaysiaGeo.jsx"></script>
 <script type="text/babel" src="PropertyMapData.jsx"></script>
@@ -51,10 +51,9 @@ const { useState } = React;
 
 const TITLES = {
   valuation: 'Valuation',
+  market: 'Property Market Overview',
   roi: 'ROI Calculator',
   sentiment: 'Sentiment Index',
-  risk: 'Risk Factor',
-  txnmap: 'Malaysia Property Transaction Map',
 };
 
 const App = () => {
@@ -73,7 +72,7 @@ const App = () => {
   // wipe) covers the first frame, then dissolves as the map scales into place.
   const [firstReveal, setFirstReveal] = useState(!skip);
   // Pages that render the full-bleed Malaysia map experience (no padding, fixed height).
-  const isMapPage = page === 'txnmap' || page === 'valuation';
+  const isMapPage = page === 'valuation';
 
   if (!introDone) {
     return <Intro onDone={() => setIntroDone(true)}/>;
@@ -115,10 +114,9 @@ const App = () => {
           height: isMapPage ? '100%' : 'auto',
         }}>
           {page === 'valuation' && <TransactionMapPage onEngage={engage} navOpen={navOpen} variant="valuation" onExportRoi={exportToRoi}/>}
+          {page === 'market' && <MarketOverviewPage/>}
           {page === 'roi' && <RoiCalculator seed={roiSeed}/>}
           {page === 'sentiment' && <SentimentPage/>}
-          {page === 'risk' && <RiskPage/>}
-          {page === 'txnmap' && <TransactionMapPage onEngage={engage} navOpen={navOpen}/>}
         </div>
       </main>
 

@@ -22,7 +22,7 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/d3@7.8.5/dist/d3.min.js"></script>
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 </head>
 <body>
@@ -71,7 +71,7 @@ const App = () => {
   const [roiSeed, setRoiSeed] = useState(null);
   // Cinematic hand-off from the intro: a cream curtain (matching the intro's
   // wipe) covers the first frame, then dissolves as the map scales into place.
-  const [firstReveal, setFirstReveal] = useState(false);
+  const [firstReveal, setFirstReveal] = useState(!skip);
   // Pages that render the full-bleed Malaysia map experience (no padding, fixed height).
   const isMapPage = page === 'txnmap' || page === 'valuation';
 

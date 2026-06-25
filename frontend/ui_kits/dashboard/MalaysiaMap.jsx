@@ -563,43 +563,28 @@ const MalaysiaMap = ({
     <div ref={wrapRef} style={{
       position: 'relative', width: '100%', height: '100%',
       cursor: dragRef.current ? 'grabbing' : 'grab', touchAction: 'none',
-      backgroundColor: C.raised,
-      // Static image stays as the ultimate fallback (e.g. if the video can't
-      // load or autoplay). The looping <video> below paints over it.
-      backgroundImage: selectedState ? 'none' : 'url(./water-bg.png)',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
+      backgroundColor: C.cream,
+      // Line-art ground that echoes the intro globe: a soft parchment light pool
+      // overlaid with a faint forest-line graticule (lat/lng grid), so the
+      // location map continues the globe's wireframe aesthetic — no sea.
+      backgroundImage: [
+        `linear-gradient(to right, ${C.deep}12 1px, transparent 1px)`,
+        `linear-gradient(to bottom, ${C.deep}12 1px, transparent 1px)`,
+        `radial-gradient(120% 90% at 50% 44%, ${C.raised} 0%, rgba(237,233,225,0) 60%)`,
+      ].join(', '),
+      backgroundSize: '64px 64px, 64px 64px, 100% 100%',
+      backgroundPosition: 'center, center, center',
     }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onMouseLeave={() => { setHoverState(null); setHoverDistrict(null); setTip(null); endDrag(); }}>
-      {/* Looping water backdrop — only at the zoomed-out country view, mirroring
-          the static water image it replaces. Muted + playsInline so it autoplays
-          everywhere; poster shows the still frame until the video is ready. */}
-      {!selectedState && (
-        <video autoPlay loop muted playsInline poster="./water-bg.png"
-          style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'cover', zIndex: 0, pointerEvents: 'none',
-          }}>
-          <source src="./water-bg.mp4" type="video/mp4"/>
-        </video>
-      )}
+      {/* No sea — the location map is pure line-art on parchment, continuing the
+          intro globe's wireframe look. The faint graticule lives on the wrapper. */}
       <svg ref={svgRef} viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} width="100%" height="100%"
         style={{ display: 'block', background: 'transparent', position: 'relative' }}
         preserveAspectRatio="xMidYMid meet">
-        <defs>
-          {/* light glow + depth shadow so the landmass protrudes above the sea */}
-          <filter id="landShadow" x="-25%" y="-25%" width="150%" height="150%">
-            <feDropShadow dx="0" dy="0" stdDeviation={5 * strokeW}
-              floodColor="#FFFFFF" floodOpacity="0.6"/>
-            <feDropShadow dx="0" dy={2.5 * strokeW} stdDeviation={3.5 * strokeW}
-              floodColor="#2C3930" floodOpacity="0.25"/>
-          </filter>
-        </defs>
-        <g filter={selectedState ? undefined : 'url(#landShadow)'}>
+        <g>
         {geo.states.map(st => {
           const isSel = st.name === selectedState;
           const isHov = st.name === hoverState;
@@ -611,14 +596,16 @@ const MalaysiaMap = ({
                 const distHov = isSel && d.name === hoverDistrict;
                 let fill, stroke;
                 if (isSel) {
-                  // state view — districts are the units
-                  fill = distSel ? C.deep : distHov ? C.earth : C.earthLight;
-                  stroke = C.cream;
+                  // state view — districts as line-art; the picked or hovered
+                  // one gets a faint warm wash, the rest stay open parchment.
+                  fill = distSel || distHov ? C.earthFaint : C.cream;
+                  stroke = distSel || distHov ? C.earth : C.mid;
                 } else if (dim) {
-                  fill = C.muted; stroke = C.cream;
+                  // other states while one is selected — faint outlines only
+                  fill = C.cream; stroke = C.border;
                 } else {
-                  // country view — whole state reads as one shape
-                  fill = isHov ? C.earth : C.light;
+                  // country view — each state is a line-art outline on parchment
+                  fill = isHov ? C.earthFaint : C.cream;
                   stroke = isHov ? C.earth : C.mid;
                 }
                 return (
@@ -626,10 +613,10 @@ const MalaysiaMap = ({
                     data-state={st.name} data-district={d.name}
                     fill={fill}
                     stroke={stroke}
-                    strokeWidth={(isSel ? 1.1 : 0.6) * strokeW}
+                    strokeWidth={(isSel ? (distSel || distHov ? 1.4 : 1.0) : (isHov ? 1.4 : 0.9)) * strokeW}
                     strokeLinejoin="round"
                     opacity={dim ? 0.45 : 1}
-                    style={{ cursor: 'pointer', transition: 'fill .18s' }}
+                    style={{ cursor: 'pointer', transition: 'fill .18s, stroke .18s, stroke-width .18s' }}
                     onMouseEnter={(e) => {
                       if (isSel) { setHoverDistrict(d.name); move(e, d.name); }
                       else { setHoverState(st.name); move(e, st.name); }

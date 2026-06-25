@@ -82,7 +82,7 @@ const StepSelect = ({ label, value, placeholder, options, onChange, disabled, lo
 );
 
 /* ---- main page -------------------------------------------------------- */
-const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
+const TransactionMapPage = ({ onEngage, navOpen, variant, onExportRoi }) => {
   const isVal = variant === 'valuation'; // Valuation tab swaps the table for the AVM dashboard
   const [geo, setGeo] = useState(null);
   const [geoErr, setGeoErr] = useState(false);
@@ -637,9 +637,10 @@ const TransactionMapPage = ({ onEngage, navOpen, variant }) => {
                     clearAll={() => { selectState(''); setSheetMax(false); setPanelOpen(true); }}
                     load={load} txns={txns} filtered={filtered}
                     availTypes={availTypes} types={types} setTypes={setTypes}
-                    yr={yr} setYr={setYr} price={price} setPrice={setPrice} years={YEARS}/>
+                    yr={yr} setYr={setYr} price={price} setPrice={setPrice} years={YEARS}
+                    onExportRoi={onExportRoi}/>
                 ) : (
-                  <ValuationDashboard sel={searched || sel} loading={load.t}/>
+                  <ValuationDashboard sel={searched || sel} loading={load.t} onExportRoi={onExportRoi}/>
                 )
               ) : sheetMax ? (
                 <TxnFullPage

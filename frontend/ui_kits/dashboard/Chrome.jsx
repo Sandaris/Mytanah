@@ -26,6 +26,17 @@ const Icon = {
       <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
     </svg>
   ),
+  Calculator: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||18} height={p.size||18} fill="none"
+      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="3" width="14" height="18" rx="2"/>
+      <line x1="8" y1="7" x2="16" y2="7"/>
+      <circle cx="9" cy="12" r="0.8" fill="currentColor" stroke="none"/>
+      <circle cx="15" cy="12" r="0.8" fill="currentColor" stroke="none"/>
+      <circle cx="9" cy="16" r="0.8" fill="currentColor" stroke="none"/>
+      <line x1="14" y1="16" x2="16" y2="16"/>
+    </svg>
+  ),
   HouseMark: () => (
     <svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke={C.earth}
       strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -37,6 +48,7 @@ const Icon = {
 
 const NAV = [
   { id: 'valuation', label: 'Valuation', icon: Icon.Home },
+  { id: 'roi', label: 'ROI Calculator', icon: Icon.Calculator },
   { id: 'sentiment', label: 'Sentiment Index', icon: Icon.Trend },
   { id: 'risk', label: 'Risk Factor', icon: Icon.Alert },
   { id: 'txnmap', label: 'Transaction Map', icon: Icon.Map },

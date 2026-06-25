@@ -241,7 +241,7 @@ const StatTile = ({ label, value, sub, accent }) => (
   </div>
 );
 
-const ValuationDashboard = ({ sel, loading, fullpage }) => {
+const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
   const [modelIdx, setModelIdx] = useState(1); // XGBoost default (primary model)
   const [apiResults, setApiResults] = useState({}); // { rf, xgboost, ft } live predictions
   const [apiSig, setApiSig] = useState(null);
@@ -541,6 +541,18 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
     : recentScope === 'area'
       ? `No ${shortType(sel.propertyType)} or similar ${recentFamily} sales — showing all recent sales in ${recentArea}.`
       : null;
+  const displayedPoint = Math.round(m.point / 1000) * 1000;
+  const exportRoi = () => {
+    if (!hasDisplayableEstimate || !onExportRoi) return;
+    onExportRoi({
+      propertyPrice: displayedPoint,
+      locationLabel: [sel.area || sel.mukim || sel.district, sel.district, sel.state].filter(Boolean).join(', '),
+      propertyType: data.selectedType || sel.propertyType || '',
+      sourceModel: m.label,
+      rangeLow: low,
+      rangeHigh: high,
+    });
+  };
 
   return (
     <div style={{ height: fullpage ? 'auto' : '100%', display: 'flex', flexDirection: 'column', background: C.raised, position: 'relative' }}>
@@ -625,7 +637,7 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
               }}>{unavailableMessage}</div>
             )}
             <div style={{ marginTop: 8, display: hasDisplayableEstimate ? 'block' : 'none' }}>
-              <Mono size={34} color={C.deep}>{formatRM(Math.round(m.point / 1000) * 1000)}</Mono>
+              <Mono size={34} color={C.deep}>{formatRM(displayedPoint)}</Mono>
             </div>
             <div style={{ marginTop: 4, display: hasDisplayableEstimate ? 'flex' : 'none', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
@@ -672,6 +684,11 @@ const ValuationDashboard = ({ sel, loading, fullpage }) => {
             <div style={{ marginTop: 12, display: hasDisplayableEstimate ? 'block' : 'none', fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid, lineHeight: 1.45, fontStyle: 'italic' }}>
               {m.note}
             </div>
+            {hasDisplayableEstimate && onExportRoi && (
+              <Button variant="cta" onClick={exportRoi} style={{ marginTop: 14, width: '100%' }}>
+                Export to ROI Calculator
+              </Button>
+            )}
           </Card>
         </div>
 

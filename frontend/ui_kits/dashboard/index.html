@@ -40,6 +40,7 @@
 <script type="text/babel" src="PropertyMapData.jsx"></script>
 <script type="text/babel" src="Combobox.jsx"></script>
 <script type="text/babel" src="ValuationDashboard.jsx"></script>
+<script type="text/babel" src="RoiCalculator.jsx"></script>
 <script type="text/babel" src="MalaysiaMap.jsx"></script>
 <script type="text/babel" src="TxnTable.jsx"></script>
 <script type="text/babel" src="TxnFullPage.jsx"></script>
@@ -50,6 +51,7 @@ const { useState } = React;
 
 const TITLES = {
   valuation: 'Valuation',
+  roi: 'ROI Calculator',
   sentiment: 'Sentiment Index',
   risk: 'Risk Factor',
   txnmap: 'Malaysia Property Transaction Map',
@@ -66,9 +68,10 @@ const App = () => {
   const [chromeShown, setChromeShown] = useState(false);
   // Floating left nav — revealed only while the cursor is at the left edge.
   const [navOpen, setNavOpen] = useState(false);
+  const [roiSeed, setRoiSeed] = useState(null);
   // Cinematic hand-off from the intro: a cream curtain (matching the intro's
   // wipe) covers the first frame, then dissolves as the map scales into place.
-  const [firstReveal, setFirstReveal] = useState(!skip);
+  const [firstReveal, setFirstReveal] = useState(false);
   // Pages that render the full-bleed Malaysia map experience (no padding, fixed height).
   const isMapPage = page === 'txnmap' || page === 'valuation';
 
@@ -78,6 +81,12 @@ const App = () => {
 
   const engage = () => setChromeShown(true);
   const goTo = (id) => { setPage(id); setChromeShown(true); setNavOpen(false); };
+  const exportToRoi = (seed) => {
+    setRoiSeed(seed);
+    setPage('roi');
+    setChromeShown(true);
+    setNavOpen(false);
+  };
 
   return (
     <div style={{
@@ -105,7 +114,8 @@ const App = () => {
           transformOrigin: '50% 46%',
           height: isMapPage ? '100%' : 'auto',
         }}>
-          {page === 'valuation' && <TransactionMapPage onEngage={engage} navOpen={navOpen} variant="valuation"/>}
+          {page === 'valuation' && <TransactionMapPage onEngage={engage} navOpen={navOpen} variant="valuation" onExportRoi={exportToRoi}/>}
+          {page === 'roi' && <RoiCalculator seed={roiSeed}/>}
           {page === 'sentiment' && <SentimentPage/>}
           {page === 'risk' && <RiskPage/>}
           {page === 'txnmap' && <TransactionMapPage onEngage={engage} navOpen={navOpen}/>}

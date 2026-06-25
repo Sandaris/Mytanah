@@ -3,6 +3,8 @@ const { useEffect, useRef, useState } = React;
 
 const KL_LAT = 3.14;
 const KL_LNG = 101.69;
+const WORLD_MAP_W = 920;
+const WORLD_MAP_H = 520;
 
 const LANDMASSES = [
   { lat: 45, lng:-100, r: 22, n: 90 }, { lat: 30, lng: -95, r: 14, n: 50 },
@@ -17,14 +19,36 @@ const LANDMASSES = [
   { lat: -25, lng: 135, r: 14, n: 60 },
 ];
 
+const introClamp01 = (n) => Math.max(0, Math.min(1, n));
+const introLerp = (a, b, t) => a + (b - a) * t;
+const introProject = (lng, lat) => ([
+  ((lng + 180) / 360) * WORLD_MAP_W,
+  ((90 - lat) / 180) * WORLD_MAP_H,
+]);
+const introRingPath = (ring) => {
+  let d = '';
+  let lastX = null;
+  for (let i = 0; i < ring.length; i++) {
+    const [lng, lat] = ring[i];
+    const [x, y] = introProject(lng, lat);
+    const jump = lastX != null && Math.abs(x - lastX) > WORLD_MAP_W * 0.45;
+    d += `${i === 0 || jump ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)} `;
+    lastX = x;
+  }
+  return d.trim();
+};
+const introPolygonPath = (polygon) => polygon.map(introRingPath).join(' ');
+
 const Intro = ({ onDone }) => {
   const stageRef = useRef(null);
-  const wipeRef = useRef(null);
+  const mapRef = useRef(null);
+  const mapSvgRef = useRef(null);
   const heroRef = useRef(null);
   const introStartRef = useRef(null);
   const twinkleRef = useRef(null);
   const moonRef = useRef(null);
-  const [phase, setPhase] = useState('idle');     // idle | zooming | wiping | reveal
+  const [phase, setPhase] = useState('idle');     // idle | zooming | done
+  const [worldPaths, setWorldPaths] = useState([]);
   const phaseRef = useRef('idle');
   const setPhaseBoth = p => { phaseRef.current = p; setPhase(p); };
   const doneFiredRef = useRef(false);
@@ -33,6 +57,24 @@ const Intro = ({ onDone }) => {
   // is ready the instant the cream wipe hands off to the dashboard.
   useEffect(() => {
     if (window.loadMalaysiaGeo) window.loadMalaysiaGeo().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('https://unpkg.com/world-atlas@2/land-110m.json')
+      .then(r => r.json())
+      .then(topo => {
+        if (!window.topojson) return;
+        const feat = window.topojson.feature(topo, topo.objects.land);
+        const polys = feat.type === 'MultiPolygon'
+          ? feat.coordinates
+          : (feat.type === 'Polygon' ? [feat.coordinates] : []);
+        const allPolys = polys.length ? polys
+          : (feat.features || []).flatMap(f =>
+              f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates
+              : f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : []);
+        setWorldPaths(allPolys.map(introPolygonPath).filter(Boolean));
+      })
+      .catch(() => {});
   }, []);
 
   // auto-advance into the dashboard 3s after the reveal screen appears
@@ -307,11 +349,32 @@ const Intro = ({ onDone }) => {
     }
 
     let last = performance.now();
-    let zoomStart = 0, wipeStart = 0;
-    const zoomDur = 3200, wipeDur = 900;
+    let zoomStart = 0;
+    const zoomDur = 4300;
     let rafId;
 
     const ease = t => 1 - Math.pow(1 - t, 3);
+    const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    const [klMapX, klMapY] = introProject(KL_LNG, KL_LAT);
+    const setMapProgress = (unwrap, fly) => {
+      if (!mapRef.current || !mapSvgRef.current) return;
+      const u = introClamp01(unwrap);
+      const f = introClamp01(fly);
+      const radius = introLerp(34, 88, ease(u));
+      const shellScale = introLerp(0.48, 1, ease(u));
+      const opacity = Math.min(1, u * 1.4);
+      const targetW = 92;
+      const targetH = 56;
+      const viewW = introLerp(WORLD_MAP_W, targetW, easeInOut(f));
+      const viewH = introLerp(WORLD_MAP_H, targetH, easeInOut(f));
+      const viewX = introLerp(0, klMapX - viewW * 0.50, easeInOut(f));
+      const viewY = introLerp(0, klMapY - viewH * 0.50, easeInOut(f));
+      mapRef.current.style.opacity = opacity;
+      mapRef.current.style.setProperty('--map-scale', shellScale.toFixed(3));
+      mapRef.current.style.setProperty('--map-radius', radius.toFixed(2) + '%');
+      mapRef.current.style.setProperty('--map-blur', introLerp(4, 0, u).toFixed(2) + 'px');
+      mapSvgRef.current.setAttribute('viewBox', `${viewX.toFixed(2)} ${viewY.toFixed(2)} ${viewW.toFixed(2)} ${viewH.toFixed(2)}`);
+    };
 
     const startZoom = () => {
       if (phaseRef.current !== 'idle') return;
@@ -366,29 +429,21 @@ const Intro = ({ onDone }) => {
       if (phaseRef.current === 'zooming') {
         const t = Math.min(1, (now - zoomStart) / zoomDur);
         const e = ease(t);
-        camera.position.set(0, 0.5 - 0.5 * e, 4.4 - 2.85 * e);
+        const unwrap = introClamp01((t - 0.22) / 0.38);
+        const fly = introClamp01((t - 0.58) / 0.42);
+        setMapProgress(unwrap, fly);
+        if (renderer.domElement) renderer.domElement.style.opacity = String(1 - 0.82 * ease(unwrap));
+        camera.position.set(0, 0.5 - 0.5 * e, 4.4 - 2.95 * e);
         camera.lookAt(0, 0.05 + 0.05 * e, 0);
         globe.rotation.y = THREE.MathUtils.lerp(globe.rotation.y, -KL_LNG * Math.PI / 180 - Math.PI / 2, 0.04);
         globe.rotation.x = THREE.MathUtils.lerp(globe.rotation.x, KL_LAT * Math.PI / 180, 0.04);
-        if (t >= 1) {
-          setPhaseBoth('wiping');
-          wipeStart = performance.now();
-          if (wipeRef.current) wipeRef.current.classList.add('on');
-        }
-      }
-
-      if (phaseRef.current === 'wiping') {
-        const t = Math.min(1, (now - wipeStart) / wipeDur);
-        const r = (t * 120).toFixed(2) + '%';
-        if (wipeRef.current) wipeRef.current.style.setProperty('--r', r);
         if (t >= 1 && !doneFiredRef.current) {
-          // Cream wipe fully covers the screen — hand straight off to the
-          // dashboard's full-page peninsula map (no loading screen).
           doneFiredRef.current = true;
           setPhaseBoth('done');
           onDone && onDone();
         }
       }
+
 
       renderer.render(scene, camera);
       rafId = requestAnimationFrame(tick);
@@ -422,9 +477,35 @@ const Intro = ({ onDone }) => {
     };
   }, [onDone]);
 
+  const [mapTargetX, mapTargetY] = introProject(KL_LNG, KL_LAT);
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#0a0e0c', zIndex: 100, overflow: 'hidden' }}>
       <div ref={stageRef} style={{ position: 'fixed', inset: 0 }}/>
+      <div ref={mapRef} className="intro-map-transform" aria-hidden="true">
+        <svg ref={mapSvgRef} viewBox={`0 0 ${WORLD_MAP_W} ${WORLD_MAP_H}`}
+          preserveAspectRatio="xMidYMid meet">
+          <rect x="0" y="0" width={WORLD_MAP_W} height={WORLD_MAP_H} rx="18" fill="#102018"/>
+          {[-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150].map(lng => {
+            const [x] = introProject(lng, 0);
+            return <line key={'lng' + lng} x1={x} y1="0" x2={x} y2={WORLD_MAP_H}
+              stroke="#DCD7C9" strokeOpacity="0.13" strokeWidth="0.8"/>;
+          })}
+          {[-60, -30, 0, 30, 60].map(lat => {
+            const [, y] = introProject(0, lat);
+            return <line key={'lat' + lat} x1="0" y1={y} x2={WORLD_MAP_W} y2={y}
+              stroke="#DCD7C9" strokeOpacity="0.13" strokeWidth="0.8"/>;
+          })}
+          <g>
+            {worldPaths.map((d, i) => (
+              <path key={i} d={d} fill="#2C3930" stroke="#C49A7A"
+                strokeWidth="0.9" strokeLinejoin="round" strokeOpacity="0.9"/>
+            ))}
+          </g>
+          <circle cx={mapTargetX} cy={mapTargetY} r="4.2" fill="#C49A7A"/>
+          <circle cx={mapTargetX} cy={mapTargetY} r="9" fill="none" stroke="#A27B5C" strokeWidth="1.4" opacity="0.85"/>
+        </svg>
+      </div>
 
       {/* CSS meteor shower — 5 streaks, staggered */}
       <div className="meteors" aria-hidden="true">
@@ -518,7 +599,7 @@ const Intro = ({ onDone }) => {
           }}
           onMouseEnter={e => { e.currentTarget.style.background = C.earthLight; e.currentTarget.style.transform = 'translateY(-1px)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = C.cream; e.currentTarget.style.transform = 'none'; }}>
-            Begin →
+            Begin now
           </button>
           <button onClick={() => onDone && onDone()} style={{
             background: 'transparent', color: 'rgba(220,215,201,.55)', border: 0,
@@ -540,13 +621,6 @@ const Intro = ({ onDone }) => {
         <div style={{ color: C.earth, fontWeight: 500 }}>101.97°&nbsp;E</div>
         <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(220,215,201,.3)', marginTop: 8 }}>Federation of Malaysia</div>
       </div>
-
-      {/* radial cream wipe */}
-      <div ref={wipeRef} style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 115,
-        background: `radial-gradient(circle at 53% 58%, ${C.cream} 0%, ${C.cream} var(--r,0%), transparent calc(var(--r,0%) + 6%))`,
-        opacity: 0, transition: 'opacity .2s',
-      }} className="intro-wipe-target"/>
 
       {/* reveal screen — click anywhere to enter dashboard */}
       {phase === 'reveal' && (
@@ -599,11 +673,34 @@ const Intro = ({ onDone }) => {
       )}
 
       <style>{`
-        .intro-wipe-target.on { opacity: 1; }
         @keyframes introFade { from {opacity:0} to {opacity:1} }
         @keyframes introFadeUp { from {opacity:0; transform: translateY(12px)} to {opacity:1; transform:none} }
         @keyframes introLoad { 0%{left:-40%} 100%{left:100%} }
         .intro-hero.fade-out { opacity: 0; }
+        .intro-map-transform {
+          position: fixed;
+          inset: 0;
+          z-index: 103;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          pointer-events: none;
+          --map-scale: .48;
+          --map-radius: 34%;
+          --map-blur: 4px;
+        }
+        .intro-map-transform svg {
+          width: min(86vw, 980px);
+          max-height: 74vh;
+          border: 1px solid rgba(196,154,122,.32);
+          border-radius: 18px;
+          box-shadow: 0 26px 80px rgba(0,0,0,.42), inset 0 0 42px rgba(220,215,201,.08);
+          clip-path: circle(var(--map-radius) at 50% 50%);
+          filter: blur(var(--map-blur));
+          transform: scale(var(--map-scale));
+          transform-origin: center center;
+        }
 
         /* ===== Meteor shower =====
            Direction: streaks fall from upper-right toward lower-left

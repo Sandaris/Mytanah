@@ -52,5 +52,6 @@
       ).toString();
       return req('/data/query' + (q ? '?' + q : ''));
     },
+    rentComps: (mukim) => req('/rent-comps?' + new URLSearchParams({ mukim })),
   };
 })();

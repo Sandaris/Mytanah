@@ -573,6 +573,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
       sourceModel: m.label,
       rangeLow: low,
       rangeHigh: high,
+      mukim: sel.mukim || null,
     });
   };
 

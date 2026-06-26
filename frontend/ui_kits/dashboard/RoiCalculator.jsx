@@ -8,6 +8,7 @@ const ROI_DEFAULT_SEED = {
   sourceModel: 'Manual input',
   rangeLow: null,
   rangeHigh: null,
+  mukim: null,
 };
 
 let ROI_UID = 0;
@@ -321,6 +322,24 @@ const RoiCalculator = ({ seed }) => {
   const [rentalPrice, setRentalPrice] = roiUseState(Math.max(0, Math.round(source.propertyPrice * 0.0035)));
   const [carparkRent, setCarparkRent] = roiUseState(0);
   const [incomeItems, setIncomeItems] = roiUseState([]);
+  const [rentEstimate, setRentEstimate] = roiUseState(null);
+  const [rentLoading, setRentLoading] = roiUseState(false);
+  const [rentError, setRentError] = roiUseState(null);
+
+  const fetchMarketRent = () => {
+    const mukim = source.mukim;
+    if (!mukim || rentLoading) return;
+    setRentLoading(true);
+    setRentError(null);
+    window.API.rentComps(mukim)
+      .then(data => {
+        setRentEstimate(data);
+        if (data.median_rent_myr && data.confidence !== 'none')
+          setRentalPrice(Math.round(data.median_rent_myr));
+      })
+      .catch(err => setRentError(err.message || 'Failed to fetch market rent'))
+      .finally(() => setRentLoading(false));
+  };
 
   roiUseEffect(() => {
     if (seed && Number(seed.propertyPrice) > 0) {
@@ -495,6 +514,33 @@ const RoiCalculator = ({ seed }) => {
               <RoiInput label="Carpark rental" value={carparkRent} min={0} step={10}
                 onChange={(v) => setCarparkRent(Math.max(0, roiNum(v, 0)))} suffix="RM"/>
             </div>
+
+            {source.mukim && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button type="button" onClick={fetchMarketRent} disabled={rentLoading}
+                  style={{ ...addBtnStyle(C.earth), width: '100%', justifyContent: 'center',
+                           opacity: rentLoading ? 0.7 : 1, cursor: rentLoading ? 'default' : 'pointer' }}>
+                  {rentLoading
+                    ? '⏳ Fetching market rent…'
+                    : `Fetch Live Market Rent · ${source.mukim}`}
+                </button>
+                {rentError && (
+                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.down }}>{rentError}</div>
+                )}
+                {rentEstimate && !rentLoading && rentEstimate.confidence !== 'none' && (
+                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.earth }}>
+                    Auto-filled · median {roiFmt(rentEstimate.median_rent_myr)}/mo
+                    ({roiFmt(rentEstimate.min_rent_myr)}–{roiFmt(rentEstimate.max_rent_myr)})
+                    · {rentEstimate.listing_count} listings · {rentEstimate.confidence} confidence · editable
+                  </div>
+                )}
+                {rentEstimate && !rentLoading && rentEstimate.confidence === 'none' && (
+                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.muted }}>
+                    No listings found for {source.mukim}.
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* dynamic extra monthly income line items */}
             <div style={{ display: 'grid', gap: 9, paddingTop: 6, borderTop: `1px dashed ${C.border}` }}>

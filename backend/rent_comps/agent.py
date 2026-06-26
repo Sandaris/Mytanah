@@ -3,13 +3,13 @@ import os
 import re
 from datetime import datetime, timezone
 
-import anthropic
+import litellm
 from mcp import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 
 from .schema import RentEstimate
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "gemini/gemini-2.0-flash"   # fast + cheap; swap to gemini-1.5-pro for better results
 MAX_TURNS = 40
 MAX_COST_USD = 2.0
 
@@ -89,7 +89,7 @@ def _parse_result(mukim: str, raw: str) -> RentEstimate:
     try:
         match = re.search(r'```json\s*(\{.*?\})\s*```', raw, re.DOTALL)
         if not match:
-            return _fallback(mukim, f"No JSON block found in agent output")
+            return _fallback(mukim, f"No JSON block found in agent output: {repr(raw)[:300]}")
         data = json.loads(match.group(1))
         return RentEstimate(
             mukim=data.get("mukim", mukim),
@@ -109,108 +109,112 @@ def _parse_result(mukim: str, raw: str) -> RentEstimate:
 
 
 async def _run_agent(mukim: str) -> RentEstimate:
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return _fallback(mukim, "GEMINI_API_KEY not set in environment")
+
+    os.environ["GEMINI_API_KEY"] = api_key  # litellm reads this automatically
+
+    server_params = StdioServerParameters(
+        command="npx",
+        args=["-y", "@playwright/mcp@latest"],
+        env=None,
+    )
+
     try:
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        base_url = os.environ.get("ANTHROPIC_BASE_URL")
-
-        client_kwargs = {"api_key": api_key}
-        if base_url:
-            client_kwargs["base_url"] = base_url
-
-        anthropic_client = anthropic.AsyncAnthropic(**client_kwargs)
-
-        server_params = StdioServerParameters(
-            command="npx",
-            args=["-y", "@playwright/mcp@latest"],
-            env=None,
-        )
-
         async with stdio_client(server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
 
                 tools_response = await session.list_tools()
-                mcp_tools = [
+                # litellm uses OpenAI tool format
+                tools = [
                     {
-                        "name": t.name,
-                        "description": t.description or "",
-                        "input_schema": t.inputSchema,
+                        "type": "function",
+                        "function": {
+                            "name": t.name,
+                            "description": t.description or "",
+                            "parameters": t.inputSchema,
+                        },
                     }
                     for t in tools_response.tools
                     if t.name in ALLOWED_TOOLS
                 ]
 
                 messages = [
-                    {"role": "user", "content": TASK_TEMPLATE.format(mukim=mukim)}
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": TASK_TEMPLATE.format(mukim=mukim)},
                 ]
 
                 total_cost = 0.0
 
                 for _turn in range(MAX_TURNS):
-                    response = await anthropic_client.messages.create(
+                    response = await litellm.acompletion(
                         model=MODEL,
-                        max_tokens=4096,
-                        system=SYSTEM_PROMPT,
-                        tools=mcp_tools,
                         messages=messages,
+                        tools=tools,
+                        tool_choice="auto",
+                        max_tokens=4096,
                     )
 
-                    input_tokens = response.usage.input_tokens
-                    output_tokens = response.usage.output_tokens
-                    turn_cost = (input_tokens * 3 + output_tokens * 15) / 1_000_000
-                    total_cost += turn_cost
+                    usage = response.usage
+                    if usage:
+                        turn_cost = (
+                            getattr(usage, "prompt_tokens", 0) * 0.075
+                            + getattr(usage, "completion_tokens", 0) * 0.30
+                        ) / 1_000_000
+                        total_cost += turn_cost
 
                     if total_cost > MAX_COST_USD:
-                        return _fallback(mukim, f"Cost limit exceeded (${total_cost:.3f})")
+                        return _fallback(mukim, f"Cost limit exceeded (${total_cost:.4f})")
 
-                    messages.append({"role": "assistant", "content": response.content})
+                    choice = response.choices[0]
+                    msg = choice.message
+                    finish = choice.finish_reason
 
-                    if response.stop_reason == "end_turn":
-                        final_text = ""
-                        for block in response.content:
-                            if hasattr(block, "text"):
-                                final_text += block.text
+                    messages.append(msg.model_dump(exclude_none=True))
+
+                    if finish == "stop" or (finish == "end_turn"):
+                        final_text = msg.content or ""
+                        return _parse_result(mukim, final_text)
+
+                    tool_calls = getattr(msg, "tool_calls", None) or []
+                    if not tool_calls:
+                        # no tool calls and not "stop" — treat as done
+                        final_text = msg.content or ""
                         return _parse_result(mukim, final_text)
 
                     tool_results = []
-                    for block in response.content:
-                        if block.type == "tool_use":
-                            try:
-                                tool_result = await session.call_tool(block.name, block.input)
-                                result_content = []
-                                for item in tool_result.content:
-                                    if hasattr(item, "text"):
-                                        result_content.append({"type": "text", "text": item.text})
-                                    elif hasattr(item, "data"):
-                                        result_content.append({
-                                            "type": "image",
-                                            "source": {
-                                                "type": "base64",
-                                                "media_type": getattr(item, "mimeType", "image/png"),
-                                                "data": item.data,
-                                            },
-                                        })
-                                    else:
-                                        result_content.append({"type": "text", "text": str(item)})
-                                tool_results.append({
-                                    "type": "tool_result",
-                                    "tool_use_id": block.id,
-                                    "content": result_content,
-                                })
-                            except Exception as e:
-                                tool_results.append({
-                                    "type": "tool_result",
-                                    "tool_use_id": block.id,
-                                    "content": [{"type": "text", "text": f"Tool error: {e}"}],
-                                    "is_error": True,
-                                })
+                    for tc in tool_calls:
+                        fn = tc.function
+                        try:
+                            args = json.loads(fn.arguments) if isinstance(fn.arguments, str) else fn.arguments
+                            result = await session.call_tool(fn.name, args)
+                            content_parts = []
+                            for item in result.content:
+                                if hasattr(item, "text"):
+                                    content_parts.append(item.text)
+                                else:
+                                    content_parts.append(str(item))
+                            tool_results.append({
+                                "role": "tool",
+                                "tool_call_id": tc.id,
+                                "content": "\n".join(content_parts),
+                            })
+                        except Exception as e:
+                            tool_results.append({
+                                "role": "tool",
+                                "tool_call_id": tc.id,
+                                "content": f"Tool error: {e}",
+                            })
 
-                    if tool_results:
-                        messages.append({"role": "user", "content": tool_results})
-                    else:
-                        break
+                    messages.extend(tool_results)
 
                 return _fallback(mukim, "Max turns reached without final answer")
 
+    except* Exception as eg:
+        # Python 3.11+ ExceptionGroup from asyncio TaskGroup inside mcp's stdio_client
+        inner = "; ".join(str(e) for e in eg.exceptions)
+        return _fallback(mukim, f"Agent error: {inner}")
     except Exception as e:
         return _fallback(mukim, f"Agent error: {e}")

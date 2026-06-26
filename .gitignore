@@ -29,3 +29,7 @@ backend/artifacts/valuation_rf.joblib
 # Location hierarchy edge list — analysis byproduct of build_location_hierarchy.py;
 # only location_hierarchy.json is loaded at runtime
 processed data/location_hierarchy_edges.csv
+
+# Environment and cache files
+backend/.env
+backend/.cache/

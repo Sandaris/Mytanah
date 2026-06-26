@@ -9,7 +9,7 @@ from mcp.client.stdio import stdio_client, StdioServerParameters
 
 from .schema import RentEstimate
 
-MODEL = "gemini/gemini-2.0-flash"   # fast + cheap; swap to gemini-1.5-pro for better results
+MODEL = "gemini/gemini-2.5-flash"   # fast + cheap; swap to gemini-2.5-pro for better results
 MAX_TURNS = 40
 MAX_COST_USD = 2.0
 
@@ -212,9 +212,9 @@ async def _run_agent(mukim: str) -> RentEstimate:
 
                 return _fallback(mukim, "Max turns reached without final answer")
 
-    except* Exception as eg:
-        # Python 3.11+ ExceptionGroup from asyncio TaskGroup inside mcp's stdio_client
-        inner = "; ".join(str(e) for e in eg.exceptions)
-        return _fallback(mukim, f"Agent error: {inner}")
     except Exception as e:
+        # unwrap Python 3.11+ ExceptionGroup from asyncio TaskGroup inside mcp's stdio_client
+        if hasattr(e, "exceptions"):
+            inner = "; ".join(str(ex) for ex in e.exceptions)
+            return _fallback(mukim, f"Agent error: {inner}")
         return _fallback(mukim, f"Agent error: {e}")

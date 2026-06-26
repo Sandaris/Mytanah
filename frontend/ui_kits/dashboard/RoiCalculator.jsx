@@ -24,6 +24,10 @@ const roiNum = (value, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+// Render an empty box instead of a literal 0 so typing starts clean — the
+// placeholder shows through and there's no leading 0 to delete first.
+const roiInputValue = (value) => (roiNum(value, 0) === 0 ? '' : value);
+
 const roiFmt = (value) => formatRM(Math.round(roiNum(value, 0)));
 
 const roiMonthsLabel = (months) => {
@@ -34,6 +38,9 @@ const roiMonthsLabel = (months) => {
   if (!r) return `${y} yr`;
   return `${y} yr ${r} mo`;
 };
+
+// "< 1 yr" reads better than "0.0 yr" when rent clears the sunk cost almost at once
+const roiYearsLabel = (yr) => (yr == null ? null : yr < 1 ? '< 1 yr' : `${yr.toFixed(1)} yr`);
 
 const roiMonthlyPayment = (principal, annualRate, years) => {
   const p = Math.max(0, roiNum(principal, 0));
@@ -76,11 +83,11 @@ const roiBuildSchedule = ({ principal, annualRate, years, extraMonthly }) => {
   };
 };
 
-const RoiInput = ({ label, value, onChange, suffix, min, max, step = 1 }) => (
+const RoiInput = ({ label, value, onChange, suffix, min, max, step = 1, placeholder = '0' }) => (
   <label style={{ display: 'block' }}>
     <Eyebrow style={{ marginBottom: 7 }}>{label}</Eyebrow>
     <div style={{ position: 'relative' }}>
-      <input type="number" value={value} min={min} max={max} step={step}
+      <input type="number" value={roiInputValue(value)} min={min} max={max} step={step} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: '100%', background: C.cream, border: `1px solid ${C.earth}40`,
@@ -112,7 +119,7 @@ const RoiItemRow = ({ name, amount, onName, onAmount, onRemove, accent, namePlac
       <input type="text" value={name} placeholder={namePlaceholder || 'Item name'}
         onChange={(e) => onName(e.target.value)} style={field}/>
       <div style={{ position: 'relative' }}>
-        <input type="number" value={amount} min={0} step={100} placeholder={amountPlaceholder || '0'}
+        <input type="number" value={roiInputValue(amount)} min={0} step={100} placeholder={amountPlaceholder || '0'}
           onChange={(e) => onAmount(e.target.value)}
           style={{ ...field, padding: '9px 38px 9px 12px', textAlign: 'right' }}/>
         <span style={{
@@ -146,7 +153,7 @@ const RoiMetric = ({ label, value, sub, accent }) => (
   </Card>
 );
 
-const RoiTimelineChart = ({ base, extra, principal }) => {
+const RoiTimelineChart = ({ base, extra, principal, hasExtra }) => {
   const W = 920, H = 280, padL = 74, padR = 28, padTop = 24, padBot = 42;
   const maxMonth = Math.max(
     1,
@@ -180,21 +187,35 @@ const RoiTimelineChart = ({ base, extra, principal }) => {
             fontFamily="'DM Sans',sans-serif" fontSize="11" fill={C.mid}>{Math.round(m / 12)} yr</text>
         </g>
       ))}
+      {hasExtra && (
+        <path d={path(extra.points)} fill="none" stroke={C.earth} strokeWidth="2.8"
+          strokeLinecap="round" strokeLinejoin="round"/>
+      )}
       <path d={path(base.points)} fill="none" stroke={C.light} strokeWidth="2.4"
         strokeLinecap="round" strokeLinejoin="round"/>
-      <path d={path(extra.points)} fill="none" stroke={C.earth} strokeWidth="2.8"
-        strokeLinecap="round" strokeLinejoin="round"/>
       <circle cx={x(base.months)} cy={y(0)} r="4" fill={C.light}/>
-      <circle cx={x(extra.months)} cy={y(0)} r="4" fill={C.earth}/>
+      {hasExtra && <circle cx={x(extra.months)} cy={y(0)} r="4" fill={C.earth}/>}
       <text x={padL} y={14} fontFamily="'DM Sans',sans-serif" fontSize="11" fill={C.mid}>
         Remaining principal over time
       </text>
+      {!hasExtra && (
+        <text x={(padL + W - padR) / 2} y={padTop + 24} textAnchor="middle"
+          fontFamily="'DM Sans',sans-serif" fontSize="12" fill={C.muted}>
+          No extra monthly payment inserted — following the normal schedule.
+        </text>
+      )}
       <g transform={`translate(${W - 248} 8)`}>
         <rect width="220" height="34" rx="17" fill={C.raised} stroke={C.border}/>
         <line x1="16" x2="40" y1="12" y2="12" stroke={C.light} strokeWidth="2.4"/>
         <text x="48" y="16" fontFamily="'DM Sans',sans-serif" fontSize="11" fill={C.mid}>normal schedule</text>
-        <line x1="16" x2="40" y1="25" y2="25" stroke={C.earth} strokeWidth="2.8"/>
-        <text x="48" y="29" fontFamily="'DM Sans',sans-serif" fontSize="11" fill={C.mid}>with extra payment</text>
+        {hasExtra ? (
+          <React.Fragment>
+            <line x1="16" x2="40" y1="25" y2="25" stroke={C.earth} strokeWidth="2.8"/>
+            <text x="48" y="29" fontFamily="'DM Sans',sans-serif" fontSize="11" fill={C.mid}>with extra payment</text>
+          </React.Fragment>
+        ) : (
+          <text x="16" y="29" fontFamily="'DM Sans',sans-serif" fontSize="11" fill={C.muted}>no extra payment added</text>
+        )}
       </g>
     </svg>
   );
@@ -203,7 +224,7 @@ const RoiTimelineChart = ({ base, extra, principal }) => {
 /* ECharts: cumulative rental Income vs Debt outlay (loan + interest +
    furnishing) over the years. Both rise; where Income overtakes Debt is the
    break-even — when the portfolio starts to profit. */
-const RoiEarningsChart = ({ pts, breakEven, breakEvenValue }) => {
+const RoiEarningsChart = ({ pts, breakEven, breakEvenValue, loanYears }) => {
   const elRef = React.useRef(null);
   const chartRef = React.useRef(null);
   React.useEffect(() => {
@@ -238,7 +259,7 @@ const RoiEarningsChart = ({ pts, breakEven, breakEvenValue }) => {
           let s = `<div style="font-family:'JetBrains Mono',monospace;font-size:12px">Year ${Math.round(ps[0].value[0])}</div>`;
           ps.forEach(p => { s += `<div style="margin-top:2px">${p.seriesName}: <b>${sign(p.value[1])}</b></div>`; });
           const inc = ps.find(p => /Income/.test(p.seriesName));
-          const dbt = ps.find(p => /Debt/.test(p.seriesName));
+          const dbt = ps.find(p => /Cost|Debt/.test(p.seriesName));
           if (inc && dbt) { const gap = inc.value[1] - dbt.value[1]; s += `<div style="margin-top:3px;color:${gap >= 0 ? '#9ED9B0' : '#E6A6A0'}">${gap >= 0 ? 'Profit' : 'Shortfall'}: <b>${sign(gap)}</b></div>`; }
           return s;
         },
@@ -262,22 +283,27 @@ const RoiEarningsChart = ({ pts, breakEven, breakEvenValue }) => {
           endLabel: { show: true, distance: 6, formatter: (p) => sign(p.value[1]), color: C.up, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700 },
           markLine: breakEven != null ? {
             silent: true, symbol: 'none', lineStyle: { color: C.deep, width: 1.2, type: [4, 4] },
-            label: { show: true, position: 'insideEndTop', color: C.deep, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, formatter: `break-even ${breakEven.toFixed(1)}y` },
+            label: { show: true, position: 'insideEndTop', color: C.deep, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, formatter: breakEven < 1 ? 'break-even <1y' : `break-even ${breakEven.toFixed(1)}y` },
             data: [{ xAxis: breakEven }],
           } : undefined,
           markPoint: breakEven != null ? {
             symbol: 'pin', symbolSize: 44, symbolOffset: [0, -2], itemStyle: { color: C.up },
-            label: { show: true, formatter: `${breakEven.toFixed(1)}y`, color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 10, fontWeight: 700 },
+            label: { show: true, formatter: breakEven < 1 ? '<1y' : `${breakEven.toFixed(1)}y`, color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 10, fontWeight: 700 },
             data: [{ coord: [breakEven, Math.round(breakEvenValue || 0)] }],
           } : undefined,
         },
-        { name: 'Debt · loan+interest+furnishing', type: 'line', smooth: true, showSymbol: false, data: paidData,
+        { name: 'Cost · interest + one-time', type: 'line', smooth: true, showSymbol: false, data: paidData,
           lineStyle: { color: C.down, width: 2, type: [6, 4] }, itemStyle: { color: C.down }, z: 2,
           endLabel: { show: true, distance: 6, formatter: (p) => sign(p.value[1]), color: C.down, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700 },
+          markLine: loanYears != null ? {
+            silent: true, symbol: 'none', lineStyle: { color: C.down, width: 1, type: [2, 4], opacity: 0.6 },
+            label: { show: true, position: 'insideEndBottom', color: C.down, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, formatter: `loan cleared ${Math.round(loanYears)}y` },
+            data: [{ xAxis: loanYears }],
+          } : undefined,
         },
       ],
     }, true);
-  }, [pts, breakEven, breakEvenValue]);
+  }, [pts, breakEven, breakEvenValue, loanYears]);
   return <div ref={elRef} style={{ width: '100%', height: 300 }}/>;
 };
 
@@ -332,40 +358,63 @@ const RoiCalculator = ({ seed }) => {
     roiBuildSchedule({ principal, annualRate: safe.rate, years: safe.yrs, extraMonthly: safe.extra })
   ), [principal, safe.rate, safe.yrs, safe.extra]);
 
-  // Income vs debt over time: cumulative rental income (rent + carpark + other)
-  // against the total debt outlay — loan + interest (accruing via installments)
-  // plus the one-time furnishing/reno cost paid upfront. Break-even = first year
-  // income overtakes that debt.
+  // Income vs debt over time — the honest break-even.
+  //
+  // The owner pays the FULL installment every month no matter how short the
+  // rent falls, so the loan always clears by the end of its tenure. The
+  // principal you repay turns into equity — you own the unit, it isn't lost —
+  // so rent doesn't have to out-earn the whole loan, only the money that never
+  // comes back: the INTEREST plus the one-time furnishing/reno. Interest stops
+  // the moment the loan is cleared while rent keeps stacking, so there is
+  // ALWAYS a year the rent catches up. That crossing is the real break-even.
   const roi = roiUseMemo(() => {
     const M = baseSchedule.monthly;
     const inc = monthlyIncome;
     const furnishing = oneTimeCost;
-    const loanInterest = baseSchedule.totalPaid; // principal + total interest
-    const totalDebt = loanInterest + furnishing;
-    const yrs = Math.round(safe.yrs);
+    const totalInterest = baseSchedule.totalInterest;
+    const loanYears = baseSchedule.months / 12;
+    const sched = baseSchedule.points;                 // [{ month, balance, interest(cumulative) }]
+    // cumulative interest paid by year t — plateaus at totalInterest once cleared
+    const interestAtYear = (t) => {
+      const idx = Math.min(Math.max(0, Math.round(t * 12)), sched.length - 1);
+      return sched[idx] ? sched[idx].interest : totalInterest;
+    };
+
+    const sunkTotal = furnishing + totalInterest;       // the plateau rent must beat
+    const beApprox = inc > 0 ? sunkTotal / (inc * 12) : Infinity;
+    const tenureYears = Math.round(safe.yrs);
+    // stretch the horizon past the loan tenure so a slow break-even still shows
+    const horizon = Math.max(tenureYears, Math.min(60, Math.ceil(Number.isFinite(beApprox) ? beApprox + 1 : tenureYears)));
+
     const pts = [];
     let breakEven = null, breakEvenValue = null, prevDiff = null;
-    for (let t = 0; t <= yrs; t++) {
-      const income = inc * 12 * t;                                 // cumulative rentals
-      const paid = furnishing + Math.min(M * 12 * t, loanInterest); // furnishing upfront + installments
+    for (let t = 0; t <= horizon; t++) {
+      const income = inc * 12 * t;                       // cumulative rentals
+      const paid = furnishing + interestAtYear(t);       // sunk cost: one-time + interest
       const diff = income - paid;
-      if (prevDiff !== null && breakEven === null && prevDiff < 0 && diff >= 0) {
+      // `<= 0` (not `< 0`) so the case where rent already covers the sunk cost
+      // from the very first year — income and cost both start at 0 with no
+      // one-time cost — is caught as break-even ~0 instead of being missed and
+      // mislabelled "rent too low to recover".
+      if (prevDiff !== null && breakEven === null && prevDiff <= 0 && diff >= 0) {
         const frac = diff === prevDiff ? 0 : (-prevDiff) / (diff - prevDiff);
         breakEven = (t - 1) + frac;
-        breakEvenValue = furnishing + Math.min(M * 12 * breakEven, loanInterest);
+        breakEvenValue = inc * 12 * breakEven;           // income == cost at the crossing
       }
       pts.push({ t, income, paid });
       prevDiff = diff;
     }
+
     const netMonthly = inc - M;
     const grossYield = safe.p ? (inc * 12 / safe.p) * 100 : 0;
-    const last = pts.length ? pts[pts.length - 1] : { income: 0, paid: totalDebt };
-    const finalProfit = last.income - last.paid;
-    const investment = deposit + furnishing;
-    const roiOnInvestment = investment ? (finalProfit / investment) * 100 : 0;
     const coverage = M ? (inc / M) * 100 : 0;
-    return { pts, breakEven, breakEvenValue, netMonthly, grossYield, finalProfit, roiOnInvestment, installment: M, income: inc, coverage, totalDebt, furnishing, investment };
-  }, [baseSchedule.monthly, baseSchedule.totalPaid, deposit, monthlyIncome, oneTimeCost, safe.yrs, safe.p]);
+    const finalProfit = inc * 12 * tenureYears - sunkTotal; // rent out-earned by the time the loan clears
+    const investment = deposit + furnishing;                // upfront CASH (deposit + one-time)
+    const roiOnInvestment = investment ? (finalProfit / investment) * 100 : 0;
+    // how long gross rental takes to add up to the upfront cash you put down
+    const upfrontRecoverYears = inc > 0 ? investment / (inc * 12) : null;
+    return { pts, breakEven, breakEvenValue, netMonthly, grossYield, finalProfit, roiOnInvestment, installment: M, income: inc, coverage, totalInterest, furnishing, investment, upfrontRecoverYears, loanYears, tenureYears, horizon };
+  }, [baseSchedule, deposit, monthlyIncome, oneTimeCost, safe.yrs, safe.p]);
 
   const interestSaved = Math.max(0, baseSchedule.totalInterest - extraSchedule.totalInterest);
   const monthsSaved = Math.max(0, baseSchedule.months - extraSchedule.months);
@@ -431,54 +480,8 @@ const RoiCalculator = ({ seed }) => {
         </div>
       </Card>
 
-      {/* COST  vs  INCOME — two panels side by side */}
+      {/* INCOME  vs  COST — two panels side by side (income left, cost right) */}
       <div className="roi-panels" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'stretch' }}>
-        {/* ── COST panel (red-coded) ── */}
-        <Card style={{ padding: 18, borderTop: `3px solid ${C.down}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-            {sectionLabel(C.down, 'Costs · what you pay')}
-            <Mono size={15} color={C.down}>{roiFmt(deposit + oneTimeCost)} upfront</Mono>
-          </div>
-          <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
-            <RoiInput label="Property price" value={price} min={1} step={1000}
-              onChange={(v) => setPrice(roiClamp(v, 1, 100000000))} suffix="RM"/>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <RoiInput label="Deposit" value={depositPct} min={0} max={100} step={0.1}
-                onChange={onDepositChange} suffix="%"/>
-              <RoiInput label="Loan" value={loanPct} min={0} max={100} step={0.1}
-                onChange={onLoanChange} suffix="%"/>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <RoiInput label="Interest" value={annualRate} min={0} max={30} step={0.01}
-                onChange={(v) => setAnnualRate(roiClamp(v, 0, 30))} suffix="%"/>
-              <RoiInput label="Years" value={years} min={1} max={40} step={1}
-                onChange={(v) => setYears(roiClamp(v, 1, 40))}/>
-            </div>
-            <RoiInput label="Extra monthly payment" value={extraMonthly} min={0} step={100}
-              onChange={(v) => setExtraMonthly(Math.max(0, roiNum(v, 0)))} suffix="RM"/>
-
-            {/* dynamic one-time cost line items */}
-            <div style={{ display: 'grid', gap: 9, paddingTop: 6, borderTop: `1px dashed ${C.border}` }}>
-              <Eyebrow style={{ marginBottom: 2 }}>One-time costs (furnishing, reno…)</Eyebrow>
-              {costItems.length === 0 && (
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.muted }}>No one-time costs added.</div>
-              )}
-              {costItems.map((it) => (
-                <RoiItemRow key={it.id} name={it.name} amount={it.amount} accent={C.down}
-                  namePlaceholder="e.g. Furnishing" amountPlaceholder="50000"
-                  onName={(v) => patchCost(it.id, { name: v })}
-                  onAmount={(v) => patchCost(it.id, { amount: Math.max(0, roiNum(v, 0)) })}
-                  onRemove={() => removeCost(it.id)}/>
-              ))}
-              <button type="button" onClick={addCost} style={addBtnStyle(C.down)}>+ Add cost item</button>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
-                <span>Total one-time cost</span>
-                <Mono size={13} color={C.down}>{roiFmt(oneTimeCost)}</Mono>
-              </div>
-            </div>
-          </div>
-        </Card>
-
         {/* ── INCOME panel (green-coded) ── */}
         <Card style={{ padding: 18, borderTop: `3px solid ${C.up}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
@@ -514,6 +517,59 @@ const RoiCalculator = ({ seed }) => {
             </div>
           </div>
         </Card>
+
+        {/* ── COST panel (red-coded) ── */}
+        <Card style={{ padding: 18, borderTop: `3px solid ${C.down}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            {sectionLabel(C.down, 'Costs · what you pay')}
+            <Mono size={15} color={C.down}>{roiFmt(deposit + oneTimeCost)} upfront</Mono>
+          </div>
+          <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
+            <RoiInput label="Property price" value={price} min={1} step={1000}
+              onChange={(v) => setPrice(roiClamp(v, 1, 100000000))} suffix="RM"/>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <RoiInput label="Deposit" value={depositPct} min={0} max={100} step={0.1}
+                onChange={onDepositChange} suffix="%"/>
+              <RoiInput label="Loan" value={loanPct} min={0} max={100} step={0.1}
+                onChange={onLoanChange} suffix="%"/>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <RoiInput label="Interest" value={annualRate} min={0} max={30} step={0.01}
+                onChange={(v) => setAnnualRate(roiClamp(v, 0, 30))} suffix="%"/>
+              <RoiInput label="Years" value={years} min={1} max={40} step={1}
+                onChange={(v) => setYears(roiClamp(v, 1, 40))}/>
+            </div>
+            {/* extra payment — set apart from the core loan terms: optional, paid
+               on top of the installment to clear the loan faster */}
+            <div style={{ display: 'grid', gap: 7, paddingTop: 12, marginTop: 2, borderTop: `1px dashed ${C.border}` }}>
+              <RoiInput label="Extra monthly payment (optional)" value={extraMonthly} min={0} step={100}
+                onChange={(v) => setExtraMonthly(Math.max(0, roiNum(v, 0)))} suffix="RM"/>
+              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.muted, lineHeight: 1.45 }}>
+                Paid <b style={{ color: C.mid }}>on top of</b> your monthly installment to clear the loan faster and cut total interest. Leave at <b style={{ color: C.mid }}>0</b> to keep the normal schedule.
+              </div>
+            </div>
+
+            {/* dynamic one-time cost line items */}
+            <div style={{ display: 'grid', gap: 9, paddingTop: 6, borderTop: `1px dashed ${C.border}` }}>
+              <Eyebrow style={{ marginBottom: 2 }}>One-time costs (furnishing, reno…)</Eyebrow>
+              {costItems.length === 0 && (
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.muted }}>No one-time costs added.</div>
+              )}
+              {costItems.map((it) => (
+                <RoiItemRow key={it.id} name={it.name} amount={it.amount} accent={C.down}
+                  namePlaceholder="e.g. Furnishing" amountPlaceholder="50000"
+                  onName={(v) => patchCost(it.id, { name: v })}
+                  onAmount={(v) => patchCost(it.id, { amount: Math.max(0, roiNum(v, 0)) })}
+                  onRemove={() => removeCost(it.id)}/>
+              ))}
+              <button type="button" onClick={addCost} style={addBtnStyle(C.down)}>+ Add cost item</button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
+                <span>Total one-time cost</span>
+                <Mono size={13} color={C.down}>{roiFmt(oneTimeCost)}</Mono>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* monthly Income vs Debt summary — the headline A-vs-B comparison */}
@@ -541,8 +597,8 @@ const RoiCalculator = ({ seed }) => {
 
       <div className="roi-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
         <RoiMetric label="Gross yield" value={`${roi.grossYield.toFixed(1)}%`} sub="annual income ÷ price"/>
-        <RoiMetric label="Break-even" value={roi.breakEven != null ? `${roi.breakEven.toFixed(1)} yr` : `> ${Math.round(safe.yrs)} yr`}
-          sub={roi.breakEven != null ? 'income overtakes debt' : 'not within tenure'} accent={roi.breakEven != null ? C.deep : C.down}/>
+        <RoiMetric label="Break-even" value={roi.breakEven != null ? roiYearsLabel(roi.breakEven) : `> ${roi.horizon} yr`}
+          sub={roi.breakEven != null ? 'rent out-earns interest + costs' : 'rent too low to recover'} accent={roi.breakEven != null ? C.deep : C.down}/>
         <RoiMetric label={`Net profit @ ${Math.round(safe.yrs)}yr`} value={`${roi.finalProfit < 0 ? '−' : ''}${roiFmt(Math.abs(roi.finalProfit))}`}
           sub={`ROI ${roi.roiOnInvestment >= 0 ? '+' : ''}${roi.roiOnInvestment.toFixed(0)}% on cash in`} accent={roi.finalProfit >= 0 ? C.up : C.down}/>
       </div>
@@ -552,15 +608,17 @@ const RoiCalculator = ({ seed }) => {
           <div>
             <Display size={18} weight={500}>Income vs debt over time</Display>
             <div style={{ marginTop: 4, fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.mid }}>
-              Cumulative rental income climbing past total debt (loan + interest + furnishing). Where they cross, the portfolio starts to profit.
+              You repay the loan in full regardless, and the principal becomes equity you keep — so rent only has to out-earn the interest + one-time costs. Interest stops once the loan clears, so rent always catches up: that crossing is break-even.
             </div>
           </div>
           <Mono size={13} color={roi.breakEven != null ? C.up : C.down}>
-            {roi.breakEven != null ? `~${roi.breakEven.toFixed(1)} yr to profit` : 'no profit in tenure'}
+            {roi.breakEven != null
+              ? (roi.breakEven < 1 ? 'recovers within the first year' : `~${roi.breakEven.toFixed(1)} yr to recover`)
+              : 'rent too low to recover'}
           </Mono>
         </div>
         <div style={{ marginTop: 14 }}>
-          <RoiEarningsChart pts={roi.pts} breakEven={roi.breakEven} breakEvenValue={roi.breakEvenValue}/>
+          <RoiEarningsChart pts={roi.pts} breakEven={roi.breakEven} breakEvenValue={roi.breakEvenValue} loanYears={roi.loanYears}/>
         </div>
       </Card>
 
@@ -580,13 +638,35 @@ const RoiCalculator = ({ seed }) => {
           <div>
             <Display size={18} weight={500}>Loan timeline</Display>
             <div style={{ marginTop: 4, fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.mid }}>
-              Normal schedule compared with recurring extra monthly payment.
+              {safe.extra > 0
+                ? 'Normal schedule compared with recurring extra monthly payment.'
+                : 'Remaining loan principal over the tenure.'}
             </div>
           </div>
-          <Mono size={13} color={interestSaved ? C.up : C.mid}>{roiFmt(interestSaved)} saved · {roiMonthsLabel(monthsSaved)} faster</Mono>
+          {safe.extra > 0 && (
+            <Mono size={13} color={interestSaved ? C.up : C.mid}>{roiFmt(interestSaved)} saved · {roiMonthsLabel(monthsSaved)} faster</Mono>
+          )}
         </div>
+        {safe.extra <= 0 && (
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'flex-start', gap: 11, padding: '12px 15px', borderRadius: 10, background: `${C.earth}1F`, border: `1px solid ${C.earth}66` }}>
+            <span style={{ flexShrink: 0, width: 21, height: 21, borderRadius: '50%', background: C.earth, color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 700, fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>i</span>
+            <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: C.deep, lineHeight: 1.5 }}>
+              <b>No extra monthly payment added.</b> The chart below shows your <b>normal schedule only</b>. Type an amount into <b>Extra monthly payment</b> (in the Costs panel) to see how much faster you'd clear the loan and how much interest you'd save.
+            </span>
+          </div>
+        )}
         <div style={{ marginTop: 18 }}>
-          <RoiTimelineChart base={baseSchedule} extra={extraSchedule} principal={principal}/>
+          <RoiTimelineChart base={baseSchedule} extra={extraSchedule} principal={principal} hasExtra={safe.extra > 0}/>
+        </div>
+        {/* upfront cash payback — the deposit + one-time is real money out; how
+            long gross rental takes to add back up to it */}
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
+          <span>Upfront cash <b style={{ color: C.deep }}>{roiFmt(roi.investment)}</b> (deposit + one-time) — real money out of pocket</span>
+          <span style={{ color: roi.upfrontRecoverYears != null ? C.up : C.down, fontWeight: 600 }}>
+            {roi.upfrontRecoverYears != null
+              ? `Gross rental collects it back in ~${roi.upfrontRecoverYears.toFixed(1)} yr`
+              : 'Add rental income to recover it'}
+          </span>
         </div>
       </Card>
 

@@ -29,6 +29,8 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+from dotenv import load_dotenv
+load_dotenv()
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -861,6 +863,16 @@ def data_query(
     }
 
 
+@app.get("/rent-comps")
+def rent_comps_endpoint(mukim: str = Query(..., min_length=1)) -> dict:
+    from rent_comps import get_rent_estimate
+    try:
+        estimate = get_rent_estimate(mukim)
+        return estimate.__dict__
+    except Exception as exc:
+        raise HTTPException(503, f"Rent comps unavailable: {exc}") from exc
+
+
 # ---------------------------------------------------------------------------
 # Frontend static hosting — serves the MyPropertyIQ design-system prototype
 # at /app, so the React UI shares the API's origin (no CORS in the browser).
@@ -892,9 +904,10 @@ class RevalidateStaticFiles(StaticFiles):
 if FRONTEND_DIR.exists():
     app.mount("/app", RevalidateStaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 
-
-@app.get("/")
-def root() -> RedirectResponse:
-    if DASHBOARD_DIR.exists():
-        return RedirectResponse(url="/app/ui_kits/dashboard/index.html")
-    return RedirectResponse(url="/docs")
+if DASHBOARD_DIR.exists():
+    # Serve the dashboard at clean root URLs: /, /index.html, /dashboard.html, etc.
+    app.mount("/", RevalidateStaticFiles(directory=str(DASHBOARD_DIR), html=True), name="root")
+else:
+    @app.get("/")
+    def root() -> RedirectResponse:
+        return RedirectResponse(url="/docs")

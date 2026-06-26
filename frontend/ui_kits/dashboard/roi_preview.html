@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- Standalone preview of the ROI / loan calculator. No backend needed.
+     Serve this dir over HTTP and open /roi_preview.html. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ROI Calculator — preview</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  html, body { margin: 0; min-height: 100%; background: #DCD7C9; }
+  * { box-sizing: border-box; }
+  body { padding: 28px; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://unpkg.com/echarts@5.5.1/dist/echarts.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- formatRM / rmCompact normally come from PropertyMapData.jsx + ValuationDashboard.jsx;
+     defined inline here so the calculator can render in isolation. -->
+<script type="text/babel">
+  function formatRM(n) { return 'RM ' + Math.round(n).toLocaleString('en-MY'); }
+  const rmCompact = (n) => {
+    if (!n) return '—';
+    if (n >= 1e6) return 'RM ' + (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return 'RM ' + Math.round(n / 1e3) + 'k';
+    return formatRM(n);
+  };
+  Object.assign(window, { formatRM, rmCompact });
+</script>
+
+<script type="text/babel" src="Primitives.jsx"></script>
+<script type="text/babel" src="RoiCalculator.jsx"></script>
+
+<script type="text/babel">
+  const SAMPLE_SEED = {
+    propertyPrice: 620000,
+    locationLabel: 'Mont Kiara, Kuala Lumpur',
+    propertyType: 'Condominium / Apartment',
+    sourceModel: 'XGBoost valuation',
+    rangeLow: 560000,
+    rangeHigh: 690000,
+  };
+  ReactDOM.createRoot(document.getElementById('root'))
+    .render(<RoiCalculator seed={SAMPLE_SEED}/>);
+</script>
+</body>
+</html>

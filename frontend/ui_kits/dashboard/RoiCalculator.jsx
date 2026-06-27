@@ -334,8 +334,9 @@ const RoiCalculator = ({ seed }) => {
     window.API.rentComps(mukim)
       .then(data => {
         setRentEstimate(data);
-        if (data.median_rent_myr && data.confidence !== 'none')
-          setRentalPrice(Math.round(data.median_rent_myr));
+        const bestRent = data.median_rent_myr || data.avg_rent_myr;
+        if (bestRent && data.confidence !== 'none')
+          setRentalPrice(Math.round(bestRent));
       })
       .catch(err => setRentError(err.message || 'Failed to fetch market rent'))
       .finally(() => setRentLoading(false));
@@ -529,7 +530,7 @@ const RoiCalculator = ({ seed }) => {
                 )}
                 {rentEstimate && !rentLoading && rentEstimate.confidence !== 'none' && (
                   <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.earth }}>
-                    Auto-filled · median {roiFmt(rentEstimate.median_rent_myr)}/mo
+                    Auto-filled · {rentEstimate.median_rent_myr ? 'median' : 'avg'} {roiFmt(rentEstimate.median_rent_myr || rentEstimate.avg_rent_myr)}/mo
                     ({roiFmt(rentEstimate.min_rent_myr)}–{roiFmt(rentEstimate.max_rent_myr)})
                     · {rentEstimate.listing_count} listings · {rentEstimate.confidence} confidence · editable
                   </div>

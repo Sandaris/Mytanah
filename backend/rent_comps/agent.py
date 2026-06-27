@@ -19,49 +19,90 @@ ALLOWED_TOOLS = {
     "browser_wait_for", "browser_close",
 }
 
-SYSTEM_PROMPT = """You are a data-collection agent that fetches Malaysian residential rental prices for a given mukim using Playwright MCP browser tools.
+SYSTEM_PROMPT = r"""You are a data-collection agent that fetches Malaysian residential rental prices for a given mukim using Playwright MCP browser tools.
 
-SCOPE: mukim-wide aggregate rent, no bedroom or building filtering.
+SCOPE: mukim-wide aggregate rent only. No bedroom filtering, no specific building search.
 
-SITES (in priority order):
-1. PropertyGuru.com.my — Cloudflare passes automatically after a brief wait; navigate then wait 2s.
-2. Mudah.my — area-wide browsing only; do NOT attempt freetext building searches.
+## STEP-BY-STEP PROCEDURE
 
-EXTRACTION: After navigating to search results, use a single browser_evaluate call to extract prices from the DOM. Do NOT use browser_snapshot for price extraction (use it only to diagnose zero-result pages). Do NOT click into individual listing detail pages.
+### Step 1 — Search Mudah.my first (most reliable)
+Navigate to this URL (replace MUKIM with the actual mukim name, URL-encoded):
+  https://www.mudah.my/malaysia/real-estate-for-rent?q=MUKIM
 
-PropertyGuru extraction JS:
+Wait 2 seconds, then call browser_evaluate with this EXACT JavaScript:
+```
 () => {
   const seen = new Set(); const prices = [];
-  document.querySelectorAll('[class*="price"]').forEach(el => {
-    const m = el.innerText.match(/^RM ([\\d,]+) \\/mo/);
-    if (m && !seen.has(m[1])) { seen.add(m[1]); prices.push(parseFloat(m[1].replace(/,/g,''))); }
-  });
+  // Try multiple price selectors
+  const selectors = ['[class*="price"]','[class*="Price"]','span[class*="amount"]','div[class*="listing"] [class*="price"]'];
+  for (const sel of selectors) {
+    document.querySelectorAll(sel).forEach(el => {
+      const t = el.innerText || el.textContent || '';
+      const m = t.match(/RM[\\s]*([\d,]+)/);
+      if (m) { const v = parseFloat(m[1].replace(/,/g,'')); if (v>=200 && v<=30000 && !seen.has(v)) { seen.add(v); prices.push(v); } }
+    });
+    if (prices.length >= 5) break;
+  }
   prices.sort((a,b)=>a-b);
-  const n=prices.length, avg=n?prices.reduce((s,v)=>s+v,0)/n:0;
-  const median=n%2===0?(n>0?(prices[n/2-1]+prices[n/2])/2:null):prices[Math.floor(n/2)];
-  return {prices,n,min:prices[0]||null,max:prices[n-1]||null,avg:Math.round(avg),median};
+  const n=prices.length;
+  const avg=n?Math.round(prices.reduce((s,v)=>s+v,0)/n):null;
+  const median=n===0?null:n%2===0?(prices[n/2-1]+prices[n/2])/2:prices[Math.floor(n/2)];
+  return {n, min:prices[0]||null, max:prices[n-1]||null, avg, median, sample:prices.slice(0,5)};
 }
+```
 
-For Mudah.my adapt the querySelectorAll selector as needed.
+If n < 5, also try the ALL TEXT approach — scan all text nodes for price patterns:
+```
+() => {
+  const seen = new Set(); const prices = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    const t = node.textContent;
+    const matches = [...t.matchAll(/RM\s*([\d,]+)/g)];
+    for (const m of matches) {
+      const v = parseFloat(m[1].replace(/,/g,''));
+      if (v>=200 && v<=30000 && !seen.has(v)) { seen.add(v); prices.push(v); }
+    }
+    if (prices.length >= 30) break;
+  }
+  prices.sort((a,b)=>a-b);
+  const n=prices.length;
+  const avg=n?Math.round(prices.reduce((s,v)=>s+v,0)/n):null;
+  const median=n===0?null:n%2===0?(prices[n/2-1]+prices[n/2])/2:prices[Math.floor(n/2)];
+  return {n, min:prices[0]||null, max:prices[n-1]||null, avg, median};
+}
+```
 
-STOPPING RULE: aim for 15-20 distinct rent figures combined; 1-2 result pages per site is enough.
+### Step 2 — Try PropertyGuru (supplement)
+Navigate to:
+  https://www.propertyguru.com.my/property-for-rent?freetext=MUKIM&listing_type=rent
 
-FALLBACK: if one site is blocked or returns zero results, use the other alone and note it. If both return zero, report listing_count=0 and confidence="none". NEVER fabricate numbers.
+Wait 3 seconds (Cloudflare delay), then run the same browser_evaluate JS above.
 
-CONFIDENCE: "high" if listing_count >= 15 AND both sites used; "medium" if listing_count >= 8; "low" if listing_count < 8 but > 0; "none" if 0.
+### Step 3 — Aggregate and report
+Combine unique prices from both sites. Do NOT click into any listing detail pages.
 
-OUTPUT: your final message must contain ONLY a fenced JSON block and nothing after the closing fence:
+## CRITICAL RULES
+- NEVER use ref= attributes from browser_snapshot as CSS selectors — they are internal Playwright refs, NOT DOM selectors and will always fail.
+- Use browser_snapshot ONLY to diagnose why browser_evaluate returned zero results (e.g. to see if the page loaded).
+- NEVER fabricate prices. If you truly cannot extract any prices, report listing_count=0.
+- Only count prices that look like monthly rent: RM 200 – RM 30,000 range.
+
+CONFIDENCE: "high" if listing_count >= 15 AND both sites used; "medium" if listing_count >= 8; "low" if 1–7; "none" if 0.
+
+OUTPUT: your FINAL message must contain ONLY this fenced JSON block and absolutely nothing after the closing fence:
 ```json
 {
-  "mukim": "<the mukim string as given>",
-  "avg_rent_myr": <float or null>,
-  "min_rent_myr": <float or null>,
-  "max_rent_myr": <float or null>,
-  "median_rent_myr": <float or null>,
-  "listing_count": <int>,
-  "sources_used": ["propertyguru.com.my"],
+  "mukim": "<mukim as given>",
+  "avg_rent_myr": <number or null>,
+  "min_rent_myr": <number or null>,
+  "max_rent_myr": <number or null>,
+  "median_rent_myr": <number or null>,
+  "listing_count": <integer>,
+  "sources_used": ["mudah.my"],
   "confidence": "high|medium|low|none",
-  "notes": "<any caveats or null>",
+  "notes": "<caveats or null>",
   "sample_listings": []
 }
 ```"""
@@ -87,7 +128,13 @@ def _fallback(mukim: str, notes: str) -> RentEstimate:
 
 def _parse_result(mukim: str, raw: str) -> RentEstimate:
     try:
+        # Try fenced block (strict then loose — model sometimes adds text after closing fence)
         match = re.search(r'```json\s*(\{.*?\})\s*```', raw, re.DOTALL)
+        if not match:
+            match = re.search(r'```json\s*(\{.*?\})', raw, re.DOTALL)
+        if not match:
+            # Last resort: any JSON object containing "mukim"
+            match = re.search(r'(\{[^{}]*"mukim".*?\})', raw, re.DOTALL)
         if not match:
             return _fallback(mukim, f"No JSON block found in agent output: {repr(raw)[:300]}")
         data = json.loads(match.group(1))

@@ -1,0 +1,15 @@
+export const C = {
+  cream: '#DCD7C9',
+  raised: '#EDE9E1',
+  border: '#C8C3B8',
+  muted: '#B0AA9E',
+  deep: '#2C3930',
+  mid: '#3F4F44',
+  light: '#5C7065',
+  earth: '#A27B5C',
+  earthLight: '#C49A7A',
+  earthFaint: '#A27B5C20',
+  up: '#2D7A4F',
+  stable: '#8B6914',
+  down: '#A63228',
+}

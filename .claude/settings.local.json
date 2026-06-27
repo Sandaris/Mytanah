@@ -58,10 +58,32 @@
       "Bash(cat out2.txt)",
       "Bash(python check_broken.py)",
       "Bash(python fix_broken.py)",
-      "Bash(python fix_section15.py)"
+      "Bash(python fix_section15.py)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_tabs",
+      "Bash(python *)",
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click"
     ],
     "additionalDirectories": [
       "c:\\Users\\User\\AppData\\Local\\Temp"
     ]
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: runs after Edit/Write/MultiEdit on UI files and surfaces findings as system reminders."
 }

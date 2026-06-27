@@ -1,173 +1,68 @@
 <!doctype html>
-<!-- @dsCard group="UI Kit — Dashboard" name="Dashboard UI kit" subtitle="Click-through recreation: location → valuation → sentiment → risk" viewport="1280x900" -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>MyPropertyIQ — Dashboard UI Kit</title>
-<link rel="stylesheet" href="../../colors_and_type.css">
+<title>MyPropertyIQ</title>
+<link rel="stylesheet" href="/app/colors_and_type.css">
 <style>
-  html, body { margin: 0; height: 100%; background: #DCD7C9; }
+  html, body { margin: 0; height: 100%; background: #0a0e0c; }
   #root { height: 100%; }
   * { box-sizing: border-box; }
-  input[type=range] { -webkit-appearance: none; background: transparent; }
-  input[type=range]::-webkit-slider-runnable-track {
-    height: 4px; background: #C8C3B8; border-radius: 2px;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 16px; height: 16px;
-    border-radius: 50%; background: #2C3930; margin-top: -6px;
-    border: 2px solid #DCD7C9;
-  }
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/d3@7.8.5/dist/d3.min.js"></script>
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-<script src="https://unpkg.com/echarts@5.5.1/dist/echarts.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
 
-<script src="api.js"></script>
-<script type="text/babel" src="Primitives.jsx"></script>
-<script type="text/babel" src="Chrome.jsx"></script>
-<script type="text/babel" src="Intro.jsx"></script>
-<script type="text/babel" src="SentimentPage.jsx"></script>
-<script type="text/babel" src="MarketOverviewPage.jsx"></script><script type="text/babel" src="CyclicalData.jsx"></script>
-<script type="text/babel" src="CyclicalChart.jsx"></script>
+<!-- Dashboard loads silently in the background while the intro plays.
+     dashboard.html body background is cream (#DCD7C9) so even mid-load
+     the iframe shows cream, not a white flash. -->
+<iframe id="dash-frame" src="dashboard.html?from=intro"
+  style="position:fixed;inset:0;width:100%;height:100%;border:none;visibility:hidden;z-index:-1;"
+  title="Dashboard">
+</iframe>
+
 <script type="text/babel" src="MalaysiaGeo.jsx"></script>
-<script type="text/babel" src="PropertyMapData.jsx"></script>
-<script type="text/babel" src="Combobox.jsx"></script>
-<script type="text/babel" src="ValuationDashboard.jsx"></script>
-<script type="text/babel" src="RoiCalculator.jsx"></script>
-<script type="text/babel" src="MalaysiaMap.jsx"></script>
-<script type="text/babel" src="TxnTable.jsx"></script>
-<script type="text/babel" src="TxnFullPage.jsx"></script>
-<script type="text/babel" src="TransactionMapPage.jsx"></script>
+<script type="text/babel" src="Intro.jsx"></script>
 
 <script type="text/babel">
-const { useState } = React;
-
-const TITLES = {
-  valuation: 'Valuation',
-  market: 'Property Market Overview',
-  roi: 'ROI Calculator',
-  sentiment: 'Sentiment Index',
-};
+const { useEffect, useRef } = React;
 
 const App = () => {
-  // Intro plays on every load. `?skip=1` jumps past it.
-  const skip = new URLSearchParams(location.search).get('skip') === '1';
-  const [introDone, setIntroDone] = useState(skip);
-  const [page, setPage] = useState('valuation');
-  // First-time experience: the dashboard chrome (sidebar + header) stays
-  // hidden so the user lands on nothing but the Malaysia map. It glides in
-  // the moment they engage with the map (pick a state).
-  const [chromeShown, setChromeShown] = useState(false);
-  // Floating left nav — revealed only while the cursor is at the left edge.
-  const [navOpen, setNavOpen] = useState(false);
-  const [roiSeed, setRoiSeed] = useState(null);
-  // Cinematic hand-off from the intro: a cream curtain (matching the intro's
-  // wipe) covers the first frame, then dissolves as the map scales into place.
-  const [firstReveal, setFirstReveal] = useState(!skip);
-  // Pages that render the full-bleed Malaysia map experience (no padding, fixed height).
-  const isMapPage = page === 'valuation';
+  const iframeReadyRef = useRef(false);
+  const doneRef = useRef(false);
+  const revealRef = useRef(null);
 
-  if (!introDone) {
-    return <Intro onDone={() => setIntroDone(true)}/>;
-  }
+  useEffect(() => {
+    const frame = document.getElementById('dash-frame');
+    revealRef.current = () => {
+      frame.style.transition = 'opacity 0.6s ease';
+      frame.style.opacity = '0';
+      frame.style.visibility = 'visible';
+      frame.style.zIndex = '200';
+      requestAnimationFrame(() => requestAnimationFrame(() => { frame.style.opacity = '1'; }));
+      history.replaceState(null, '', 'dashboard.html?from=intro');
+    };
+    frame.addEventListener('load', () => {
+      iframeReadyRef.current = true;
+      if (doneRef.current) revealRef.current();
+    });
+  }, []);
 
-  const engage = () => setChromeShown(true);
-  const goTo = (id) => { setPage(id); setChromeShown(true); setNavOpen(false); };
-  const exportToRoi = (seed) => {
-    setRoiSeed(seed);
-    setPage('roi');
-    setChromeShown(true);
-    setNavOpen(false);
+  const handleDone = () => {
+    doneRef.current = true;
+    if (iframeReadyRef.current) {
+      revealRef.current();
+    } else {
+      window.location.href = 'dashboard.html?from=intro';
+    }
   };
 
-  return (
-    <div style={{
-      position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden',
-      display: 'flex', flexDirection: 'column',
-    }}>
-      {/* Top bar — reveals once the user engages with the map */}
-      <div style={{
-        height: chromeShown ? 56 : 0, flexShrink: 0, overflow: 'hidden',
-        transition: 'height .7s cubic-bezier(.16,1,.3,1)',
-      }}>
-        <Header title={TITLES[page]}/>
-      </div>
-
-      <main style={{
-        flex: 1, overflow: isMapPage ? 'hidden' : 'auto', position: 'relative',
-        padding: isMapPage ? 0 : 28,
-        background: '#DCD7C9',
-      }}
-      data-screen-label={`01 ${TITLES[page]}`}>
-        <div key={page} style={{
-          animation: firstReveal
-            ? 'mapReveal 1.5s cubic-bezier(.16,1,.3,1) both'
-            : 'pageIn .5s cubic-bezier(.16,1,.3,1)',
-          transformOrigin: '50% 46%',
-          height: isMapPage ? '100%' : 'auto',
-        }}>
-          {page === 'valuation' && <TransactionMapPage onEngage={engage} navOpen={navOpen} variant="valuation" onExportRoi={exportToRoi}/>}
-          {page === 'market' && <MarketOverviewPage/>}
-          {page === 'roi' && <RoiCalculator seed={roiSeed}/>}
-          {page === 'sentiment' && <SentimentPage/>}
-        </div>
-      </main>
-
-      {/* Far-left hover trigger strip */}
-      <div onMouseEnter={() => setNavOpen(true)} style={{
-        position: 'fixed', left: 0, top: 0, bottom: 0, width: 24, zIndex: 68,
-      }}/>
-
-      {/* Edge hint grip — invites the hover, fades away while the nav is open */}
-      <div aria-hidden="true" style={{
-        position: 'fixed', left: 9, top: '50%', transform: 'translateY(-50%)',
-        width: 4, height: 48, borderRadius: 9999, background: C.deep,
-        opacity: navOpen ? 0 : 0.55, transition: 'opacity .3s', zIndex: 67,
-        pointerEvents: 'none', boxShadow: '0 2px 10px rgba(44,57,48,.3)',
-      }}/>
-
-      {/* Floating navigation panel — glides in from the left on hover */}
-      <nav onMouseEnter={() => setNavOpen(true)} onMouseLeave={() => setNavOpen(false)}
-        style={{
-          position: 'fixed', left: 12, top: 12, bottom: 12, width: 220, zIndex: 72,
-          transform: navOpen ? 'translateX(0)' : 'translateX(calc(-100% - 18px))',
-          transition: 'transform .5s cubic-bezier(.16,1,.3,1)',
-          borderRadius: 16, overflow: 'hidden',
-          boxShadow: '0 22px 60px rgba(20,28,22,.42)',
-        }}>
-        <Sidebar active={page} onNav={goTo}/>
-      </nav>
-
-      {/* Cream curtain — seamless continuation of the intro wipe, then dissolves */}
-      {firstReveal && (
-        <div onAnimationEnd={() => setFirstReveal(false)} style={{
-          position: 'fixed', inset: 0, zIndex: 90, background: C.cream,
-          pointerEvents: 'none', animation: 'curtainFade 1.15s cubic-bezier(.4,0,.2,1) both',
-        }}/>
-      )}
-
-      <style>{`
-        @keyframes pageIn { from {opacity:0;transform:translateY(-16px)} to {opacity:1;transform:none} }
-        @keyframes mapReveal {
-          0%   { opacity: 0; transform: scale(1.12); filter: blur(6px); }
-          55%  { opacity: 1; }
-          100% { opacity: 1; transform: scale(1); filter: blur(0); }
-        }
-        @keyframes curtainFade {
-          0%   { opacity: 1; }
-          40%  { opacity: 1; }
-          100% { opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
+  return <Intro onDone={handleDone}/>;
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);

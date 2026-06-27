@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm cream/forest theme mapped to shadcn variables */
+    --background: 40 22% 88%;        /* #EDE9E1 cream-light */
+    --foreground: 155 14% 19%;       /* #2C3930 forest deep */
+
+    --card: 38 20% 83%;              /* #DCD7C9 cream */
+    --card-foreground: 155 14% 19%;
+
+    --popover: 40 22% 92%;
+    --popover-foreground: 155 14% 19%;
+
+    --primary: 155 14% 19%;          /* #2C3930 forest deep */
+    --primary-foreground: 40 22% 88%;
+
+    --secondary: 26 28% 49%;         /* #A27B5C earth brown */
+    --secondary-foreground: 40 22% 95%;
+
+    --muted: 38 20% 88%;
+    --muted-foreground: 155 10% 40%;
+
+    --accent: 29 40% 61%;            /* #C49A7A earth light */
+    --accent-foreground: 155 14% 19%;
+
+    --destructive: 4 57% 41%;        /* #A63228 signal down */
+    --destructive-foreground: 40 22% 95%;
+
+    --border: 36 17% 74%;            /* #C8C3B8 */
+    --input: 36 17% 74%;
+    --ring: 155 14% 19%;
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  .font-data {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Semantic signal colors as utility classes */
+@layer utilities {
+  .text-signal-up { color: #2D7A4F; }
+  .text-signal-down { color: #A63228; }
+  .text-signal-stable { color: #8B6914; }
+  .bg-signal-up { background-color: #2D7A4F; }
+  .bg-signal-down { background-color: #A63228; }
+  .bg-signal-stable { background-color: #8B6914; }
+}

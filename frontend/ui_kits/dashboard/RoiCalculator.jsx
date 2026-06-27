@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-const { useState: roiUseState, useMemo: roiUseMemo, useEffect: roiUseEffect } = React;
+const { useState: roiUseState, useMemo: roiUseMemo, useEffect: roiUseEffect, useRef: roiUseRef } = React;
 
 const ROI_DEFAULT_SEED = {
   propertyPrice: 500000,
@@ -325,12 +325,38 @@ const RoiCalculator = ({ seed }) => {
   const [rentEstimate, setRentEstimate] = roiUseState(null);
   const [rentLoading, setRentLoading] = roiUseState(false);
   const [rentError, setRentError] = roiUseState(null);
+  const [rentMode, setRentMode] = roiUseState(source.mukim ? 'live' : 'manual');
+  const [progressVal, setProgressVal] = roiUseState(null);
+  const progressIntervalRef = roiUseRef(null);
+
+  const startProgress = () => {
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    setProgressVal(0);
+    let val = 0;
+    progressIntervalRef.current = setInterval(() => {
+      // Decelerating fill: fast early, crawls near 85%
+      const remaining = 85 - val;
+      val = Math.min(85, val + Math.max(0.4, remaining * 0.1));
+      setProgressVal(Math.round(val));
+      if (val >= 84.9) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    }, 80);
+  };
+
+  const completeProgress = () => {
+    if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
+    setProgressVal(100);
+    setTimeout(() => setProgressVal(null), 460);
+  };
 
   const fetchMarketRent = () => {
     const mukim = source.mukim;
     if (!mukim || rentLoading) return;
     setRentLoading(true);
     setRentError(null);
+    startProgress();
     window.API.rentComps(mukim)
       .then(data => {
         setRentEstimate(data);
@@ -339,15 +365,24 @@ const RoiCalculator = ({ seed }) => {
           setRentalPrice(Math.round(bestRent));
       })
       .catch(err => setRentError(err.message || 'Failed to fetch market rent'))
-      .finally(() => setRentLoading(false));
+      .finally(() => { setRentLoading(false); completeProgress(); });
   };
 
   roiUseEffect(() => {
     if (seed && Number(seed.propertyPrice) > 0) {
       setPrice(Math.round(seed.propertyPrice));
       setRentalPrice(Math.max(0, Math.round(seed.propertyPrice * 0.0035)));
+      setRentEstimate(null);
+      setRentError(null);
     }
   }, [seed && seed.propertyPrice]);
+
+  // Auto-fetch when entering live mode (or on first mount when mukim is set)
+  roiUseEffect(() => {
+    if (rentMode === 'live' && source.mukim && !rentEstimate && !rentLoading) {
+      fetchMarketRent();
+    }
+  }, [rentMode]);
 
   const safe = roiUseMemo(() => {
     const p = roiClamp(price, 1, 100000000);
@@ -476,7 +511,7 @@ const RoiCalculator = ({ seed }) => {
   );
 
   return (
-    <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gap: 18 }}>
+    <div className="roi-calc" style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gap: 18 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 18, flexWrap: 'wrap' }}>
         <div>
           <Eyebrow>ROI Calculator</Eyebrow>
@@ -509,39 +544,155 @@ const RoiCalculator = ({ seed }) => {
             <Mono size={15} color={C.up}>{roiFmt(monthlyIncome)} / mo</Mono>
           </div>
           <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <RoiInput label="Rental price" value={rentalPrice} min={0} step={50}
-                onChange={(v) => setRentalPrice(Math.max(0, roiNum(v, 0)))} suffix="RM"/>
-              <RoiInput label="Carpark rental" value={carparkRent} min={0} step={10}
-                onChange={(v) => setCarparkRent(Math.max(0, roiNum(v, 0)))} suffix="RM"/>
+            {/* ── Rental price: Manual or Live market estimate ── */}
+            <div style={{ display: 'grid', gap: 10 }}>
+              {/* Mode header row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <Eyebrow>Rental price</Eyebrow>
+                <div className="roi-mode-tabs" role="group" aria-label="Rental price source">
+                  <button type="button"
+                    className={`roi-mode-tab${rentMode === 'manual' ? ' roi-mode-tab--active' : ''}`}
+                    onClick={() => setRentMode('manual')}
+                    aria-pressed={rentMode === 'manual'}>
+                    Manual
+                  </button>
+                  <button type="button"
+                    className={`roi-mode-tab${rentMode === 'live' ? ' roi-mode-tab--active' : ''}${!source.mukim ? ' roi-mode-tab--locked' : ''}`}
+                    onClick={() => source.mukim && setRentMode('live')}
+                    disabled={!source.mukim}
+                    aria-pressed={rentMode === 'live'}
+                    title={!source.mukim ? 'Import a valuation with a location to unlock live market data' : `Live listings from ${source.mukim}`}>
+                    Live estimate
+                  </button>
+                </div>
+              </div>
+
+              {/* Manual mode */}
+              {rentMode === 'manual' && (
+                <div className="roi-mode-panel" style={{ display: 'grid', gap: 6 }}>
+                  <div className="roi-input-wrap">
+                    <input type="number" value={roiInputValue(rentalPrice)} min={0} step={50}
+                      placeholder="e.g. 1500" className="roi-input"
+                      onChange={(e) => setRentalPrice(Math.max(0, roiNum(e.target.value, 0)))}
+                      aria-label="Monthly rental price in RM"/>
+                    <span className="roi-input-suffix">RM / mo</span>
+                  </div>
+                  {source.mukim ? (
+                    <div style={{ fontSize: 11.5, color: C.light, fontFamily: "'DM Sans',sans-serif", lineHeight: 1.4 }}>
+                      Enter your estimate, or switch to{' '}
+                      <b style={{ color: C.earth, cursor: 'pointer' }} onClick={() => setRentMode('live')}>
+                        Live estimate
+                      </b>{' '}
+                      to auto-fill from {source.mukim} listings.
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11.5, color: C.muted, fontFamily: "'DM Sans',sans-serif", lineHeight: 1.4 }}>
+                      Enter your expected monthly rental. Import a valuation to unlock live market data.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Live mode */}
+              {rentMode === 'live' && (
+                <div className="roi-mode-panel" style={{ display: 'grid', gap: 8 }}>
+                  {/* Progress bar — replaces spinner; shows during load and brief completion flash */}
+                  {(rentLoading || progressVal !== null) && (
+                    <div className="roi-live-state" style={{ padding: '12px 14px', borderRadius: 10, background: C.earthFaint, border: `1px solid ${C.border}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, lineHeight: 1.4,
+                          color: progressVal === 100 ? C.up : C.mid, transition: 'color 300ms ease-out' }}>
+                          {progressVal === 100
+                            ? <React.Fragment>Loaded — listings from <b style={{ color: C.up }}>{source.mukim}</b></React.Fragment>
+                            : <React.Fragment>Looking up listings in <b style={{ color: C.deep }}>{source.mukim}</b>…</React.Fragment>
+                          }
+                        </span>
+                        <span className={`roi-progress-pct${progressVal === 100 ? ' roi-progress-pct--complete' : ''}`}
+                          aria-live="polite" aria-atomic="true">
+                          {progressVal ?? 0}%
+                        </span>
+                      </div>
+                      <div className="roi-progress-track"
+                        role="progressbar" aria-valuenow={progressVal ?? 0} aria-valuemin={0} aria-valuemax={100}
+                        aria-label="Fetching market rent data">
+                        <div className={`roi-progress-fill${progressVal === 100 ? ' roi-progress-fill--complete' : ''}`}
+                          style={{ transform: `scaleX(${(progressVal ?? 0) / 100})` }}/>
+                      </div>
+                    </div>
+                  )}
+                  {/* Error */}
+                  {!rentLoading && rentError && (
+                    <div className="roi-live-state" style={{ display: 'grid', gap: 8, padding: '12px 14px', borderRadius: 10, background: 'rgba(166,50,40,0.07)', border: '1px solid rgba(166,50,40,0.22)' }}>
+                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.down }}>{rentError}</div>
+                      <button type="button" onClick={fetchMarketRent}
+                        style={{ alignSelf: 'start', cursor: 'pointer', border: `1px solid ${C.down}`, background: 'transparent', color: C.down, fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, borderRadius: 7, padding: '6px 12px', transition: 'background 160ms' }}>
+                        Try again
+                      </button>
+                    </div>
+                  )}
+                  {/* Success — data with confidence */}
+                  {!rentLoading && !rentError && rentEstimate && rentEstimate.confidence !== 'none' && (
+                    <div className="roi-live-state" style={{ display: 'grid', gap: 8 }}>
+                      <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(45,122,79,0.08)', border: '1px solid rgba(45,122,79,0.22)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.up, fontWeight: 600 }}>
+                            Market data · {source.mukim}
+                          </div>
+                          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10.5, color: C.mid, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {rentEstimate.confidence} · {rentEstimate.listing_count} listings
+                          </span>
+                        </div>
+                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <Mono size={22} color={C.up}>{roiFmt(rentEstimate.median_rent_myr || rentEstimate.avg_rent_myr)}</Mono>
+                          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.mid }}>
+                            / mo {rentEstimate.median_rent_myr ? 'median' : 'avg'}
+                          </span>
+                        </div>
+                        <div style={{ marginTop: 3, fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.mid }}>
+                          Range: {roiFmt(rentEstimate.min_rent_myr)} – {roiFmt(rentEstimate.max_rent_myr)} / mo
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gap: 5 }}>
+                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.mid }}>Applied — or type to override:</div>
+                        <div className="roi-input-wrap">
+                          <input type="number" value={roiInputValue(rentalPrice)} min={0} step={50}
+                            placeholder={String(Math.round(rentEstimate.median_rent_myr || rentEstimate.avg_rent_myr || 0))}
+                            className="roi-input"
+                            onChange={(e) => setRentalPrice(Math.max(0, roiNum(e.target.value, 0)))}
+                            aria-label="Monthly rental — override market estimate"/>
+                          <span className="roi-input-suffix">RM / mo</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* No listings found */}
+                  {!rentLoading && !rentError && rentEstimate && rentEstimate.confidence === 'none' && (
+                    <div className="roi-live-state" style={{ display: 'grid', gap: 8, padding: '12px 14px', borderRadius: 10, background: C.earthFaint, border: `1px solid ${C.border}` }}>
+                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
+                        No rental listings found for <b style={{ color: C.deep }}>{source.mukim}</b>. Switch to Manual to enter your own estimate.
+                      </div>
+                      <button type="button" onClick={() => setRentMode('manual')}
+                        style={{ alignSelf: 'start', cursor: 'pointer', border: `1px solid ${C.earth}`, background: 'transparent', color: C.earth, fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, borderRadius: 7, padding: '6px 12px', transition: 'background 160ms' }}>
+                        Switch to Manual
+                      </button>
+                    </div>
+                  )}
+                  {/* Initial — effect not yet fired (sub-frame fallback) */}
+                  {!rentLoading && !rentError && !rentEstimate && progressVal === null && (
+                    <div className="roi-live-state" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 10, background: C.earthFaint, border: `1px solid ${C.border}` }}>
+                      <span className="roi-spinner" aria-hidden="true"/>
+                      <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
+                        Preparing fetch for <b style={{ color: C.deep }}>{source.mukim}</b>…
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {source.mukim && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <button type="button" onClick={fetchMarketRent} disabled={rentLoading}
-                  style={{ ...addBtnStyle(C.earth), width: '100%', justifyContent: 'center',
-                           opacity: rentLoading ? 0.7 : 1, cursor: rentLoading ? 'default' : 'pointer' }}>
-                  {rentLoading
-                    ? '⏳ Fetching market rent…'
-                    : `Fetch Live Market Rent · ${source.mukim}`}
-                </button>
-                {rentError && (
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.down }}>{rentError}</div>
-                )}
-                {rentEstimate && !rentLoading && rentEstimate.confidence !== 'none' && (
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.earth }}>
-                    Auto-filled · {rentEstimate.median_rent_myr ? 'median' : 'avg'} {roiFmt(rentEstimate.median_rent_myr || rentEstimate.avg_rent_myr)}/mo
-                    ({roiFmt(rentEstimate.min_rent_myr)}–{roiFmt(rentEstimate.max_rent_myr)})
-                    · {rentEstimate.listing_count} listings · {rentEstimate.confidence} confidence · editable
-                  </div>
-                )}
-                {rentEstimate && !rentLoading && rentEstimate.confidence === 'none' && (
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.muted }}>
-                    No listings found for {source.mukim}.
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Carpark rental — always visible */}
+            <RoiInput label="Carpark rental" value={carparkRent} min={0} step={10}
+              onChange={(v) => setCarparkRent(Math.max(0, roiNum(v, 0)))} suffix="RM"/>
 
             {/* dynamic extra monthly income line items */}
             <div style={{ display: 'grid', gap: 9, paddingTop: 6, borderTop: `1px dashed ${C.border}` }}>
@@ -724,6 +875,171 @@ const RoiCalculator = ({ seed }) => {
         }
         @media (max-width: 560px) {
           .roi-stats { grid-template-columns: 1fr !important; }
+        }
+
+        /* ── Rental mode tab toggle ── */
+        .roi-mode-tabs {
+          display: flex;
+          gap: 2px;
+          background: #DCD7C9;
+          border: 1px solid #C8C3B8;
+          border-radius: 8px;
+          padding: 2px;
+          flex-shrink: 0;
+        }
+        .roi-mode-tab {
+          padding: 4px 11px;
+          border: none;
+          border-radius: 6px;
+          background: transparent;
+          color: #3F4F44;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 11.5px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 140ms, color 140ms, box-shadow 140ms;
+          white-space: nowrap;
+          line-height: 1.6;
+        }
+        .roi-mode-tab:hover:not(:disabled):not(.roi-mode-tab--active) {
+          background: rgba(44, 57, 48, 0.09);
+        }
+        .roi-mode-tab--active {
+          background: #2C3930;
+          color: #DCD7C9;
+          box-shadow: 0 1px 3px rgba(44, 57, 48, 0.2);
+        }
+        .roi-mode-tab--locked,
+        .roi-mode-tab:disabled {
+          opacity: 0.38;
+          cursor: not-allowed;
+        }
+        .roi-mode-tab:focus-visible {
+          outline: 2px solid #A27B5C;
+          outline-offset: 1px;
+        }
+
+        /* ── Rental input with inline suffix ── */
+        .roi-input-wrap { position: relative; }
+        .roi-input {
+          width: 100%;
+          background: #DCD7C9;
+          border: 1px solid rgba(162, 123, 92, 0.28);
+          color: #2C3930;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 14px;
+          border-radius: 8px;
+          padding: 11px 68px 11px 12px;
+          outline: none;
+          transition: border-color 160ms, box-shadow 160ms;
+          box-sizing: border-box;
+          -moz-appearance: textfield;
+        }
+        .roi-input::-webkit-inner-spin-button,
+        .roi-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .roi-input:focus {
+          border-color: #A27B5C;
+          box-shadow: 0 0 0 3px rgba(162, 123, 92, 0.16);
+        }
+        .roi-input-suffix {
+          position: absolute;
+          right: 11px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-family: 'DM Sans', sans-serif;
+          font-size: 11.5px;
+          color: #B0AA9E;
+          pointer-events: none;
+          white-space: nowrap;
+        }
+
+        /* ── Focus ring for existing RoiInput fields ── */
+        .roi-calc input[type=number]:focus {
+          outline: none;
+          border-color: #A27B5C !important;
+          box-shadow: 0 0 0 3px rgba(162, 123, 92, 0.16) !important;
+        }
+
+        /* ── CSS spinner (fallback only) ── */
+        @keyframes roi-spin { to { transform: rotate(360deg); } }
+        .roi-spinner {
+          display: inline-block;
+          flex-shrink: 0;
+          width: 14px;
+          height: 14px;
+          border: 2px solid #C8C3B8;
+          border-top-color: #A27B5C;
+          border-radius: 50%;
+          animation: roi-spin 0.65s linear infinite;
+        }
+
+        /* ── Page entrance ── */
+        @keyframes roi-enter {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .roi-calc {
+          animation: roi-enter 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* ── Mode panel content fade-in on tab switch ── */
+        @keyframes roi-panel-in {
+          from { opacity: 0; transform: translateY(5px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .roi-mode-panel {
+          animation: roi-panel-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* ── Live mode state card fade-in ── */
+        .roi-live-state {
+          animation: roi-panel-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* ── Fetch progress bar ── */
+        .roi-progress-track {
+          height: 4px;
+          background: #C8C3B8;
+          border-radius: 2px;
+          overflow: hidden;
+        }
+        .roi-progress-fill {
+          height: 100%;
+          width: 100%;
+          background: #A27B5C;
+          border-radius: 2px;
+          transform: scaleX(0);
+          transform-origin: left center;
+          transition: transform 80ms linear;
+        }
+        .roi-progress-fill--complete {
+          background: #2D7A4F;
+          transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), background 280ms ease-out;
+        }
+        .roi-progress-pct {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11.5px;
+          font-weight: 500;
+          color: #A27B5C;
+          min-width: 34px;
+          text-align: right;
+          flex-shrink: 0;
+          transition: color 280ms ease-out;
+        }
+        .roi-progress-pct--complete {
+          color: #2D7A4F;
+        }
+
+        /* ── Reduced motion overrides ── */
+        @media (prefers-reduced-motion: reduce) {
+          .roi-calc { animation: none; }
+          .roi-mode-panel { animation: none; }
+          .roi-live-state { animation: none; }
+          .roi-spinner { animation: none; border-top-color: #C8C3B8; opacity: 0.5; }
+          .roi-mode-tab { transition: none; }
+          .roi-input { transition: none; }
+          .roi-progress-fill { transition: none; }
+          .roi-progress-pct { transition: none; }
         }
       `}</style>
     </div>

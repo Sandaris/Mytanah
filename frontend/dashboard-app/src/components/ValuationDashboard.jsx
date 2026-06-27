@@ -263,13 +263,17 @@ const StatTile = ({ label, value, sub, accent }) => (
   </div>
 );
 
-const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
+const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi, onSwitchToMalaysia }) => {
   // Single live web-search valuation (Exa). No model selection — the backend
   // searches Malaysian property portals for comparable sale prices.
   const [apiResult, setApiResult] = useState(null);   // full /valuation/predict response
   const [apiSig, setApiSig] = useState(null);         // signature the result belongs to
   const [apiError, setApiError] = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
+  const [rentResult, setRentResult] = useState(null);
+  const [rentSig, setRentSig] = useState(null);
+  const [rentError, setRentError] = useState(null);
+  const [rentLoading, setRentLoading] = useState(false);
   const [recentTxns, setRecentTxns] = useState(null);   // real Open Transaction Data rows
   const [recentLoading, setRecentLoading] = useState(false);
   const [recentScope, setRecentScope] = useState('exact'); // 'exact' | 'family' | 'area'
@@ -464,6 +468,30 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
 
   const payloadSig = useMemo(() => payloadBase ? JSON.stringify(payloadBase) : null, [payloadBase]);
 
+  /* Parallel rent comps fetch — fires at the same time as the listing valuation.
+     Anchored on mukim (Malaysia) or the postal district (Singapore, which has no
+     mukim). Country switches the backend to SGD + Singapore portals. */
+  const rentMukim = sel.mukim || sel.district;
+  const rentCountry = isSG ? 'SG' : 'MY';
+  const rentPayloadSig = useMemo(() => {
+    if (!rentMukim) return null;
+    return JSON.stringify({ country: rentCountry, mukim: rentMukim, scheme: sel.area || null, district: sel.district || null, state: sel.state || null, propertyType: sel.propertyType || null });
+  }, [rentCountry, rentMukim, sel.area, sel.district, sel.state, sel.propertyType]);
+
+  useEffect(() => {
+    if (!rentPayloadSig) {
+      setRentResult(null); setRentSig(null); setRentError(null); setRentLoading(false);
+      return;
+    }
+    setRentLoading(true); setRentError(null); setRentResult(null); setRentSig(null);
+    let cancelled = false;
+    API.rentComps({ country: rentCountry, mukim: rentMukim, scheme: sel.area || undefined, district: sel.district || undefined, state: sel.state || undefined, property_type: sel.propertyType || undefined })
+      .then((r) => { if (!cancelled) { setRentResult(r); setRentSig(rentPayloadSig); } })
+      .catch((e) => { if (!cancelled) setRentError(e.message || 'Failed to fetch rental estimate'); })
+      .finally(() => { if (!cancelled) setRentLoading(false); });
+    return () => { cancelled = true; };
+  }, [rentPayloadSig]);
+
   /* Fetch the live web valuation whenever the property/selection changes. Results
      are cached server-side per search (Exa results have a 48h TTL), so repeating a
      selection is fast. */
@@ -584,6 +612,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
   const fetchedLabel = fmtFetched(m.fetchedAt);
   const exportRoi = () => {
     if (!hasDisplayableEstimate || !onExportRoi) return;
+    const rentData = rentSig === rentPayloadSig ? rentResult : null;
     onExportRoi({
       propertyPrice: displayedPoint,
       locationLabel: [sel.area || sel.mukim || sel.district, sel.district, sel.state].filter(Boolean).join(', '),
@@ -595,6 +624,9 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
       scheme: sel.area || null,
       district: sel.district || null,
       state: sel.state || null,
+      country: rentCountry,
+      currency: isSG ? 'SGD' : 'RM',
+      rentEstimate: (rentData && rentData.confidence !== 'none') ? rentData : null,
     });
   };
 
@@ -644,18 +676,23 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
               )}
             </Eyebrow>
             {estimateLoading && (
-              <div style={{
-                minHeight: 190, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 10,
-                color: C.mid, textAlign: 'center',
-              }}>
-                <span className="tmap-spin" style={{
-                  width: 22, height: 22, borderRadius: '50%',
-                  border: `2px solid ${C.border}`, borderTopColor: C.earth, display: 'inline-block',
-                }}/>
-                <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13 }}>
-                  {guardChecking ? 'Checking recent transaction average...' : 'Searching property listings online…'}
-                </span>
+              <div style={{ marginTop: 12, padding: 14, borderRadius: 10, background: C.earthFaint, border: `1px solid ${C.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                  <span className="tmap-spin" style={{
+                    display: 'inline-block', flexShrink: 0, width: 14, height: 14, marginTop: 2,
+                    borderRadius: '50%', border: `2px solid ${C.border}`, borderTopColor: C.earth,
+                  }}/>
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, lineHeight: 1.45, color: C.mid }}>
+                    {guardChecking
+                      ? 'Checking recent transaction average…'
+                      : `Looking up sale listings online for ${sel.area || sel.mukim || sel.district}…`}
+                  </span>
+                </div>
+                {!guardChecking && (
+                  <div style={{ height: 4, borderRadius: 2, overflow: 'hidden', background: C.border }}>
+                    <div style={{ height: '100%', width: '38%', borderRadius: 2, background: C.earth, animation: 'rentLookupSlide 1.4s ease-in-out infinite' }}/>
+                  </div>
+                )}
               </div>
             )}
             {estimateUnavailable && (
@@ -760,15 +797,103 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
             )}
 
             <div style={{ marginTop: 12, display: hasDisplayableEstimate ? 'block' : 'none', fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid, lineHeight: 1.45, fontStyle: 'italic' }}>
-              Live estimate from comparable sale listings on Malaysian property portals
+              {isSG
+                ? 'Indicative estimate based on comparable Singapore listings'
+                : 'Live estimate from comparable sale listings on Malaysian property portals'}
               {fetchedLabel ? ` · as of ${fetchedLabel}` : ''}.
             </div>
-            {hasDisplayableEstimate && onExportRoi && !isSG && (
+            {hasDisplayableEstimate && onExportRoi && (
               <Button variant="cta" onClick={exportRoi} style={{ marginTop: 14, width: '100%' }}>
                 Export to ROI Calculator
               </Button>
             )}
           </Card>
+
+          {/* Rental estimate card — parallel Exa fetch, same loader style */}
+          {(rentLoading || rentSig === rentPayloadSig) && (
+            <Card style={{ padding: 20 }}>
+              <Eyebrow>
+                Estimated Rental · Live Web Search
+                {rentSig === rentPayloadSig && rentResult && rentResult.confidence !== 'none' && (
+                  <span style={{
+                    marginLeft: 8, padding: '1px 7px', borderRadius: 9999,
+                    background: C.up + '22', color: C.up, fontSize: 9,
+                    letterSpacing: '.12em', fontWeight: 600,
+                  }}>LIVE</span>
+                )}
+              </Eyebrow>
+
+              {rentLoading && (
+                <div style={{ marginTop: 12, padding: 14, borderRadius: 10, background: C.earthFaint, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                    <span className="tmap-spin" style={{
+                      display: 'inline-block', flexShrink: 0, width: 14, height: 14, marginTop: 2,
+                      borderRadius: '50%', border: `2px solid ${C.border}`, borderTopColor: C.earth,
+                    }}/>
+                    <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, lineHeight: 1.45, color: C.mid }}>
+                      Looking up rental listings online for {sel.area || sel.mukim || sel.district}…
+                    </span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, overflow: 'hidden', background: C.border }}>
+                    <div style={{ height: '100%', width: '38%', borderRadius: 2, background: C.earth, animation: 'rentLookupSlide 1.4s ease-in-out infinite' }}/>
+                  </div>
+                </div>
+              )}
+
+              {!rentLoading && rentResult && rentResult.confidence !== 'none' && (
+                <>
+                  <div style={{ marginTop: 10 }}>
+                    <Mono size={30} color={C.up}>{moneyC(rentResult.median_rent_myr || rentResult.avg_rent_myr)} / mo</Mono>
+                  </div>
+                  <div style={{ marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
+                      Range {moneyC(rentResult.min_rent_myr)} – {moneyC(rentResult.max_rent_myr)} / mo
+                    </span>
+                    <Mono size={11} color={C.earth}>{rentResult.confidence} · {rentResult.listing_count} listings</Mono>
+                  </div>
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <Eyebrow style={{ fontSize: 9.5 }}>Median / mo</Eyebrow>
+                      <Mono size={15}>{moneyC(rentResult.median_rent_myr)}</Mono>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <Eyebrow style={{ fontSize: 9.5 }}>Average / mo</Eyebrow>
+                      <Mono size={15}>{moneyC(rentResult.avg_rent_myr)}</Mono>
+                    </div>
+                  </div>
+                  {rentResult.sources_used && rentResult.sources_used.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <Eyebrow style={{ fontSize: 9.5, marginBottom: 6 }}>Sources</Eyebrow>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {rentResult.sources_used.map((s, i) => (
+                          <span key={i} style={{
+                            padding: '2px 8px', borderRadius: 9999, background: C.cream,
+                            border: `1px solid ${C.border}`, color: C.mid,
+                            fontFamily: "'DM Sans',sans-serif", fontSize: 10.5,
+                          }}>{cleanSource(s)}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ marginTop: 10, fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid, lineHeight: 1.45, fontStyle: 'italic' }}>
+                    Live rental estimate from comparable listings on {isSG ? 'Singapore' : 'Malaysian'} property portals.
+                  </div>
+                </>
+              )}
+
+              {!rentLoading && rentResult && rentResult.confidence === 'none' && (
+                <div style={{ marginTop: 10, fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.muted }}>
+                  No rental listings found for this selection.
+                </div>
+              )}
+
+              {!rentLoading && rentError && (
+                <div style={{ marginTop: 10, fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.down }}>
+                  Could not fetch rental estimate.
+                </div>
+              )}
+            </Card>
+          )}
         </div>
 
         {/* ===== RIGHT — region data (Malaysia) / coming-soon (Singapore) ===== */}
@@ -777,37 +902,24 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
             <Card style={{ padding: 22 }}>
               <Display size={16} weight={500}>Recent transactions &amp; market analytics</Display>
               <div style={{
-                marginTop: 12, padding: '16px 16px', borderRadius: 10,
+                marginTop: 12, padding: '24px 16px', borderRadius: 10,
                 background: C.earthFaint, border: `1px solid ${C.earth}33`,
-                fontFamily: "'DM Sans',sans-serif", fontSize: 13, lineHeight: 1.55, color: C.deep,
+                fontFamily: "'DM Sans',sans-serif", fontSize: 14, lineHeight: 1.55,
+                color: C.deep, textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
               }}>
-                <strong>Coming soon for Singapore.</strong> Recent-transaction tables,
-                price-by-type and yearly trends here are powered by Malaysia's NAPIC
-                Open Transaction Data. We're a Malaysian team — there's no Singapore
-                feed wired in yet. We'll add these the moment we get Singapore's open
-                property transaction data (e.g. URA caveats / data.gov.sg).
-                <div style={{ marginTop: 10, color: C.mid }}>
-                  For now the valuation on the left is sourced <strong>live</strong> from
-                  Singapore property portals (PropertyGuru, 99.co, EdgeProp SG, SRX) in S$.
-                </div>
-              </div>
-              <div style={{ marginTop: 14, display: 'grid', gap: 9 }}>
-                {['Recent transactions', 'Average price by property type', 'Price trend by year'].map((t) => (
-                  <div key={t} style={{
-                    display: 'flex', alignItems: 'center', gap: 9, padding: '11px 13px',
-                    borderRadius: 9, border: `1px dashed ${C.border}`, background: C.cream,
-                  }}>
-                    <span style={{
-                      width: 7, height: 7, borderRadius: '50%', background: C.earth, opacity: 0.5,
-                      flexShrink: 0,
-                    }}/>
-                    <span style={{ flex: 1, fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>{t}</span>
-                    <span style={{
-                      fontFamily: "'DM Sans',sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: '.1em',
-                      color: C.earth, background: C.earth + '18', borderRadius: 9999, padding: '2px 8px',
-                    }}>PENDING DATA</span>
-                  </div>
-                ))}
+                <span>Oops — we don't have the data for Singapore yet. Try Malaysia instead.</span>
+                <button
+                  type="button"
+                  onClick={onSwitchToMalaysia}
+                  style={{
+                    cursor: 'pointer', border: 'none', borderRadius: 9999,
+                    padding: '10px 18px', background: C.earth, color: '#fff',
+                    fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 600,
+                  }}
+                >
+                  🇲🇾 Choose a location in Malaysia
+                </button>
               </div>
             </Card>
           ) : (<>
@@ -1007,6 +1119,11 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
       )}
 
       <style>{`
+        @keyframes rentLookupSlide {
+          0%   { margin-left: 0;   width: 38%; }
+          50%  { margin-left: 62%; width: 38%; }
+          100% { margin-left: 0;   width: 38%; }
+        }
         @media (max-width: 880px) {
           .val-grid { grid-template-columns: 1fr !important; }
           .val-stats { grid-template-columns: repeat(2, 1fr) !important; }

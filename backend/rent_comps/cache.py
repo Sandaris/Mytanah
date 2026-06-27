@@ -37,6 +37,7 @@ def read_cache(ctx: RentContext) -> RentEstimate | None:
             fetched_at=data["fetched_at"],
             notes=data.get("notes"),
             sample_listings=data.get("sample_listings", []),
+            currency=data.get("currency", "RM"),
         )
     except Exception:
         return None

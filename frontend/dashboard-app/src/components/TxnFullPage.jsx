@@ -195,7 +195,8 @@ const TxnFullPage = (p) => {
         {isVal && (
           <Card style={{ padding: 0, overflow: 'hidden' }}>
             {p.searched
-              ? <ValuationDashboard sel={p.searched} loading={load.t} fullpage onExportRoi={p.onExportRoi}/>
+              ? <ValuationDashboard sel={p.searched} loading={load.t} fullpage onExportRoi={p.onExportRoi}
+                  onSwitchToMalaysia={p.onSwitchToMalaysia}/>
               : <FullEmpty title="Choose a location and press Search to value the area."
                   sub="Pick at least a district — mukim, scheme/area and road are optional."/>}
           </Card>

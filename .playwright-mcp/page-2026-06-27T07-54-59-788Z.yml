@@ -1,0 +1,133 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]: Valuation
+    - generic [ref=e6]: 27 Jun 2026
+  - main [ref=e7]:
+    - generic [ref=e9]:
+      - generic [ref=e309]:
+        - img [ref=e310]:
+          - generic:
+            - generic: Johor
+          - generic:
+            - generic: Kedah
+          - generic:
+            - generic: Kelantan
+          - generic:
+            - generic: Kuala Lumpur
+          - generic:
+            - generic: Labuan
+          - generic:
+            - generic: Melaka
+          - generic:
+            - generic: Negeri Sembilan
+          - generic:
+            - generic: Pahang
+          - generic:
+            - generic: Penang
+          - generic:
+            - generic: Perak
+          - generic:
+            - generic: Perlis
+          - generic:
+            - generic: Putrajaya
+          - generic:
+            - generic: Sabah
+          - generic:
+            - generic: Sarawak
+          - generic:
+            - generic: Selangor
+          - generic:
+            - generic: Terengganu
+        - generic [ref=e488]:
+          - button "West Malaysia" [ref=e489] [cursor=pointer]
+          - button "East Malaysia" [ref=e490] [cursor=pointer]
+        - button "East Malaysia" [ref=e491] [cursor=pointer]:
+          - img [ref=e492]
+          - generic [ref=e494]: East Malaysia
+        - generic [ref=e495]:
+          - button "Zoom in" [ref=e496] [cursor=pointer]:
+            - img [ref=e497]
+          - button "Zoom out" [ref=e498] [cursor=pointer]:
+            - img [ref=e499]
+          - button "Reset view" [ref=e500] [cursor=pointer]:
+            - img [ref=e501]
+        - generic: West Malaysia · click a state · scroll to zoom · drag to pan
+      - generic [ref=e282]:
+        - generic [ref=e283]:
+          - generic [ref=e284]:
+            - generic [ref=e285]: Explore
+            - generic [ref=e286]: Location Search
+          - button "Collapse" [ref=e287] [cursor=pointer]:
+            - img [ref=e288]
+        - generic [ref=e293]:
+          - generic [ref=e294]:
+            - button "🌏 All" [ref=e295] [cursor=pointer]
+            - button "🇲🇾 Malaysia" [ref=e296] [cursor=pointer]
+            - button "🇸🇬 Singapore" [ref=e297] [cursor=pointer]
+          - generic [ref=e298]: Select a state to begin a valuation.
+          - generic [ref=e299]:
+            - generic [ref=e504]:
+              - generic [ref=e506]: ① State
+              - combobox [ref=e507] [cursor=pointer]:
+                - option "Select state" [selected]
+                - option "Johor"
+                - option "Kedah"
+                - option "Kelantan"
+                - option "Kuala Lumpur"
+                - option "Labuan"
+                - option "Melaka"
+                - option "Negeri Sembilan"
+                - option "Pahang"
+                - option "Penang"
+                - option "Perak"
+                - option "Perlis"
+                - option "Putrajaya"
+                - option "Sabah"
+                - option "Sarawak"
+                - option "Selangor"
+                - option "Terengganu"
+            - generic [ref=e508]:
+              - generic [ref=e510]: ② District
+              - combobox [disabled] [ref=e511]:
+                - option "Select a state first" [selected]
+            - generic [ref=e512]:
+              - generic [ref=e514]: Property Type · required
+              - combobox [ref=e515] [cursor=pointer]:
+                - option "Select a property type" [selected]
+                - option "1 - 1 1/2 Storey Terraced"
+                - option "2 - 2 1/2 Storey Terraced"
+                - option "Condominium/Apartment"
+                - option "1 - 1 1/2 Storey Semi-Detached"
+                - option "Low-Cost House"
+                - option "Detached"
+                - option "2 - 2 1/2 Storey Semi-Detached"
+                - option "Flat"
+                - option "Low-Cost Flat"
+                - option "Cluster House"
+                - option "Town House"
+            - button "Value this area" [disabled] [ref=e517]:
+              - img [ref=e518]
+              - text: Value this area
+  - navigation [ref=e18]:
+    - complementary [ref=e19]:
+      - generic [ref=e20]:
+        - img [ref=e21]
+        - generic [ref=e25]: MyPropertyIQ
+      - generic [ref=e26]:
+        - link "Valuation" [ref=e27] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e28]
+          - generic [ref=e31]: Valuation
+        - link "Market Overview" [ref=e32] [cursor=pointer]:
+          - /url: /dashboard/market
+          - img [ref=e33]
+          - generic [ref=e37]: Market Overview
+        - link "ROI Calculator" [ref=e38] [cursor=pointer]:
+          - /url: /dashboard/roi
+          - img [ref=e39]
+          - generic [ref=e44]: ROI Calculator
+        - link "Housing Cycle Index" [ref=e45] [cursor=pointer]:
+          - /url: /dashboard/sentiment
+          - img [ref=e46]
+          - generic [ref=e49]: Housing Cycle Index
+      - generic [ref=e50]: "Data: NAPIC 2021–2025"

@@ -22,6 +22,13 @@ def read_cache(ctx: ValuationContext) -> ValuationEstimate | None:
         if fetched_at.tzinfo is None:
             fetched_at = fetched_at.replace(tzinfo=timezone.utc)
         has_value = data.get("estimated_value_myr") is not None
+        # Skip entries explicitly marked as errors.
+        if data.get("error", False):
+            return None
+        # Legacy entries (written before the error field existed) that have no
+        # value are likely cached transient failures — force a fresh fetch.
+        if "error" not in data and not has_value:
+            return None
         ttl = TTL_WITH_RESULTS if has_value else TTL_EMPTY
         if datetime.now(timezone.utc) - fetched_at > ttl:
             return None

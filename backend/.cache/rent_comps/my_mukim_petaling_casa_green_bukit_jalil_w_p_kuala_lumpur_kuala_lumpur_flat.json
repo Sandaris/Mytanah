@@ -1,0 +1,53 @@
+{
+  "mukim": "Petaling",
+  "avg_rent_myr": 2037.5,
+  "min_rent_myr": 1350.0,
+  "max_rent_myr": 2500.0,
+  "median_rent_myr": 2100.0,
+  "listing_count": 8,
+  "sources_used": [
+    "https://www.edgeprop.my/rent/kuala-lumpur/bukit-jalil/casa-green/all-residential/414057",
+    "https://www.edgeprop.my/listing/rental/3514762/casa-green-bukit-jalil-for-rent-by-jazz-yee-foong-fei",
+    "https://www.edgeprop.my/listing/rental/3304648/casa-green-for-rent-by-philip-ng",
+    "https://www.edgeprop.my/listing/rental/3669115/casa-green-bukit-jalil-for-rent-by-sharon-khong",
+    "https://www.mudah.my/property/properties-in-casa-green-bukit-jalil-kuala-lumpur",
+    "https://www.mudah.my/3-bedroom-2-bathroom-partly-furniture-ready-move-in-114935380.htm",
+    "https://www.iproperty.com.my/condo-for-rent/in-bukit-jalil-ijzo5/priced-under-2k-rm"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T08:49:32.454110+00:00",
+  "notes": "Casa Green (Bukit Jalil) is marketed on portals as a condominium / serviced residence rather than a literal flat; I used comparable whole-unit rentals only and excluded room-only/bedspace listings. I deduplicated one obvious cross-portal duplicate RM1,700 ad that appeared on both iProperty and Mudah. The current live samples found cluster between RM1,350 and RM2,500 per month.",
+  "sample_listings": [
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3514762/casa-green-bukit-jalil-for-rent-by-jazz-yee-foong-fei",
+      "title": "Casa Green Condominium @ Bukit Jalil for Rent for Rental @RM1,350 By JAZZ YEE FOONG FEI",
+      "source": "EdgeProp",
+      "rent_myr": 1350
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3304648/casa-green-for-rent-by-philip-ng",
+      "title": "RENT @ Casa Green 3 Rooms Partially Furnish @ Near Pavillion Bukit Jalil LRT for Rental @RM1,750 By PHILIP NG",
+      "source": "EdgeProp",
+      "rent_myr": 1750
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3669115/casa-green-bukit-jalil-for-rent-by-sharon-khong",
+      "title": "3 bedroom 3 bathroom condominium for rent for Rental @RM2,000 By SHARON KHONG",
+      "source": "EdgeProp",
+      "rent_myr": 2000
+    },
+    {
+      "url": "https://www.mudah.my/property/properties-in-casa-green-bukit-jalil-kuala-lumpur",
+      "title": "Condominium for Rent, 3 Bedroom, 1003 sq.ft, Casa Green (Bukit Jalil), Bukit Jalil, Kuala Lumpur",
+      "source": "Mudah",
+      "rent_myr": 2200
+    },
+    {
+      "url": "https://www.mudah.my/property/properties-in-casa-green-bukit-jalil-kuala-lumpur",
+      "title": "Condominium for Rent, 3 Bedroom, 1003 sq.ft, Casa Green (Bukit Jalil), Bukit Jalil, Kuala Lumpur",
+      "source": "Mudah",
+      "rent_myr": 2300
+    }
+  ],
+  "currency": "RM"
+}

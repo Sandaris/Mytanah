@@ -22,6 +22,13 @@ def read_cache(ctx: RentContext) -> RentEstimate | None:
         if fetched_at.tzinfo is None:
             fetched_at = fetched_at.replace(tzinfo=timezone.utc)
         listing_count = data.get("listing_count", 0)
+        # Skip entries explicitly marked as errors.
+        if data.get("error", False):
+            return None
+        # Legacy entries (written before the error field existed) with no
+        # listings are likely cached transient failures — force a fresh fetch.
+        if "error" not in data and listing_count == 0:
+            return None
         ttl = TTL_WITH_RESULTS if listing_count > 0 else TTL_EMPTY
         if datetime.now(timezone.utc) - fetched_at > ttl:
             return None

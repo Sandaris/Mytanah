@@ -1,0 +1,58 @@
+{
+  "estimated_value_myr": 500000.0,
+  "low_myr": 470000.0,
+  "high_myr": 530000.0,
+  "price_per_sqft_myr": 500.0,
+  "listing_count": 6,
+  "sources_used": [
+    "EdgeProp Casa Green insights",
+    "EdgeProp sale listing RM530k",
+    "PropMall sale listing RM440k",
+    "PropMall sale listing RM550k",
+    "Asia EProperty sale listing RM480k",
+    "Estate123 sale listing RM470k",
+    "Listin sale listing RM500k"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T10:08:35.753474+00:00",
+  "notes": "Estimate is anchored on live same-project asking prices for 1,003-sqft leasehold units (roughly RM440k-RM550k) and EdgeProp’s project insight showing a sold-price median of about RM499 psf for Casa Green @ Bukit Jalil, with historical sold-price range of RM494-RM509 psf and historical high/low of RM559/psf and RM399/psf. Adjusted to 1,001 sq ft, that implies about RM500k, with a realistic range of RM470k-RM530k. Rentals were excluded.",
+  "comparables": [
+    {
+      "price_myr": 530000.0,
+      "title": "BUKIT JALIL, CASA GREEN CONDOMINIUM for SALE",
+      "url": "https://www.edgeprop.my/listing/sale/3631519/casa-green-bukit-jalil-for-sale-by-rihan-saleh",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 440000.0,
+      "title": "Casa Green Bukit Jalil Condominium Kuala Lumpur",
+      "url": "https://propmall.my/list/casa-green-bukit-jalil-condominium-kuala-lumpur-143117",
+      "source": "PropMall"
+    },
+    {
+      "price_myr": 550000.0,
+      "title": "Casa Green Condominiun @ Bukit Jalil Condo (Fully Furnished & Renovated)",
+      "url": "https://propmall.my/aleyaproperty/list/casa-green-condominiun-bukit-jalil-condo-fully-furnished-renovated-106713",
+      "source": "PropMall"
+    },
+    {
+      "price_myr": 480000.0,
+      "title": "Casa Green (Bukit Jalil), Bukit Jalil, Kuala Lumpur",
+      "url": "https://asiaeproperty.com/property/casa-green-bukit-jalil-bukit-jalil-kuala-lumpur/",
+      "source": "Asia EProperty"
+    },
+    {
+      "price_myr": 470000.0,
+      "title": "Property Residential | CASA GREEN CONDO, BUKIT JALIL | Buy & Sell Malaysia Commercial Property",
+      "url": "https://estate123.my/property/residential/details/135451707366323/casa-green-condo-bukit-jalil",
+      "source": "Estate123"
+    },
+    {
+      "price_myr": 500000.0,
+      "title": "Casa Green Condominium",
+      "url": "https://listin.my/property/casa-green-condominium-3-2-2-2-2-5",
+      "source": "Listin"
+    }
+  ],
+  "error": false
+}

@@ -1,0 +1,52 @@
+{
+  "mukim": "Petaling",
+  "avg_rent_myr": 1728.57,
+  "min_rent_myr": 1350.0,
+  "max_rent_myr": 2200.0,
+  "median_rent_myr": 1700.0,
+  "listing_count": 7,
+  "sources_used": [
+    "EdgeProp.my",
+    "Mudah.my",
+    "Roomz Malaysia",
+    "DurianProperty.com.my",
+    "BuddyHartanah.com"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T10:09:12.720580+00:00",
+  "notes": "Based on 7 live whole-unit condominium/apartment rental listings for Casa Green Bukit Jalil collected from Malaysia property portals on 2026-06-27. Room-only/bedspace/partition listings were excluded. The sample spans 825–1,003 sqft and includes current portal pages from EdgeProp, Mudah, Roomz Malaysia, and DurianProperty/BuddyHartanah. One EdgeProp room-rental listing at RM700 was explicitly excluded.",
+  "sample_listings": [
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3514762/casa-green-bukit-jalil-for-rent-by-jazz-yee-foong-fei",
+      "title": "Casa Green Condominium @ Bukit Jalil for Rent for Rental @RM1,350 By JAZZ YEE FOONG FEI | EdgeProp.my",
+      "source": "EdgeProp.my",
+      "rent_myr": 1350
+    },
+    {
+      "url": "https://my.roomz.asia/rent/property/4023/ready-move-in-15-may-2024-partial-furnished-3-bedroom-2-bathroom-condominium-for-rent-at-casa-green-bukit-jalil",
+      "title": "[Ready Move In 15 May 2024] Partial Furnished 3 bedroom 2 bathroom condominium for rent at Casa Green Bukit Jalil | Roomz Malaysia",
+      "source": "Roomz Malaysia",
+      "rent_myr": 1500
+    },
+    {
+      "url": "https://my.roomz.asia/rent/property/1398/casa-green-3r2b-fully-furnished-rm1600",
+      "title": "Casa Green 3r2b fully furnished",
+      "source": "Roomz Malaysia",
+      "rent_myr": 1600
+    },
+    {
+      "url": "https://www.mudah.my/3-bedroom-2-bathroom-partly-furniture-ready-move-in-114935380.htm",
+      "title": "Condominium for Rent, 3 Bedroom, 825 sq.ft, Casa Green (Bukit Jalil), Bukit Jalil, Kuala Lumpur 114935380 | Mudah.my",
+      "source": "Mudah.my",
+      "rent_myr": 1700
+    },
+    {
+      "url": "https://buddyhartanah.com/list/rent-casa-green-bukit-jalil-partially-furnished-bukit-jalil-kl-available-august-onwards-94359",
+      "title": "Casa Green Bukit Jalil 3 Bedroom 3 Bathroom 1003 sqft Condominium Unit for Rent",
+      "source": "DurianProperty.com.my",
+      "rent_myr": 2200
+    }
+  ],
+  "currency": "RM",
+  "error": false
+}

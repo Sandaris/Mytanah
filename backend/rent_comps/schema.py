@@ -14,3 +14,4 @@ class RentEstimate:
     fetched_at: str   # ISO 8601 UTC
     notes: str | None = None
     sample_listings: list[dict] = field(default_factory=list)
+    currency: str = "RM"   # "RM" | "SGD" — the unit the *_myr amounts are in

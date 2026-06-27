@@ -1,61 +1,27 @@
 # Project notes for Claude Code
 
-## Deploying
+## Running locally
 
-When the user says "deploy", "push and deploy", "ship it", or similar — follow
-[DEPLOY.md](./DEPLOY.md) directly. Do not ask for confirmation, the VM target,
-the SSH command, or which files to sync. The runbook covers all of that.
+Two terminals. Open the app at **http://localhost:5173** (Vite proxies API calls to the backend).
 
-Quick reference (full details in DEPLOY.md):
-
-- VM: `kw-property-valuation` (`asia-southeast1-a`), public IP `34.87.4.244`.
-- Use `gcloud compute ssh … --zone=asia-southeast1-a` **without**
-  `--tunnel-through-iap` (IAP currently 4033s).
-- Use **forward-slash** paths in `gcloud compute scp` on Windows.
-- Frontend-only changes are live the moment SCP finishes — no restart.
-- Backend changes need `sudo systemctl restart fyp2` plus an 8-second wait
-  before health-check (uvicorn + dataframe boot). If `requirements.txt` changed,
-  `pip install -r …` into the VM venv first.
-- Valuation is web-search based (Exa) — it needs `EXA_API_KEY` in `backend/.env`
-  on the VM. No `torch`/`xgboost` anymore.
-- Health: `curl http://34.87.4.244/` should return `307` (redirects to the
-  live dashboard).
-
-### Which frontend to deploy
-
-The repo has **two** frontends. Only sync the one that changed.
-
-| | Legacy (live today) | New (Vite migration) |
-|---|---|---|
-| Source | `frontend/ui_kits/dashboard/` | `frontend/dashboard-app/` |
-| Build step | None — JSX transpiled in the browser via CDN + Babel | `cd frontend/dashboard-app && npm run build` → output in `frontend/dist/` |
-| Served at | `/` (root) | `/app/dist/` (via the `/app` static mount) |
-| Deploy | SCP changed `.jsx`, `.html`, `.css`, and static assets under `ui_kits/dashboard/` | **Build first**, then SCP the whole `frontend/dist/` tree (hashed `assets/`, `index.html`, GeoJSON, video, etc.) |
-| Smoke test | `curl -I http://34.87.4.244/` → 307; `curl -I http://34.87.4.244/app/ui_kits/dashboard/index.html` → 200 | `curl -I http://34.87.4.244/app/dist/index.html` → 200 |
-
-The new Vite app is the active development target (`docs/dashboard-dev.md` has
-local-dev details). The legacy CDN dashboard is still what FastAPI serves at
-`/`. Switching root to the built app requires an `api.py` mount change — do not
-assume that has already happened.
-
-Do **not** SCP `node_modules`, `frontend/dashboard-app/` source to the VM (only
-`frontend/dist/` after a build), or `backend/.venv/`.
-
-### Backend deploy
-
-Restart the service when any of these change:
-
-- `backend/api.py`
-- `backend/requirements.txt` (pip install into venv first)
-- `backend/save_models.py`
-- `backend/artifacts/`
-- `backend/rent_comps/` (rent-comps AI agent)
-- `backend/valuation_comps/` (Exa web-search valuation agent)
+**Backend** (FastAPI on port 8000):
 
 ```bash
-gcloud compute ssh kw-property-valuation --zone=asia-southeast1-a \
-  --command="sudo systemctl restart fyp2 && sleep 8 && systemctl status fyp2 --no-pager | head -15"
+cd backend
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt   # first time only
+uvicorn api:app --reload --port 8000
 ```
+
+**Frontend** (Vite dev server on port 5173):
+
+```bash
+cd frontend/dashboard-app
+npm install   # first time only
+npm run dev
+```
+
+More detail: `docs/dashboard-dev.md`.
 
 ## Project shape (1-liner each)
 
@@ -70,8 +36,8 @@ gcloud compute ssh kw-property-valuation --zone=asia-southeast1-a \
 - `frontend/ui_kits/dashboard/` — **legacy** CDN React dashboard (no build step).
   Still served at `/`. Kept in sync during migration; will be retired once the
   Vite app replaces the root mount.
-- `frontend/dist/` — built output from `dashboard-app` (auto-generated; deploy
-  this, don't hand-edit).
+- `frontend/dist/` — built output from `dashboard-app` (auto-generated; don't
+  hand-edit).
 - `processed data/transactions.parquet` — cleaned Open Transaction Data
   (~4.4 MB). Authoritative source; the xlsx in the repo is just the input.
 - `processed data/scheme_mukim_index.csv` — Scheme/Area → Mukim mapping with

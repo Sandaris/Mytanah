@@ -812,6 +812,7 @@ def rent_comps_endpoint(
     district: str | None = Query(None),
     state: str | None = Query(None),
     property_type: str | None = Query(None, description="Property type label for comparable rentals"),
+    country: str = Query("MY", description="Country code: MY (Malaysia) or SG (Singapore)"),
 ) -> dict:
     from rent_comps import get_rent_estimate
     try:
@@ -821,6 +822,7 @@ def rent_comps_endpoint(
             district=district,
             state=state,
             property_type=property_type,
+            country=country,
         )
         return estimate.__dict__
     except Exception as exc:

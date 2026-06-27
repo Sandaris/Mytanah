@@ -1,0 +1,13 @@
+{
+  "mukim": "Pulai",
+  "avg_rent_myr": null,
+  "min_rent_myr": null,
+  "max_rent_myr": null,
+  "median_rent_myr": null,
+  "listing_count": 0,
+  "sources_used": [],
+  "confidence": "none",
+  "fetched_at": "2026-06-27T02:02:39.789953+00:00",
+  "notes": "No JSON block found in agent output: 'The rental market analysis for residential properties in Pulai, Malaysia, has been completed by gathering data from Mudah.my and PropertyGuru.\\n\\nFrom Mudah.my, using the ALL TEXT approach, 5 listings were found with a minimum rent of MYR 1,500, a maximum of MYR 20,000, an average of MYR 7,260, and",
+  "sample_listings": []
+}

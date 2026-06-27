@@ -1,0 +1,13 @@
+{
+  "mukim": "Mersing",
+  "avg_rent_myr": null,
+  "min_rent_myr": null,
+  "max_rent_myr": null,
+  "median_rent_myr": null,
+  "listing_count": 0,
+  "sources_used": [],
+  "confidence": "none",
+  "fetched_at": "2026-06-27T04:33:32.121616+00:00",
+  "notes": "No current live whole-unit condominium/apartment rentals were found in Taman Wawasan / Bandar Baru Mersing itself. EdgeProp shows Taman Wawasan, Mersing with FOR RENT (0), Nextsix reports no properties found for apartment rentals in Mersing, and Mitula's Mersing condo/apartment pages surfaced only non-local or non-matching results (e.g., houses, shops, or listings outside Mersing). Because of that, there is no qualifying live-listing sample to compute min/max/average/median from the exact locality.",
+  "sample_listings": []
+}

@@ -1,0 +1,57 @@
+{
+  "estimated_value_myr": 835000.0,
+  "low_myr": 780000.0,
+  "high_myr": 900000.0,
+  "price_per_sqft_myr": 687.0,
+  "listing_count": 20,
+  "sources_used": [
+    "StackProperty",
+    "SG Property Vow",
+    "99.co",
+    "HDB Insights",
+    "CheckHowMuch",
+    "PropertyGuru",
+    "data.gov.sg"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:46:52.496926+00:00",
+  "notes": "Figures are SGD (despite the schema field label). No exact D06-only 5-room active listing surfaced; I therefore weighted the nearest live central-area evidence: North Bridge Road/Golden Beach Vista 5-room transactions clustered at S$748k–S$875k, plus newer nearby Kallang Heights / Boon Keng comparables that trade materially higher. For the subject size of 1,216 sqft, that implies roughly S$687 psf and a value around S$835k. The broader Central Area 5-room median is lower (S$678.4k), but the tighter North Bridge Road cluster and nearby newer central HDBs support a realistic upper-middle range. Excludes rentals and room-only ads.",
+  "comparables": [
+    {
+      "price_myr": 839999.0,
+      "title": "Blk 12 North Bridge Road — 5-room resale (Mar 2026)",
+      "url": "https://stackproperty.sg/hdb/streets/nth-bridge-rd",
+      "source": "StackProperty"
+    },
+    {
+      "price_myr": 810000.0,
+      "title": "Blk 12 North Bridge Road — 5-room resale (Jan 2026)",
+      "url": "https://stackproperty.sg/hdb/streets/nth-bridge-rd",
+      "source": "StackProperty"
+    },
+    {
+      "price_myr": 875000.0,
+      "title": "Blk 467 North Bridge Road — 5-room resale (Sep 2025)",
+      "url": "https://stackproperty.sg/hdb/streets/nth-bridge-rd",
+      "source": "StackProperty"
+    },
+    {
+      "price_myr": 947000.0,
+      "title": "Blk 2A Upper Boon Keng Road — 5-room resale (Apr 2026)",
+      "url": "https://stackproperty.sg/hdb/2a-upp-boon-keng-rd",
+      "source": "StackProperty"
+    },
+    {
+      "price_myr": 1120000.0,
+      "title": "2A Upper Boon Keng Road — HDB 5 Rooms for Sale (asking price shown on 99.co street page)",
+      "url": "https://www.99.co/singapore/sale/property/2a-upper-boon-keng-road-hdb-TwPhEDRfjfqeZprFGmSsz5",
+      "source": "99.co"
+    },
+    {
+      "price_myr": 1300000.0,
+      "title": "Blk 9 Boon Keng Road / City View @ Boon Keng — 5-room resale (Jan 2026)",
+      "url": "https://sg.propertyvow.com/property/hdb/detail/9-boon-keng-rd",
+      "source": "SG Property Vow"
+    }
+  ]
+}

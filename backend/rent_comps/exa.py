@@ -151,6 +151,7 @@ def _map_response(ctx: RentContext, data: dict) -> RentEstimate:
         fetched_at=now,
         notes=data.get("notes") or "via Exa Agent",
         sample_listings=sample_listings[:5],
+        currency=ctx.currency_code,
     )
 
 
@@ -167,4 +168,5 @@ def _fallback(ctx: RentContext, notes: str) -> RentEstimate:
         fetched_at=datetime.now(timezone.utc).isoformat(),
         notes=notes,
         sample_listings=[],
+        currency=ctx.currency_code,
     )

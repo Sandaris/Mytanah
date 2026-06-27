@@ -1,0 +1,22 @@
+{
+  "mukim": "Plentong",
+  "avg_rent_myr": 2602,
+  "min_rent_myr": 445,
+  "max_rent_myr": 10000,
+  "median_rent_myr": null,
+  "listing_count": 17,
+  "sources_used": [
+    "mudah.my",
+    "propertyguru.com.my"
+  ],
+  "confidence": "high",
+  "fetched_at": "2026-06-27T01:49:03.978193+00:00",
+  "notes": "Median rent cannot be accurately calculated as individual listing prices were not available from Mudah.my, only aggregate statistics.",
+  "sample_listings": [
+    800,
+    1000,
+    1400,
+    1600,
+    1800
+  ]
+}

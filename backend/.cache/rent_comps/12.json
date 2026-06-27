@@ -1,0 +1,24 @@
+{
+  "mukim": "Mukim 12, North Seberang Perai, Penang",
+  "avg_rent_myr": 2400.0,
+  "min_rent_myr": 2400.0,
+  "max_rent_myr": 2400.0,
+  "median_rent_myr": 2400.0,
+  "listing_count": 1,
+  "sources_used": [
+    "https://www.fazwaz.my/property-for-rent/malaysia/penang/north-seberang-perai/mukim-12",
+    "https://www.fazwaz.my/condo-for-rent/malaysia/penang/north-seberang-perai/mukim-12",
+    "https://www.fazwaz.my/property-rent/3-bedroom-condo-for-rent-in-mukim-12-penang-u2021199"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T03:53:13.418480+00:00",
+  "notes": "Live whole-unit rental data found for Mukim 12 shows 1 active condo listing. The available unit is a 3-bedroom, 2-bathroom, 1,350 sqft whole-unit condo ('Arte’S at Bukit Gambier, 3Bedrooms') priced at RM2,400/month. Because only one active listing was found, the aggregate statistics equal that single listing price and should be treated as a very small-sample snapshot rather than a stable market-wide estimate.",
+  "sample_listings": [
+    {
+      "url": "https://www.fazwaz.my/property-rent/3-bedroom-condo-for-rent-in-mukim-12-penang-u2021199",
+      "title": "[House for rent] Arte’S at Bukit Gambier, 3Bedrooms",
+      "source": "FazWaz.my",
+      "rent_myr": 2400
+    }
+  ]
+}

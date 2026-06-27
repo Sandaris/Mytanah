@@ -1,0 +1,51 @@
+{
+  "mukim": "Buloh Kasap",
+  "avg_rent_myr": 1158.33,
+  "min_rent_myr": 900.0,
+  "max_rent_myr": 1500.0,
+  "median_rent_myr": 1150.0,
+  "listing_count": 6,
+  "sources_used": [
+    "https://www.mudah.my/johor-segamat/houses-for-rent",
+    "https://www.mudah.my/johor-segamat/houses-for-rent/rent-from-500-below-1000",
+    "https://www.mudah.my/johor-segamat/houses-for-rent/rent-from-1000-below-1500",
+    "https://homes.mitula.my/homes/for-rent-segamat-buloh-kasap",
+    "https://www.mudah.my/rumah-sewa-taman-bukit-mutiara-segamat-114593721.htm",
+    "https://www.edgeprop.my/listing/rental/2832362/johor/segamat/landed/terracehouse/taman-yayasan-segamat-semi-d"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T03:48:51.967259+00:00",
+  "notes": "Based on 6 current live whole-unit residential rental listings in/around Buloh Kasap that were explicitly tied to Buloh Kasap/Taman Yayasan/Billion/SMK Buloh Kasap and excluded room-only/bedspace/partition rentals. The usable current band is RM900-RM1,500/month. One Mudah Taman Tasik Sejati listing had a header price of RM1,300 but description text mentioning RM1,500; I used the header price. Because Buloh Kasap-specific inventory is thin, a couple of the listings are in nearby Segamat neighborhoods that are explicitly linked to the Buloh Kasap area.",
+  "sample_listings": [
+    {
+      "url": "https://www.mudah.my/johor-segamat/houses-for-rent",
+      "title": "House Rent RM900 Taman Yayasan Segamat",
+      "source": "Mudah",
+      "rent_myr": 900
+    },
+    {
+      "url": "https://www.mudah.my/johor-segamat/houses-for-rent/rent-from-500-below-1000",
+      "title": "Single Storey Terrace House Rent - Taman Yayasan, Segamat",
+      "source": "Mudah",
+      "rent_myr": 950
+    },
+    {
+      "url": "https://homes.mitula.my/homes/for-rent-segamat-buloh-kasap",
+      "title": "Kampung Abdullah Buloh Kasap Single Storey Terrace House For Rent",
+      "source": "Mitula",
+      "rent_myr": 1000
+    },
+    {
+      "url": "https://www.mudah.my/rumah-sewa-taman-bukit-mutiara-segamat-114593721.htm",
+      "title": "RUMAH SEWA TAMAN BUKIT MUTIARA Segamat",
+      "source": "Mudah",
+      "rent_myr": 1300
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/2832362/johor/segamat/landed/terracehouse/taman-yayasan-segamat-semi-d",
+      "title": "Taman Yayasan Segamat Semi D for Rental @RM1,500",
+      "source": "EdgeProp",
+      "rent_myr": 1500
+    }
+  ]
+}

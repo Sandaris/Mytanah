@@ -20,7 +20,7 @@ fyp2-deploy.tgz
 
 # Random Forest valuation artifact (~203 MB) — exceeds GitHub's 100 MB file
 # limit and is a reproducible build output of `python backend/save_models.py rf`.
-# Deployed to the VM via scp, not tracked in git.
+# Reproducible build output — not tracked in git.
 backend/artifacts/valuation_rf.joblib
 
 # Office lock files
@@ -32,4 +32,4 @@ processed data/location_hierarchy_edges.csv
 
 # Environment and cache files
 backend/.env
-backend/.cache/
+# backend/.cache/ is committed so pulled clones share pre-fetched Exa results

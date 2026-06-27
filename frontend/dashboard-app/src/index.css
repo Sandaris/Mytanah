@@ -63,6 +63,85 @@
   }
 }
 
+/* TrustLens landing page (ported from legacy ui_kits dashboard) */
+html {
+  scroll-behavior: smooth;
+}
+
+.tl-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image:
+    radial-gradient(1.4px 1.4px at 12% 22%, rgba(237, 233, 225, 0.55), transparent),
+    radial-gradient(1.2px 1.2px at 28% 64%, rgba(237, 233, 225, 0.4), transparent),
+    radial-gradient(1.6px 1.6px at 47% 16%, rgba(196, 154, 122, 0.5), transparent),
+    radial-gradient(1.2px 1.2px at 63% 48%, rgba(237, 233, 225, 0.42), transparent),
+    radial-gradient(1.3px 1.3px at 82% 30%, rgba(237, 233, 225, 0.5), transparent),
+    radial-gradient(1.1px 1.1px at 90% 70%, rgba(237, 233, 225, 0.35), transparent),
+    radial-gradient(1.2px 1.2px at 73% 82%, rgba(196, 154, 122, 0.4), transparent);
+}
+
+@keyframes tlChev {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+
+.tl-chev {
+  display: inline-block;
+  animation: tlChev 1.6s ease-in-out infinite;
+  font-size: 15px;
+}
+
+/* Pitch sections (02 onward) — bold hover life on cards */
+.tl-panel {
+  transition: transform .38s cubic-bezier(.2, .85, .25, 1),
+              box-shadow .38s cubic-bezier(.2, .85, .25, 1),
+              border-color .38s ease;
+}
+.tl-panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 22px 48px rgba(20, 28, 22, 0.16);
+}
+.tl-panel-dark:hover {
+  transform: translateY(-5px);
+  border-color: rgba(196, 154, 122, 0.5) !important;
+  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.42);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-panel,
+  .tl-panel:hover,
+  .tl-panel-dark:hover {
+    transform: none;
+    transition: box-shadow .25s ease, border-color .25s ease;
+  }
+}
+
+@media (max-width: 640px) {
+  .tl-stat-row { grid-template-columns: 1fr !important; }
+  .tl-stat-row > div {
+    border-right: none !important;
+    border-bottom: 1px solid #C8C3B8;
+    padding-bottom: 22px;
+  }
+}
+
+@media (max-width: 920px) {
+  .tl-hero-grid { grid-template-columns: 1fr !important; }
+  .tl-hero-grid > div:last-child { order: -1; }
+  .tl-grid-3 { grid-template-columns: 1fr 1fr !important; }
+  .tl-grid-4 { grid-template-columns: 1fr 1fr !important; }
+  .tl-flow { grid-template-columns: 1fr 1fr !important; }
+  .tl-split { grid-template-columns: 1fr !important; }
+  .tl-navlinks a:not(:last-child) { display: none; }
+}
+
+@media (max-width: 560px) {
+  .tl-grid-3, .tl-grid-4, .tl-flow { grid-template-columns: 1fr !important; }
+}
+
 /* Semantic signal colors as utility classes */
 @layer utilities {
   .text-signal-up { color: #2D7A4F; }

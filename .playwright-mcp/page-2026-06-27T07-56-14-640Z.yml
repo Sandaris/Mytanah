@@ -1,0 +1,68 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]: Valuation
+    - generic [ref=e6]: 27 Jun 2026
+  - main [ref=e7]:
+    - generic [ref=e9]:
+      - generic [ref=e51]:
+        - img [ref=e52]
+        - generic [ref=e269]:
+          - generic [ref=e270]: "Click a country:"
+          - button "🇲🇾 Malaysia" [ref=e271] [cursor=pointer]
+          - button "🇸🇬 Singapore" [ref=e272] [cursor=pointer]
+        - generic [ref=e273]:
+          - button "Zoom in" [ref=e274] [cursor=pointer]:
+            - img [ref=e275]
+          - button "Zoom out" [ref=e276] [cursor=pointer]:
+            - img [ref=e277]
+          - button "Fit Malaysia + Singapore" [ref=e278] [cursor=pointer]:
+            - img [ref=e279]
+        - generic: Malaysia + Singapore · click a country to start · scroll to zoom · drag to pan
+      - generic [ref=e282]:
+        - generic [ref=e283]:
+          - generic [ref=e284]:
+            - generic [ref=e285]: Explore
+            - generic [ref=e286]: Location Search
+          - button "Collapse" [ref=e287] [cursor=pointer]:
+            - img [ref=e288]
+        - generic [ref=e293]:
+          - generic [ref=e294]:
+            - button "🌏 All" [ref=e295] [cursor=pointer]
+            - button "🇲🇾 Malaysia" [ref=e296] [cursor=pointer]
+            - button "🇸🇬 Singapore" [ref=e297] [cursor=pointer]
+          - generic [ref=e298]: Malaysia + Singapore. Click a country on the map (or pick one below) to start a valuation.
+          - generic [ref=e300]:
+            - generic [ref=e301]:
+              - text: Viewing
+              - strong [ref=e302]: Malaysia + Singapore
+              - text: . Pick a country — click it on the map, or choose below — to start a valuation.
+            - generic [ref=e303]:
+              - button "🇲🇾 Malaysia" [ref=e304] [cursor=pointer]:
+                - generic [ref=e305]: 🇲🇾
+                - text: Malaysia
+              - button "🇸🇬 Singapore" [ref=e306] [cursor=pointer]:
+                - generic [ref=e307]: 🇸🇬
+                - text: Singapore
+  - navigation [ref=e18]:
+    - complementary [ref=e19]:
+      - generic [ref=e20]:
+        - img [ref=e21]
+        - generic [ref=e25]: MyPropertyIQ
+      - generic [ref=e26]:
+        - link "Valuation" [ref=e27] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e28]
+          - generic [ref=e31]: Valuation
+        - link "Market Overview" [ref=e32] [cursor=pointer]:
+          - /url: /dashboard/market
+          - img [ref=e33]
+          - generic [ref=e37]: Market Overview
+        - link "ROI Calculator" [ref=e38] [cursor=pointer]:
+          - /url: /dashboard/roi
+          - img [ref=e39]
+          - generic [ref=e44]: ROI Calculator
+        - link "Housing Cycle Index" [ref=e45] [cursor=pointer]:
+          - /url: /dashboard/sentiment
+          - img [ref=e46]
+          - generic [ref=e49]: Housing Cycle Index
+      - generic [ref=e50]: "Data: NAPIC 2021–2025"

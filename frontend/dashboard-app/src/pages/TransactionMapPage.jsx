@@ -82,7 +82,12 @@ const disclosureBtn = {
   fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600,
 };
 
-const StepSelect = ({ label, value, placeholder, options, onChange, disabled, loading, loadingLabel, onClear }) => (
+const StepSelect = ({ label, value, placeholder, options, onChange, disabled, loading, loadingLabel, onClear, highlight }) => {
+  // A required field draws attention through the control itself (tinted fill +
+  // stronger border while empty) rather than a padded wrapper, so it stays
+  // flush-aligned with the other selects in the panel.
+  const emphasize = highlight && !value && !disabled;
+  return (
   <div>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
       <Eyebrow style={{ color: disabled ? C.muted : C.earth }}>{label}</Eyebrow>
@@ -99,8 +104,8 @@ const StepSelect = ({ label, value, placeholder, options, onChange, disabled, lo
         <select value={value} disabled={disabled}
           onChange={e => onChange(e.target.value)}
           style={{
-            width: '100%', background: disabled ? C.cream : C.cream,
-            border: `1px solid ${disabled ? C.border : C.earth + '55'}`,
+            width: '100%', backgroundColor: disabled ? C.cream : (emphasize ? C.earthFaint : C.cream),
+            border: `1px solid ${disabled ? C.border : (emphasize ? C.earth : C.earth + '55')}`,
             color: disabled ? C.muted : C.deep,
             fontFamily: "'DM Sans', sans-serif", fontSize: 14,
             borderRadius: 8, padding: '10px 12px', boxSizing: 'border-box',
@@ -114,7 +119,8 @@ const StepSelect = ({ label, value, placeholder, options, onChange, disabled, lo
         </select>
       )}
   </div>
-);
+  );
+};
 
 /* ---- main page -------------------------------------------------------- */
 export default function TransactionMapPage() {
@@ -388,7 +394,7 @@ export default function TransactionMapPage() {
     setSearched(snap);
     setSheetOpen(true);
     if (onEngage) onEngage();
-    if (isVal) setPanelOpen(false); // minimise Location Search so it doesn't cover the dashboard
+    if (isVal) { setPanelOpen(false); setSheetMax(true); }
     setLoad(l => ({ ...l, t: true }));
     if (!isVal) {
       API.dataQuery({
@@ -559,20 +565,36 @@ export default function TransactionMapPage() {
 
           <div ref={bodyRef} style={{ padding: '0 18px', overflowY: 'auto', flex: 1 }}>
             {/* map scope — All (MY+SG overview) / Malaysia (NAPIC) / Singapore (web) */}
-            <div style={{
-              display: 'flex', gap: 4, background: C.cream, padding: 4, borderRadius: 9999,
-              border: `1px solid ${C.border}`, margin: '0 0 12px',
-            }}>
-              {[['ALL', '🌏 All'], ['MY', '🇲🇾 Malaysia'], ['SG', '🇸🇬 Singapore']].map(([code, label]) => (
-                <button key={code} onClick={() => switchView(code)} style={{
-                  flex: 1, border: 0, borderRadius: 9999, padding: '8px 6px',
-                  background: view === code ? C.deep : 'transparent',
-                  color: view === code ? C.cream : C.mid,
-                  fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, fontWeight: 600,
-                  cursor: 'pointer', transition: 'background .18s, color .18s', whiteSpace: 'nowrap',
-                }}>{label}</button>
-              ))}
-            </div>
+            {(() => {
+              const TABS = [['ALL', '🌏 All'], ['MY', '🇲🇾 Malaysia'], ['SG', '🇸🇬 Singapore']];
+              const activeIdx = TABS.findIndex(([code]) => code === view);
+              return (
+                <div style={{
+                  position: 'relative', display: 'flex', background: C.cream, padding: 4, borderRadius: 9999,
+                  border: `1px solid ${C.border}`, margin: '0 0 12px',
+                }}>
+                  {/* sliding pill */}
+                  <div style={{
+                    position: 'absolute', top: 4, bottom: 4,
+                    left: `calc(4px + ${activeIdx} * (100% - 8px) / 3)`,
+                    width: 'calc((100% - 8px) / 3)',
+                    background: C.deep, borderRadius: 9999,
+                    transition: 'left .28s cubic-bezier(.16,1,.3,1)',
+                    pointerEvents: 'none',
+                  }} />
+                  {TABS.map(([code, label]) => (
+                    <button key={code} onClick={() => switchView(code)} style={{
+                      flex: 1, border: 0, borderRadius: 9999, padding: '8px 6px',
+                      background: 'transparent',
+                      color: view === code ? C.cream : C.mid,
+                      fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, fontWeight: 600,
+                      cursor: 'pointer', transition: 'color .18s', whiteSpace: 'nowrap',
+                      position: 'relative', zIndex: 1,
+                    }}>{label}</button>
+                  ))}
+                </div>
+              );
+            })()}
             <div style={{
               padding: '10px 12px', borderRadius: 8,
               background: searched ? C.deep : C.earthFaint,
@@ -730,16 +752,12 @@ export default function TransactionMapPage() {
               {/* Property Type sits at the bottom, just above Search, and always
                   renders regardless of the optional cascade steps above it — so it
                   stays in view (and gets nudged down as mukim/area/road reveal)
-                  and users stop skipping it. Highlighted until it's chosen. */}
-              <div style={{
-                borderRadius: 8, padding: 12, transition: 'background .2s, border-color .2s',
-                background: sel.propertyType ? 'transparent' : C.earthFaint,
-                border: `1px solid ${sel.propertyType ? C.border : C.earth + '55'}`,
-              }}>
-                <StepSelect label="Property Type · required" value={sel.propertyType}
-                  placeholder="Select a property type" options={isSG ? SG_PROPERTY_TYPES : PROPERTY_TYPES_ALL}
-                  onChange={selectPropertyType} onClear={() => selectPropertyType('')}/>
-              </div>
+                  and users stop skipping it. The `highlight` prop tints the select
+                  itself until it's chosen, so the field stays flush-aligned with
+                  the State / District selects above rather than sitting inset. */}
+              <StepSelect label="Property Type · required" value={sel.propertyType}
+                placeholder="Select a property type" options={isSG ? SG_PROPERTY_TYPES : PROPERTY_TYPES_ALL}
+                onChange={selectPropertyType} onClear={() => selectPropertyType('')} highlight/>
 
               <div style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 2 }}>
                 <button onClick={runSearch} disabled={!canSearch} style={{
@@ -820,16 +838,15 @@ export default function TransactionMapPage() {
             <Fragment>
               {!sheetMax && (
                 <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 4, display: 'flex', gap: 8 }}>
-                  {!isSG && (
                   <button onClick={() => { setYearMode('range'); setSheetMax(true); }} title="Expand to full page"
-                    style={iconBtn}>
+                    style={{ ...iconBtn, ...(isVal ? { width: 'auto', paddingLeft: 10, paddingRight: 12, gap: 6 } : {}) }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
                       <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
                     </svg>
+                    {isVal && <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600, color: C.deep, whiteSpace: 'nowrap' }}>Full view</span>}
                   </button>
-                  )}
                   <button onClick={() => setSheetOpen(false)} title="Collapse" style={iconBtn}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -852,9 +869,10 @@ export default function TransactionMapPage() {
                     load={load} txns={txns} filtered={filtered}
                     availTypes={availTypes} types={types} setTypes={setTypes}
                     yr={yr} setYr={setYr} price={price} setPrice={setPrice} years={YEARS}
-                    onExportRoi={onExportRoi}/>
+                    onExportRoi={onExportRoi} onSwitchToMalaysia={() => switchView('MY')}/>
                 ) : (
-                  <ValuationDashboard sel={searched || sel} loading={load.t} onExportRoi={onExportRoi}/>
+                  <ValuationDashboard sel={searched || sel} loading={load.t} onExportRoi={onExportRoi}
+                    onSwitchToMalaysia={() => switchView('MY')}/>
                 )
               ) : sheetMax ? (
                 <TxnFullPage
@@ -868,7 +886,8 @@ export default function TransactionMapPage() {
                   clearAll={() => { selectState(''); setSheetMax(false); setPanelOpen(true); }}
                   load={load} txns={txns} filtered={filtered}
                   availTypes={availTypes} types={types} setTypes={setTypes}
-                  yr={yr} setYr={setYr} price={price} setPrice={setPrice} years={YEARS}/>
+                  yr={yr} setYr={setYr} price={price} setPrice={setPrice} years={YEARS}
+                  onSwitchToMalaysia={() => switchView('MY')}/>
               ) : (
                 <TxnTable fill
                   sel={searched || sel} loading={load.t} txns={txns} filtered={filtered}

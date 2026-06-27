@@ -1,0 +1,22 @@
+{
+  "mukim": "Subang",
+  "avg_rent_myr": 2595,
+  "min_rent_myr": 400,
+  "max_rent_myr": 7500,
+  "median_rent_myr": 2400,
+  "listing_count": 25,
+  "sources_used": [
+    "mudah.my",
+    "propertyguru.com.my"
+  ],
+  "confidence": "high",
+  "fetched_at": "2026-06-27T01:55:23.005931+00:00",
+  "notes": null,
+  "sample_listings": [
+    400,
+    420,
+    450,
+    550,
+    750
+  ]
+}

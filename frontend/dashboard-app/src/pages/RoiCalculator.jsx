@@ -341,6 +341,9 @@ export default function RoiCalculator({ seed }) {
   const source = seed && Number(seed.propertyPrice) > 0 ? seed : ROI_DEFAULT_SEED
   const rentLabel = roiRentSearchLabel(source)
   const rentDetail = roiRentSearchDetail(source)
+  // Live rent needs a location anchor: a mukim (Malaysia) or a postal district
+  // (Singapore, which has no mukim).
+  const canLiveRent = !!(source.mukim || source.district)
   const [price, setPrice] = useState(Math.round(source.propertyPrice))
   const [depositPct, setDepositPct] = useState(10)
   const [loanPct, setLoanPct] = useState(90)
@@ -348,20 +351,30 @@ export default function RoiCalculator({ seed }) {
   const [years, setYears] = useState(30)
   const [extraMonthly, setExtraMonthly] = useState(0)
   const [costItems, setCostItems] = useState(() => [{ id: roiUid(), name: 'Furnishing', amount: 50000 }])
-  const [rentalPrice, setRentalPrice] = useState(Math.max(0, Math.round(source.propertyPrice * 0.0035)))
+  const [rentalPrice, setRentalPrice] = useState(() => {
+    const pre = source.rentEstimate
+    if (pre && pre.confidence !== 'none') {
+      const best = pre.median_rent_myr || pre.avg_rent_myr
+      if (best) return Math.round(best)
+    }
+    return Math.max(0, Math.round(source.propertyPrice * 0.0035))
+  })
   const [carparkRent, setCarparkRent] = useState(0)
   const [incomeItems, setIncomeItems] = useState([])
-  const [rentEstimate, setRentEstimate] = useState(null)
+  const [rentEstimate, setRentEstimate] = useState(source.rentEstimate || null)
   const [rentLoading, setRentLoading] = useState(false)
   const [rentError, setRentError] = useState(null)
-  const [rentMode, setRentMode] = useState(source.mukim ? 'live' : 'manual')
+  const [rentMode, setRentMode] = useState((source.mukim || source.district || source.rentEstimate) ? 'live' : 'manual')
   const fetchMarketRent = () => {
-    const { mukim, scheme, district, state, propertyType } = source
-    if (!mukim || rentLoading) return
+    const { mukim, scheme, district, state, propertyType, country } = source
+    // Singapore has no mukim — anchor on the postal district instead.
+    const anchor = mukim || district
+    if (!anchor || rentLoading) return
     setRentLoading(true)
     setRentError(null)
     API.rentComps({
-      mukim,
+      country: country || 'MY',
+      mukim: anchor,
       scheme,
       district,
       state,
@@ -380,14 +393,21 @@ export default function RoiCalculator({ seed }) {
   useEffect(() => {
     if (seed && Number(seed.propertyPrice) > 0) {
       setPrice(Math.round(seed.propertyPrice))
-      setRentalPrice(Math.max(0, Math.round(seed.propertyPrice * 0.0035)))
-      setRentEstimate(null)
+      const pre = seed.rentEstimate
+      if (pre && pre.confidence !== 'none') {
+        const best = pre.median_rent_myr || pre.avg_rent_myr
+        if (best) setRentalPrice(Math.round(best))
+        setRentEstimate(pre)
+      } else {
+        setRentalPrice(Math.max(0, Math.round(seed.propertyPrice * 0.0035)))
+        setRentEstimate(null)
+      }
       setRentError(null)
     }
   }, [seed && seed.propertyPrice]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (rentMode === 'live' && source.mukim && !rentEstimate && !rentLoading) {
+    if (rentMode === 'live' && (source.mukim || source.district) && !rentEstimate && !rentLoading) {
       fetchMarketRent()
     }
   }, [rentMode]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -544,7 +564,7 @@ export default function RoiCalculator({ seed }) {
             <div className="grid gap-2.5">
               <div className="flex justify-between items-center gap-2">
                 <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#A27B5C]">Rental price</p>
-                <Tabs value={rentMode} onValueChange={(v) => source.mukim ? setRentMode(v) : null}>
+                <Tabs value={rentMode} onValueChange={(v) => canLiveRent ? setRentMode(v) : null}>
                   <TabsList className="bg-[#DCD7C9] border border-[#C8C3B8] h-auto p-0.5 gap-0.5">
                     <TabsTrigger
                       value="manual"
@@ -554,8 +574,8 @@ export default function RoiCalculator({ seed }) {
                     </TabsTrigger>
                     <TabsTrigger
                       value="live"
-                      disabled={!source.mukim}
-                      title={!source.mukim ? 'Import a valuation with a location to unlock live market data' : `Live listings for ${rentLabel}`}
+                      disabled={!canLiveRent}
+                      title={!canLiveRent ? 'Import a valuation with a location to unlock live market data' : `Live listings for ${rentLabel}`}
                       className="text-[11.5px] font-medium px-[11px] py-1 data-[state=active]:bg-[#2C3930] data-[state=active]:text-[#DCD7C9] data-[state=active]:shadow-sm disabled:opacity-40"
                     >
                       Live estimate
@@ -577,7 +597,7 @@ export default function RoiCalculator({ seed }) {
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#B0AA9E] pointer-events-none">RM / mo</span>
                       </div>
-                      {source.mukim ? (
+                      {canLiveRent ? (
                         <div className="text-[11.5px] leading-snug" style={{ color: C.light }}>
                           Enter your estimate, or switch to{' '}
                           <b className="cursor-pointer" style={{ color: C.earth }} onClick={() => setRentMode('live')}>

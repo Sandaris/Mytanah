@@ -1,0 +1,16 @@
+{
+  "mukim": "Kulai",
+  "avg_rent_myr": 2041,
+  "min_rent_myr": 200,
+  "max_rent_myr": 11000,
+  "median_rent_myr": 1700,
+  "listing_count": 24,
+  "sources_used": [
+    "mudah.my",
+    "propertyguru.com.my"
+  ],
+  "confidence": "high",
+  "fetched_at": "2026-06-27T02:15:06.334672+00:00",
+  "notes": "Median is taken from PropertyGuru (the site with more listings) due to the inability to combine individual prices from both sites for an accurate combined median calculation.",
+  "sample_listings": []
+}

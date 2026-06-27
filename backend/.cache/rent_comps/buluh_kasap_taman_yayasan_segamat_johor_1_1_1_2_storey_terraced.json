@@ -1,0 +1,52 @@
+{
+  "mukim": "Buluh Kasap, Segamat, Johor",
+  "avg_rent_myr": 810.0,
+  "min_rent_myr": 650.0,
+  "max_rent_myr": 950.0,
+  "median_rent_myr": 800.0,
+  "listing_count": 5,
+  "sources_used": [
+    "https://www.mudah.my/johor-segamat/houses-for-rent",
+    "https://www.mudah.my/johor-segamat/properties-for-rent?monthly_rent=-1500",
+    "https://www.mudah.my/johor-segamat/houses-for-rent/rent-from-500-below-1000",
+    "https://www.mudah.my/johor-segamat/houses-for-rent/rent-from-1000-below-1500",
+    "https://www.mudah.my/rumah-sewa-murah-bandar-putra-114699664.htm",
+    "https://www.mudah.my/rumah-sewa-kg-berata-114733614.htm",
+    "https://www.mudah.my/house-for-rent-sewa-114892490.htm"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T03:35:57.969778+00:00",
+  "notes": "Current live whole-unit terraced-house comparables were taken from Mudah listings in/around Taman Yayasan, Buluh Kasap, and nearby Segamat. I excluded room-only/bedspace/partition ads. I also excluded one Taman Yayasan terraced ad priced at RM600 because the page did not explicitly state 1-storey/1.5-storey, to keep the property-type filter strict. No live Segamat-area 1.5-storey terraced listing surfaced in the current search results.",
+  "sample_listings": [
+    {
+      "url": "https://www.mudah.my/rumah-sewa-murah-bandar-putra-114699664.htm",
+      "title": "1-storey Terraced House for Rent, 3 Bedroom, 770 sq.ft, Segamat, Johor 114699664 | Mudah.my",
+      "source": "Mudah.my",
+      "rent_myr": 650
+    },
+    {
+      "url": "https://www.mudah.my/rumah-sewa-kg-berata-114733614.htm",
+      "title": "1-storey Terraced House for Rent, 2 Bedroom, 900 sq.ft, Segamat, Johor 114733614 | Mudah.my",
+      "source": "Mudah.my",
+      "rent_myr": 800
+    },
+    {
+      "url": "https://www.mudah.my/house-for-rent-sewa-114892490.htm",
+      "title": "1-storey Terraced House for Rent, 2 Bedroom, 1020 sq.ft, Segamat, Johor 114892490 | Mudah.my",
+      "source": "Mudah.my",
+      "rent_myr": 800
+    },
+    {
+      "url": "https://www.mudah.my/johor-segamat/houses-for-rent/rent-from-500-below-1000",
+      "title": "Rumah Teres 1 Tingkat Untuk Disewa, Taman Mewah, Bukit Siput, Segamat",
+      "source": "Mudah.my",
+      "rent_myr": 850
+    },
+    {
+      "url": "https://www.mudah.my/johor-segamat/properties-for-rent?monthly_rent=-1500",
+      "title": "Single Storey Terrace House Rent - Taman Yayasan, Segamat",
+      "source": "Mudah.my",
+      "rent_myr": 950
+    }
+  ]
+}

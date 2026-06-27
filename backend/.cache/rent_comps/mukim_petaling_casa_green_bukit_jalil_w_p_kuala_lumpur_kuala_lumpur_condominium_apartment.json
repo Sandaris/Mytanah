@@ -1,0 +1,53 @@
+{
+  "mukim": "Mukim Petaling",
+  "avg_rent_myr": 2050.0,
+  "min_rent_myr": 1350.0,
+  "max_rent_myr": 2500.0,
+  "median_rent_myr": 2100.0,
+  "listing_count": 10,
+  "sources_used": [
+    "https://www.edgeprop.my/listing/rental/3514762/casa-green-bukit-jalil-for-rent-by-jazz-yee-foong-fei",
+    "https://www.edgeprop.my/listing/rental/3304648/casa-green-for-rent-by-philip-ng",
+    "https://www.edgeprop.my/listing/rental/3669115/casa-green-bukit-jalil-for-rent-by-sharon-khong",
+    "https://www.mudah.my/3-bedroom-2-bathroom-partly-furniture-ready-move-in-114935380.htm",
+    "https://www.mudah.my/property/properties-in-casa-green-bukit-jalil-kuala-lumpur",
+    "https://www.dotproperty.com.my/3-bedroom-condo-for-rent-in-kuala-lumpur-kuala-lumpur_8035186",
+    "https://www.dotproperty.com.my/3-bedroom-condo-for-rent-in-kuala-lumpur-kuala-lumpur_5342730",
+    "https://rentola.com.my/listings/casa-green-bukit-jalil-p110017"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T04:37:31.085782+00:00",
+  "notes": "Ad-level snapshot from 10 live whole-unit condo/apartment rental listings for Casa Green Bukit Jalil observed on EdgeProp, Mudah, DotProperty, and Rentola as of 2026-06-27. Room-only, bedspace, and partition ads were excluded. Because portals can cross-list the same unit, these figures should be treated as live listing statistics rather than a deduped market study.",
+  "sample_listings": [
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3514762/casa-green-bukit-jalil-for-rent-by-jazz-yee-foong-fei",
+      "title": "Casa Green Condominium @ Bukit Jalil for Rent",
+      "source": "EdgeProp",
+      "rent_myr": 1350
+    },
+    {
+      "url": "https://www.mudah.my/3-bedroom-2-bathroom-partly-furniture-ready-move-in-114935380.htm",
+      "title": "Condominium for Rent, 3 Bedroom, 825 sq.ft, Casa Green (Bukit Jalil)",
+      "source": "Mudah.my",
+      "rent_myr": 1700
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3304648/casa-green-for-rent-by-philip-ng",
+      "title": "RENT @ Casa Green 3 Rooms Partially Furnish @ Near Pavillion Bukit Jalil LRT",
+      "source": "EdgeProp",
+      "rent_myr": 1750
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3669115/casa-green-bukit-jalil-for-rent-by-sharon-khong",
+      "title": "3 bedroom 3 bathroom condominium for rent",
+      "source": "EdgeProp",
+      "rent_myr": 2000
+    },
+    {
+      "url": "https://www.dotproperty.com.my/3-bedroom-condo-for-rent-in-kuala-lumpur-kuala-lumpur_5342730",
+      "title": "Casa Green, Bukit Jalil, Fully Furnished Condo for rent in Kuala Lumpur",
+      "source": "DotProperty",
+      "rent_myr": 2300
+    }
+  ]
+}

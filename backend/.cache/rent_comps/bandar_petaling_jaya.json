@@ -1,0 +1,46 @@
+{
+  "mukim": "Bandar Petaling Jaya",
+  "avg_rent_myr": 797.6,
+  "min_rent_myr": 300.0,
+  "max_rent_myr": 2900.0,
+  "median_rent_myr": 600.0,
+  "listing_count": 15,
+  "sources_used": [
+    "Fazwaz.my"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T03:31:39.379144+00:00",
+  "notes": "Based on 15 live residential rental listings with explicit Bandar Petaling Jaya location tags found on Fazwaz on 2026-06-27. The sample is dominated by PJ Midtown and the Petaling Jaya project within Bandar Petaling Jaya. Rents span RM300 to RM2,900 per month; the mean is pulled up by two high outliers (RM1,500 and RM2,900), while the median is RM600.",
+  "sample_listings": [
+    {
+      "url": "https://www.fazwaz.my/property-rent/studio-condo-for-rent-at-pj-midtown-in-bandar-petaling-jaya-selangor-u5975650",
+      "title": "Studio Condo for Rent at Pj Midtown for RM300/mo | U5975650",
+      "source": "Fazwaz.my",
+      "rent_myr": 300
+    },
+    {
+      "url": "https://www.fazwaz.my/property-rent/studio-condo-for-rent-at-pj-midtown-in-bandar-petaling-jaya-selangor-u6210944",
+      "title": "Studio Condo for Rent at Pj Midtown for RM500/mo | U6210944",
+      "source": "Fazwaz.my",
+      "rent_myr": 500
+    },
+    {
+      "url": "https://www.fazwaz.my/property-rent/studio-penthouse-for-rent-at-pj-midtown-in-bandar-petaling-jaya-selangor-u6460051",
+      "title": "Studio Penthouse for Rent at Pj Midtown for RM553/mo | U6460051",
+      "source": "Fazwaz.my",
+      "rent_myr": 553
+    },
+    {
+      "url": "https://www.fazwaz.my/property-rent/2-bedroom-penthouse-for-rent-at-pj-midtown-in-bandar-petaling-jaya-selangor-u6201523",
+      "title": "2 Bedroom Penthouse for Rent at Pj Midtown for RM700/mo | U6201523",
+      "source": "Fazwaz.my",
+      "rent_myr": 700
+    },
+    {
+      "url": "https://www.fazwaz.my/property-rent/2-bedroom-condo-for-rent-in-bandar-petaling-jaya-selangor-u2032807",
+      "title": "2 Bedroom Condo for Rent in Bandar Petaling Jaya, Selangor for RM2,900/mo | U2032807",
+      "source": "Fazwaz.my",
+      "rent_myr": 2900
+    }
+  ]
+}

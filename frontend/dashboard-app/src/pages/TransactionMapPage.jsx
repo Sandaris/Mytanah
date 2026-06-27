@@ -4,12 +4,19 @@ import { useNavigate } from 'react-router-dom'
 import { C, Eyebrow, Display, PrimitiveCard as Card } from '@/components/shared/primitives'
 import { API } from '@/lib/api'
 import { loadMalaysiaGeo } from '@/lib/malaysiaGeo'
+import { loadSingaporeGeo } from '@/lib/singaporeGeo'
+import { loadCombinedGeo } from '@/lib/combinedGeo'
 import {
   getMukims, getAreas, getDistrictAreas, getAreaMukim, getRoads,
   getDistrictRoads, getRoadPath, getTransactionsForScope, PROPERTY_TYPES_ALL,
 } from '@/lib/propertyData'
+import {
+  SG_REGIONS, SG_PROPERTY_TYPES, getSgDistricts, getSgLocalities, sgRegionOfDistrict,
+} from '@/lib/singaporeData'
 import Combobox from '@/components/Combobox'
 import MalaysiaMap from '@/components/MalaysiaMap'
+import SingaporeMap from '@/components/SingaporeMap'
+import CombinedMap from '@/components/CombinedMap'
 import ValuationDashboard from '@/components/ValuationDashboard'
 import TxnTable from '@/components/TxnTable'
 import TxnFullPage from '@/components/TxnFullPage'
@@ -119,8 +126,18 @@ export default function TransactionMapPage() {
   const isVal = variant === 'valuation';
   const [geo, setGeo] = useState(null);
   const [geoErr, setGeoErr] = useState(false);
+  const [sgGeo, setSgGeo] = useState(null);
+  const [sgGeoErr, setSgGeoErr] = useState(false);
+  const [combinedGeo, setCombinedGeo] = useState(null);
+  const [combinedGeoErr, setCombinedGeoErr] = useState(false);
 
-  const [sel, setSel] = useState({ state: '', district: '', propertyType: '', mukim: '', area: '', road: '' });
+  // Map scope: 'ALL' (Malaysia + Singapore overview), 'MY' (Malaysia), 'SG'
+  // (Singapore). `sel.country` mirrors the active country for the cascade +
+  // valuation ('' while in the ALL overview).
+  const [view, setView] = useState('ALL');
+  const [sel, setSel] = useState({ country: '', state: '', district: '', propertyType: '', mukim: '', area: '', road: '' });
+  const isSG = view === 'SG';
+  const isALL = view === 'ALL';
   const [load, setLoad] = useState({ d: false, m: false, a: false, r: false, t: false });
   const [txns, setTxns] = useState(null); // null = not loaded yet
   const [region, setRegion] = useState('west');
@@ -152,6 +169,19 @@ export default function TransactionMapPage() {
     loadMalaysiaGeo().then(setGeo).catch(() => setGeoErr(true));
   }, []);
 
+  // Singapore planning-area choropleth — loaded lazily the first time the user
+  // switches to Singapore.
+  useEffect(() => {
+    if (!isSG || sgGeo) return;
+    loadSingaporeGeo().then(setSgGeo).catch(() => setSgGeoErr(true));
+  }, [isSG, sgGeo]);
+
+  // Combined Malaysia + Singapore overview — loaded lazily for the "All" scope.
+  useEffect(() => {
+    if (!isALL || combinedGeo) return;
+    loadCombinedGeo().then(setCombinedGeo).catch(() => setCombinedGeoErr(true));
+  }, [isALL, combinedGeo]);
+
   /* Live mukim + scheme lists from the backend, scoped to the user's selection.
      The frontend's mock generator is kept as a fallback in case the API is
      offline or the chosen mock district/mukim doesn't exist in the dataset. */
@@ -159,7 +189,7 @@ export default function TransactionMapPage() {
   const [apiAreas, setApiAreas] = useState(null);
   const [apiRoads, setApiRoads] = useState(null); // real road names for the current scope
   useEffect(() => {
-    if (!sel.district) { setApiMukims(null); setApiAreas(null); return; }
+    if (isSG || !sel.district) { setApiMukims(null); setApiAreas(null); return; }
     let cancelled = false;
     const q = { district: sel.district };
     if (sel.mukim) q.mukim = sel.mukim;
@@ -181,7 +211,7 @@ export default function TransactionMapPage() {
      disclosure. Fetched on demand so the big district list isn't pulled unless
      needed; falls back to the mock generator if the API is offline. */
   useEffect(() => {
-    const wantRoads = !!sel.district && (!!sel.area || roadSearchOpen);
+    const wantRoads = !isSG && !!sel.district && (!!sel.area || roadSearchOpen);
     if (!wantRoads) { setApiRoads(null); return; }
     let cancelled = false;
     API.valuationRoads({ district: sel.district, mukim: sel.mukim, scheme: sel.area })
@@ -194,7 +224,11 @@ export default function TransactionMapPage() {
   // keep the current selection in its own list — a mukim/scheme back-filled from
   // a road may not exist in the live API list, but must stay selectable.
   const withSelected = (list, val) => (val && !list.includes(val) ? [val, ...list] : list);
-  const districts = geo && sel.state ? geo.byName[sel.state].districts.map(d => d.name) : [];
+  const districts = (!isSG && geo && sel.state && geo.byName[sel.state]) ? geo.byName[sel.state].districts.map(d => d.name) : [];
+
+  // ---- Singapore option lists (postal districts + localities) ----
+  const sgDistricts = isSG ? getSgDistricts(sel.state || null) : [];
+  const sgLocalities = isSG && sel.district ? getSgLocalities(sel.district) : [];
   const mockMukims = sel.district ? getMukims(sel.state, sel.district) : [];
   const mukims = withSelected((apiMukims && apiMukims.length) ? apiMukims : mockMukims, sel.mukim);
   // Scheme/Area can be browsed at the mukim level (if a mukim is chosen) OR
@@ -222,7 +256,7 @@ export default function TransactionMapPage() {
   const selectState = (state) => {
     // propertyType is orthogonal to the geographic cascade — keep it so the user
     // doesn't lose their pick (and re-forget it) when they change location.
-    setSel(s => ({ state: state || '', district: '', propertyType: s.propertyType, mukim: '', area: '', road: '' }));
+    setSel(s => ({ country: s.country, state: state || '', district: '', propertyType: s.propertyType, mukim: '', area: '', road: '' }));
     setSearched(null); setTxns(null); setRoadAutoFill(null);
     if (state) {
       if (onEngage) onEngage(); // reveal the dashboard chrome on first engagement
@@ -300,6 +334,51 @@ export default function TransactionMapPage() {
     setSearched(null); setTxns(null);
   };
 
+  /* ---- map scope: All (overview) / Malaysia / Singapore ----------------- */
+  const switchView = (v) => {
+    if (v === view) return;
+    setView(v);
+    setSel({ country: v === 'ALL' ? '' : v, state: '', district: '', propertyType: '', mukim: '', area: '', road: '' });
+    setSearched(null); setTxns(null); setRoadAutoFill(null);
+    setRoadSearchOpen(false); setPanelOpen(true);
+  };
+  /* Clicking a country in the combined overview drills straight into it (and, for
+     Malaysia, pre-selects the clicked state). */
+  const pickFromOverview = ({ country, state }) => {
+    setView(country);
+    setSearched(null); setTxns(null); setRoadAutoFill(null); setRoadSearchOpen(false);
+    setPanelOpen(true);
+    if (onEngage) onEngage();
+    if (country === 'MY') {
+      setSel({ country: 'MY', state: state || '', district: '', propertyType: '', mukim: '', area: '', road: '' });
+      if (state && geo) { setRegion(geo.regionOf(state)); setLoad(l => ({ ...l, d: true })); delay(() => setLoad(l => ({ ...l, d: false })), 450); }
+    } else {
+      setSel({ country: 'SG', state: '', district: '', propertyType: '', mukim: '', area: '', road: '' });
+    }
+  };
+
+  /* ---- Singapore cascade: Region → Postal District → Locality ----------- */
+  const selectSgRegion = (region) => {
+    setSel(s => ({ ...s, state: region || '', district: '', area: '' }));
+    setSearched(null); setTxns(null);
+    if (region && onEngage) onEngage();
+  };
+  const selectSgDistrict = (label) => {
+    // Picking a postal district back-fills its region so the map highlights it.
+    setSel(s => ({
+      ...s,
+      district: label || '',
+      area: '',
+      state: label ? (sgRegionOfDistrict(label) || s.state) : s.state,
+    }));
+    setSearched(null); setTxns(null);
+    if (label) { setPanelOpen(true); if (onEngage) onEngage(); }
+  };
+  const selectSgLocality = (loc) => {
+    setSel(s => ({ ...s, area: loc || '' }));
+    setSearched(null); setTxns(null);
+  };
+
   /* explicit Search — gathers results for whatever level is filled. Road is
      optional; a mukim- or district-level search is allowed. */
   const canSearch = !!sel.district && !!sel.propertyType;
@@ -363,7 +442,13 @@ export default function TransactionMapPage() {
 
   /* status hint */
   let hint;
-  if (!sel.state) hint = isVal ? 'Select a state to begin a valuation.' : 'Select a state to explore property transactions.';
+  if (isALL) hint = 'Malaysia + Singapore. Click a country on the map (or pick one below) to start a valuation.';
+  else if (isSG) {
+    if (!sel.district) hint = 'Pick a postal district (or a region first) to value a Singapore property.';
+    else if (!sel.propertyType) hint = `${sel.district}. Choose a property type below (optionally pick a locality).`;
+    else if (searched) hint = `Live valuation ready for ${searched.area || searched.district}.`;
+    else hint = `${sel.district}. Pick a locality (optional) and a property type, then value it.`;
+  } else if (!sel.state) hint = isVal ? 'Select a state to begin a valuation.' : 'Select a state to explore property transactions.';
   else if (!sel.district) hint = `${sel.state}. Choose a district to continue.`;
   else if (!sel.propertyType) hint = `${sel.district}, ${sel.state}. Pick a property type below (optionally refine by mukim / scheme / road first).`;
   else if (searched) hint = isVal
@@ -371,7 +456,7 @@ export default function TransactionMapPage() {
     : `Showing ${searched.road || searched.area || searched.mukim || searched.district}.`;
   else hint = `${sel.district}, ${sel.state}. Refine by mukim / scheme / road (all optional), then press Search.`;
 
-  if (geoErr) return (
+  if (geoErr && view === 'MY') return (
     <div style={{ padding: 28 }}>
       <Card><div style={{ fontFamily: "'DM Sans',sans-serif", color: C.down }}>
         Unable to load the Malaysia map data. Please check your connection and reload.
@@ -388,7 +473,39 @@ export default function TransactionMapPage() {
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
       background: 'linear-gradient(165deg, #E7E3DA 0%, #DCD7C9 55%, #CFC9BA 100%)' }}>
       {/* ===== FULL-BLEED MAP ===== */}
-      {geo
+      {isALL ? (
+        combinedGeo
+          ? <CombinedMap geo={combinedGeo} onPick={pickFromOverview}/>
+          : <div style={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', flexDirection: 'column', gap: 12,
+            }}>
+              <span className="tmap-spin" style={{
+                width: 30, height: 30, borderRadius: '50%',
+                border: `3px solid ${C.border}`, borderTopColor: C.earth,
+              }}/>
+              <span style={{ fontFamily: "'DM Sans',sans-serif", color: C.mid, fontSize: 13 }}>
+                {combinedGeoErr ? 'Map unavailable — use the tabs above to pick a country.' : 'Loading Malaysia + Singapore map…'}
+              </span>
+            </div>
+      ) : isSG ? (
+        sgGeo
+          ? <SingaporeMap geo={sgGeo}
+              selectedRegion={sel.state || null}
+              onSelectRegion={selectSgRegion}/>
+          : <div style={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', flexDirection: 'column', gap: 12,
+            }}>
+              <span className="tmap-spin" style={{
+                width: 30, height: 30, borderRadius: '50%',
+                border: `3px solid ${C.border}`, borderTopColor: C.earth,
+              }}/>
+              <span style={{ fontFamily: "'DM Sans',sans-serif", color: C.mid, fontSize: 13 }}>
+                {sgGeoErr ? 'Singapore map unavailable — use the dropdowns to value a property.' : 'Loading Singapore map…'}
+              </span>
+            </div>
+      ) : geo
         ? <MalaysiaMap geo={geo}
             selectedState={sel.state || null}
             selectedDistrict={sel.district || null}
@@ -441,6 +558,21 @@ export default function TransactionMapPage() {
           </div>
 
           <div ref={bodyRef} style={{ padding: '0 18px', overflowY: 'auto', flex: 1 }}>
+            {/* map scope — All (MY+SG overview) / Malaysia (NAPIC) / Singapore (web) */}
+            <div style={{
+              display: 'flex', gap: 4, background: C.cream, padding: 4, borderRadius: 9999,
+              border: `1px solid ${C.border}`, margin: '0 0 12px',
+            }}>
+              {[['ALL', '🌏 All'], ['MY', '🇲🇾 Malaysia'], ['SG', '🇸🇬 Singapore']].map(([code, label]) => (
+                <button key={code} onClick={() => switchView(code)} style={{
+                  flex: 1, border: 0, borderRadius: 9999, padding: '8px 6px',
+                  background: view === code ? C.deep : 'transparent',
+                  color: view === code ? C.cream : C.mid,
+                  fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, fontWeight: 600,
+                  cursor: 'pointer', transition: 'background .18s, color .18s', whiteSpace: 'nowrap',
+                }}>{label}</button>
+              ))}
+            </div>
             <div style={{
               padding: '10px 12px', borderRadius: 8,
               background: searched ? C.deep : C.earthFaint,
@@ -450,6 +582,50 @@ export default function TransactionMapPage() {
             }}>{hint}</div>
 
             <div style={{ margin: '16px 0 18px', display: 'grid', gap: 13 }}>
+              {isALL ? (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <div style={{
+                    padding: '11px 13px', borderRadius: 8, background: C.earthFaint,
+                    border: `1px solid ${C.earth}40`, fontFamily: "'DM Sans',sans-serif",
+                    fontSize: 12.5, lineHeight: 1.5, color: C.mid,
+                  }}>
+                    Viewing <strong style={{ color: C.deep }}>Malaysia + Singapore</strong>. Pick a
+                    country — click it on the map, or choose below — to start a valuation.
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {[['MY', '🇲🇾', 'Malaysia'], ['SG', '🇸🇬', 'Singapore']].map(([code, flag, name]) => (
+                      <button key={code} onClick={() => switchView(code)} style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                        padding: '14px 10px', borderRadius: 10, cursor: 'pointer',
+                        border: `1px solid ${C.border}`, background: C.cream, color: C.deep,
+                        fontFamily: "'DM Sans',sans-serif", fontSize: 13.5, fontWeight: 600,
+                        transition: 'border-color .18s, background .18s',
+                      }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.earth; e.currentTarget.style.background = C.raised; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.cream; }}>
+                        <span style={{ fontSize: 22 }}>{flag}</span>{name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (<>
+              {isSG ? (
+                <>
+                  <StepSelect label="① Region (optional)" value={sel.state}
+                    placeholder="All of Singapore" options={SG_REGIONS}
+                    onChange={selectSgRegion} onClear={() => selectSgRegion('')}/>
+                  <StepSelect label="② Postal District" value={sel.district}
+                    placeholder={sel.state ? `Select a district in ${sel.state}` : 'Select a postal district (D01–D28)'}
+                    options={sgDistricts} onChange={selectSgDistrict}
+                    onClear={() => selectSgDistrict('')}/>
+                  {sel.district && (
+                    <StepSelect label="③ Locality (optional)" value={sel.area}
+                      placeholder="Any locality in this district" options={sgLocalities}
+                      onChange={selectSgLocality} onClear={() => selectSgLocality('')}/>
+                  )}
+                </>
+              ) : (
+              <>
               <StepSelect label="① State" value={sel.state} placeholder="Select state"
                 options={geo ? geo.stateNames : []} onChange={selectState}
                 onClear={() => selectState('')}/>
@@ -548,6 +724,8 @@ export default function TransactionMapPage() {
                   placeholder="Any road" options={roads} onChange={selectRoad}
                   loading={load.r} loadingLabel="Loading road names…" onClear={() => selectRoad('')}/>
               )}
+              </>
+              )}
 
               {/* Property Type sits at the bottom, just above Search, and always
                   renders regardless of the optional cascade steps above it — so it
@@ -559,7 +737,7 @@ export default function TransactionMapPage() {
                 border: `1px solid ${sel.propertyType ? C.border : C.earth + '55'}`,
               }}>
                 <StepSelect label="Property Type · required" value={sel.propertyType}
-                  placeholder="Select a property type" options={PROPERTY_TYPES_ALL}
+                  placeholder="Select a property type" options={isSG ? SG_PROPERTY_TYPES : PROPERTY_TYPES_ALL}
                   onChange={selectPropertyType} onClear={() => selectPropertyType('')}/>
               </div>
 
@@ -583,6 +761,7 @@ export default function TransactionMapPage() {
                   }}>Clear</button>
                 )}
               </div>
+              </>)}
             </div>
           </div>
         </div>
@@ -641,6 +820,7 @@ export default function TransactionMapPage() {
             <Fragment>
               {!sheetMax && (
                 <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 4, display: 'flex', gap: 8 }}>
+                  {!isSG && (
                   <button onClick={() => { setYearMode('range'); setSheetMax(true); }} title="Expand to full page"
                     style={iconBtn}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -649,6 +829,7 @@ export default function TransactionMapPage() {
                       <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
                     </svg>
                   </button>
+                  )}
                   <button onClick={() => setSheetOpen(false)} title="Collapse" style={iconBtn}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

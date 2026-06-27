@@ -1,28 +1,27 @@
-"""FastAPI backend exposing the FYP2 property models.
+"""FastAPI backend exposing the FYP2 property API.
 
 Endpoints
 ---------
-GET  /health                 — service + artifact status
-POST /valuation/predict      — price prediction (Random Forest by default)
+GET  /health                 — service + data status
+POST /valuation/predict      — live market-value estimate via Exa web search
 GET  /valuation/options      — valid dropdown values for categorical inputs
 GET  /hcr/current            — latest housing cycle regime probability + label
 POST /hcr/predict            — regime probability for a custom macro vector
 GET  /data/query             — filtered slice of the cleaned transactions
 
+Valuation is no longer ML-based: instead of loading a trained model, the user
+fills in the property fields and `valuation_comps` asks the Exa Agent to search
+Malaysian property portals for comparable sale prices (see valuation_comps/).
+
 Artifacts expected in ./artifacts/ (produced by save_models.py):
-    valuation_model.joblib   {model, num_cols, cat_cols, cat_categories,
-                              target_log: bool}
     hcr_model.joblib         {model, feature_cols, scaler}
     hcr_latest.json          {period, probability, regime, features}
 """
 
 from __future__ import annotations
 
-import gc
 import json
 import re
-import threading
-from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -36,12 +35,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-
-# Registers FTTransformerRegressor so joblib.load can resolve the "ft" artifact's
-# class. Cheap at import time: ft_transformer keeps torch lazy (imported only on
-# the first FT prediction), so this does not pull torch into the API process
-# unless someone actually selects the FT-Transformer model.
-import ft_transformer  # noqa: F401
 
 ROOT = Path(__file__).parent
 ARTIFACTS = ROOT / "artifacts"
@@ -62,73 +55,41 @@ app.add_middleware(
 )
 
 state: dict[str, Any] = {
-    "valuation_meta": None,  # shared cat_cols/num_cols/cat_categories (from default model)
+    "valuation_meta": None,  # cat_cols/num_cols/cat_categories derived from the data
     "hcr": None,
     "hcr_latest": None,
     "transactions": None,
     "location_hierarchy": None,
 }
 
-# Selectable valuation models -> artifact filenames. "xgboost" is the default
-# and the back-compat artifact; "rf"/"ft" are optional and skipped if missing.
-# The "ft" artifact unpickles ft_transformer.FTTransformerRegressor (imported
-# below so joblib.load can resolve the class; torch stays lazy until predict).
-VALUATION_MODEL_FILES = {
-    "xgboost": "valuation_model.joblib",
-    "rf": "valuation_rf.joblib",
-    "ft": "valuation_ft.joblib",
-}
-DEFAULT_MODEL = "xgboost"
-
-# Lazy, single-slot model cache. The VM is memory-constrained (~1 GB) and the
-# Random Forest artifact alone is ~200 MB resident, so we never keep more than
-# one valuation model in RAM: a model loads from disk on first request and the
-# least-recently-used one is evicted. The lock serializes load+predict so two
-# concurrent requests can't pull two big models in at once and blow the budget.
-# The frontend computes only the *selected* model and caches results per search,
-# so each model is loaded at most once per search (instant on switch-back).
-_MODEL_CACHE: "OrderedDict[str, Any]" = OrderedDict()
-_MODEL_CACHE_MAX = 1
-_MODEL_LOCK = threading.RLock()
+# Categorical columns the valuation form offers as dropdowns. Previously sourced
+# from the trained model's metadata; now derived straight from the transactions
+# dataframe since valuation is web-search based (no model artifact).
+VAL_CAT_COLS = ["Property Type", "District", "Mukim", "Scheme Name/Area", "Tenure"]
+VAL_NUM_COLS = ["Land", "Area"]
 
 
-def _load_model_cached(key: str) -> Any:
-    """Artifact for `key`, loading from disk (evicting the LRU model) if not
-    resident. Caller must hold _MODEL_LOCK. Unknown/missing keys fall back to
-    the default model."""
-    if key not in VALUATION_MODEL_FILES or not (ARTIFACTS / VALUATION_MODEL_FILES[key]).exists():
-        key = DEFAULT_MODEL
-    path = ARTIFACTS / VALUATION_MODEL_FILES.get(key, "")
-    if not path.exists():
+def _build_valuation_meta(df: pd.DataFrame | None) -> dict[str, Any] | None:
+    """Dropdown category metadata for /valuation/options, built from the dataset.
+
+    Mirrors the shape the old model artifact exposed (cat_cols/num_cols/
+    cat_categories) so the options endpoint is unchanged."""
+    if df is None:
         return None
-    if key in _MODEL_CACHE:
-        _MODEL_CACHE.move_to_end(key)
-        return _MODEL_CACHE[key]
-    while len(_MODEL_CACHE) >= _MODEL_CACHE_MAX:
-        _MODEL_CACHE.popitem(last=False)
-        gc.collect()  # release the evicted model's arrays before loading the next
-    _MODEL_CACHE[key] = joblib.load(path)
-    return _MODEL_CACHE[key]
-
-
-def _available_models() -> list[str]:
-    return [k for k, f in VALUATION_MODEL_FILES.items() if (ARTIFACTS / f).exists()]
+    return {
+        "cat_cols": VAL_CAT_COLS,
+        "num_cols": VAL_NUM_COLS,
+        "cat_categories": {
+            c: sorted(df[c].dropna().astype(str).unique().tolist())
+            for c in VAL_CAT_COLS
+            if c in df.columns
+        },
+        "name": "exa-web",
+    }
 
 
 @app.on_event("startup")
 def load_artifacts() -> None:
-    # Pre-warm the default model and extract the shared category metadata the
-    # dropdown endpoints need (identical across models — same training split).
-    with _MODEL_LOCK:
-        default = _load_model_cached(DEFAULT_MODEL)
-    if default is not None:
-        state["valuation_meta"] = {
-            "cat_cols": default["cat_cols"],
-            "num_cols": default["num_cols"],
-            "cat_categories": default["cat_categories"],
-            "name": default.get("name"),
-        }
-
     hcr_path = ARTIFACTS / "hcr_model.joblib"
     if hcr_path.exists():
         state["hcr"] = joblib.load(hcr_path)
@@ -143,12 +104,17 @@ def load_artifacts() -> None:
         else:
             state["transactions"] = pd.read_excel(DATA_FILE)
 
+    # Build the dropdown category metadata from the loaded transactions.
+    state["valuation_meta"] = _build_valuation_meta(state["transactions"])
+
     if _LOCATION_HIERARCHY.exists():
         state["location_hierarchy"] = json.loads(_LOCATION_HIERARCHY.read_text(encoding="utf-8"))
 
 
 @app.get("/health")
 def health() -> dict[str, Any]:
+    import os
+
     df = state["transactions"]
     meta = state.get("valuation_meta")
     hcr_latest = state["hcr_latest"]
@@ -157,9 +123,8 @@ def health() -> dict[str, Any]:
         "version": app.version,
         "valuation": {
             "loaded": meta is not None,
-            "model": meta.get("name") if meta else None,
-            "available": _available_models(),
-            "cached": list(_MODEL_CACHE.keys()),
+            "source": "exa-web",
+            "exa_key_set": bool(os.environ.get("EXA_API_KEY", "").strip()),
         },
         "hcr": {
             "model_loaded": state["hcr"] is not None,
@@ -181,13 +146,18 @@ def health() -> dict[str, Any]:
 
 class ValuationRequest(BaseModel):
     property_type: str = Field(..., examples=["2 - 2 1/2 Storey Terraced"])
+    country: str = Field("MY", description="MY (Malaysia) | SG (Singapore)")
     district: str = Field(..., examples=["Petaling"])
-    mukim: str = Field(..., examples=["Damansara"])
-    scheme: str = Field(..., examples=["Bandar Utama"])
-    tenure: str = Field(..., examples=["Freehold"])
-    land: float = Field(..., gt=0, description="Plot size in sqft")
-    area: float | None = Field(None, ge=0, description="Built-up sqft (optional for high-rise)")
-    model: str = Field("xgboost", description="Which valuation model: xgboost | rf | ft")
+    # Optional below: Singapore uses district (postal district) + scheme (locality)
+    # only; mukim/tenure don't apply there.
+    mukim: str | None = Field(None, examples=["Damansara"])
+    scheme: str | None = Field(None, examples=["Bandar Utama"])
+    tenure: str | None = Field(None, examples=["Freehold"])
+    land: float = Field(..., gt=0, description="Plot / built-up size in sq m")
+    area: float | None = Field(None, ge=0, description="Built-up sq m (optional for high-rise)")
+    # Accepted but ignored — kept so the legacy dashboard (which still posts a
+    # model selector) keeps working. Valuation is now web-search based.
+    model: str | None = Field(None, description="Deprecated; ignored")
 
 
 class Comparable(BaseModel):
@@ -199,62 +169,31 @@ class Comparable(BaseModel):
     transaction_date: str | None
 
 
+class WebComparable(BaseModel):
+    price: float
+    title: str | None = None
+    url: str | None = None
+    source: str | None = None
+
+
 class ValuationResponse(BaseModel):
-    predicted_price: float
-    price_low: float
-    price_high: float
+    predicted_price: float | None
+    price_low: float | None
+    price_high: float | None
     price_per_sqft_land: float | None
     price_per_sqft_area: float | None
+    price_per_sqft: float | None = None  # web-derived RM / sq ft (true sqft)
     currency: str = "RM"
-    model: str
-    val_mape: float | None = None  # median abs % error on the 2025 hold-out
-    confidence: str  # "high" | "medium" | "low"
+    model: str  # value source, e.g. "exa-web"
+    val_mape: float | None = None  # always null now (no ML hold-out); kept for back-compat
+    confidence: str  # "high" | "medium" | "low" | "none"
+    listing_count: int = 0
+    sources_used: list[str] = Field(default_factory=list)
+    notes: str | None = None
+    fetched_at: str | None = None
     inputs_used: dict[str, Any]
-    comparables: list[Comparable]
-
-
-_Z80 = 1.2816  # z-score for an 80% interval (10th–90th percentile)
-
-
-def _predict_with_band(art, X: pd.DataFrame) -> tuple[float, float, float, float]:
-    """Returns (y_mean, y_lo, y_hi, rel_spread) in the model's native (log) space.
-
-    Band source, in order of preference:
-      1. trained quantile heads (α=0.1/0.9) -> a per-input 80% band,
-      2. a RandomForest's per-tree spread,
-      3. a fixed ±1.28σ band from the saved validation residual std.
-    `rel_spread` is an equivalent log-σ (half-width / z80) so the confidence
-    thresholds stay comparable across all three paths.
-    """
-    pipe = art["model"]
-    y_mean = float(pipe.predict(X)[0])
-
-    q_lo, q_hi = art.get("quantile_lo"), art.get("quantile_hi")
-    if q_lo is not None and q_hi is not None:
-        # CQR: widen by the calibrated conformal offset so the band hits its
-        # nominal 80% coverage; clamp to guard against quantile crossing.
-        E = float(art.get("quantile_conformal", 0.0))
-        y_lo = min(float(q_lo.predict(X)[0]) - E, y_mean)
-        y_hi = max(float(q_hi.predict(X)[0]) + E, y_mean)
-        rel_spread = (y_hi - y_lo) / 2.0 / _Z80
-        return y_mean, y_lo, y_hi, rel_spread
-
-    steps = pipe.named_steps
-    if "rf" in steps:
-        pre, rf = steps["pre"], steps["rf"]
-        Xt = pre.transform(X)
-        tree_preds = np.array([t.predict(Xt)[0] for t in rf.estimators_])
-        y_mean = float(tree_preds.mean())
-        half = (np.percentile(tree_preds, 90) - np.percentile(tree_preds, 10)) / 2.0
-        return (
-            y_mean,
-            float(np.percentile(tree_preds, 10)),
-            float(np.percentile(tree_preds, 90)),
-            float(half / _Z80),
-        )
-
-    sigma = float(art.get("band_log_std", 0.2))
-    return y_mean, y_mean - _Z80 * sigma, y_mean + _Z80 * sigma, sigma
+    comparables: list[Comparable]  # NAPIC transaction comparables (local dataset)
+    web_comparables: list[WebComparable] = Field(default_factory=list)  # Exa listings
 
 
 def _find_comparables(req: ValuationRequest, n: int = 5) -> list[Comparable]:
@@ -291,71 +230,74 @@ def _find_comparables(req: ValuationRequest, n: int = 5) -> list[Comparable]:
 
 @app.post("/valuation/predict", response_model=ValuationResponse)
 def valuation_predict(req: ValuationRequest) -> ValuationResponse:
-    req.district = _resolve_district(req.district)  # map map-name -> dataset name
+    """Live market-value estimate from the Exa Agent (web search over Malaysian
+    property portals). No trained model is involved — the user's fields drive a
+    comparable-listing search whose result is cached on disk. NAPIC comparables
+    from the local dataset are attached for context."""
+    country = (req.country or "MY").upper()
+    is_sg = country == "SG"
+    if not is_sg:
+        req.district = _resolve_district(req.district)  # map map-name -> dataset name
 
-    row = {
+    from valuation_comps import get_valuation
+
+    est = get_valuation(
+        property_type=req.property_type,
+        country=country,
+        district=req.district,
+        mukim=req.mukim,
+        scheme=req.scheme,
+        tenure=req.tenure,
+        land=req.land,
+        area=req.area,
+    )
+
+    price = est.estimated_value_myr
+    price_lo = est.low_myr
+    price_hi = est.high_myr
+    currency = "SGD" if is_sg else "RM"
+
+    inputs_used = {
         "Property Type": req.property_type,
+        "Country": country,
         "District": req.district,
         "Mukim": req.mukim,
         "Scheme Name/Area": req.scheme,
         "Tenure": req.tenure,
         "Land": req.land,
-        "Area": req.area if req.area is not None else 0.0,
-        "Area_Applicable": 1 if req.area is not None else 0,
+        "Area": req.area,
     }
-    X = pd.DataFrame([row])
 
-    # Load + predict under the lock so only one (memory-heavy) model is resident
-    # at a time on the constrained VM. Comparables come from the dataframe and are
-    # built outside the lock.
-    with _MODEL_LOCK:
-        art = _load_model_cached(req.model)
-        if art is None:
-            raise HTTPException(503, "Valuation model not loaded. Run save_models.py first.")
-
-        unseen: list[str] = []
-        for col in art["cat_cols"]:
-            known = art["cat_categories"].get(col, [])
-            if X.at[0, col] not in known and known:
-                unseen.append(col)
-                X.at[0, col] = known[0]
-
-        y_mean, y_lo, y_hi, rel_spread = _predict_with_band(art, X)
-        target_log = art.get("target_log")
-        model_name = art.get("name", "valuation")
-        model_mape = art.get("val_mape")
-
-    if target_log:
-        price = float(np.expm1(y_mean))
-        price_lo = float(np.expm1(y_lo))
-        price_hi = float(np.expm1(y_hi))
-    else:
-        price, price_lo, price_hi = y_mean, y_lo, y_hi
-
-    # Confidence = how tight this property's band is vs typical. Thresholds are
-    # the ~33rd/66th percentiles of rel_spread over 2025 validation, so the band
-    # width (now input-specific via the conformal quantile heads) maps to roughly
-    # tightest / middle / widest third.
-    if unseen:
-        confidence = "low"
-    elif rel_spread < 0.18:
-        confidence = "high"
-    elif rel_spread < 0.23:
-        confidence = "medium"
-    else:
-        confidence = "low"
+    # NAPIC comparables only exist for Malaysia; Singapore has no local dataset yet.
+    napic_comps = [] if is_sg else _find_comparables(req, n=5)
 
     return ValuationResponse(
-        predicted_price=round(price, 2),
-        price_low=round(price_lo, 2),
-        price_high=round(price_hi, 2),
-        price_per_sqft_land=round(price / req.land, 2) if req.land else None,
-        price_per_sqft_area=round(price / req.area, 2) if req.area else None,
-        model=model_name,
-        val_mape=model_mape,
-        confidence=confidence,
-        inputs_used={**row, "unseen_categories": unseen},
-        comparables=_find_comparables(req, n=5),
+        predicted_price=round(price, 2) if price is not None else None,
+        price_low=round(price_lo, 2) if price_lo is not None else None,
+        price_high=round(price_hi, 2) if price_hi is not None else None,
+        price_per_sqft_land=round(price / req.land, 2) if (price and req.land) else None,
+        price_per_sqft_area=round(price / req.area, 2) if (price and req.area) else None,
+        price_per_sqft=est.price_per_sqft_myr,
+        currency=currency,
+        model="exa-web",
+        val_mape=None,
+        confidence=est.confidence,
+        listing_count=est.listing_count,
+        sources_used=est.sources_used,
+        notes=est.notes,
+        fetched_at=est.fetched_at,
+        inputs_used=inputs_used,
+        comparables=napic_comps,
+        web_comparables=[
+            WebComparable(
+                price=c["price_myr"],
+                title=c.get("title"),
+                url=c.get("url"),
+                source=c.get("source"),
+            )
+            for c in est.comparables
+            if c.get("price_myr") is not None
+        ],
     )
 
 

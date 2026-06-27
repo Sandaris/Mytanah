@@ -14,8 +14,10 @@ Quick reference (full details in DEPLOY.md):
 - Use **forward-slash** paths in `gcloud compute scp` on Windows.
 - Frontend-only changes are live the moment SCP finishes — no restart.
 - Backend changes need `sudo systemctl restart fyp2` plus an 8-second wait
-  before health-check (model load time). If `requirements.txt` changed, `pip
-  install -r …` into the VM venv first.
+  before health-check (uvicorn + dataframe boot). If `requirements.txt` changed,
+  `pip install -r …` into the VM venv first.
+- Valuation is web-search based (Exa) — it needs `EXA_API_KEY` in `backend/.env`
+  on the VM. No `torch`/`xgboost` anymore.
 - Health: `curl http://34.87.4.244/` should return `307` (redirects to the
   live dashboard).
 
@@ -48,6 +50,7 @@ Restart the service when any of these change:
 - `backend/save_models.py`
 - `backend/artifacts/`
 - `backend/rent_comps/` (rent-comps AI agent)
+- `backend/valuation_comps/` (Exa web-search valuation agent)
 
 ```bash
 gcloud compute ssh kw-property-valuation --zone=asia-southeast1-a \
@@ -59,6 +62,8 @@ gcloud compute ssh kw-property-valuation --zone=asia-southeast1-a \
 - `backend/api.py` — FastAPI app served by uvicorn on port 80. Endpoints under
   `/valuation/*`, `/hcr/*`, `/data/*`, `/rent-comps`. Static mounts: `/app` →
   entire `frontend/` dir; `/` → legacy `frontend/ui_kits/dashboard/`.
+  `/valuation/predict` is Exa web-search based (see `backend/valuation_comps/`),
+  not ML — the user's fields drive a comparable-listing search.
 - `frontend/dashboard-app/` — **new** Vite + React + Tailwind + shadcn/ui SPA
   (proper npm install). Edit here; `npm run build` writes to `frontend/dist/`.
   Local dev: Vite on `:5173` proxies API calls to FastAPI on `:8000`.

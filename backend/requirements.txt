@@ -3,15 +3,11 @@ uvicorn[standard]==0.30.6
 pydantic==2.9.2
 pandas==2.2.2
 numpy==1.26.4
+# scikit-learn + joblib are kept for the HCR (housing-cycle regime) logit model.
+# Valuation is now web-search based (Exa) — no xgboost/torch needed.
 scikit-learn==1.8.0
-xgboost==3.2.0
 joblib==1.4.2
 pyarrow==17.0.0
-# FT-Transformer valuation model. Pin the CPU build: the default torch wheel is
-# a multi-GB CUDA package that won't fit the VM. The extra index below is read
-# by `pip install -r requirements.txt`, so no extra flags are needed at deploy.
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.11.0+cpu
 anthropic
 mcp
 python-dotenv

@@ -1,6 +1,6 @@
 # FYP2 Backend API
 
-FastAPI service that exposes the property valuation model, housing cycle regime indicator, and the cleaned transactions dataset to a frontend.
+FastAPI service that exposes a live (web-search) property valuation, the housing cycle regime indicator, and the cleaned transactions dataset to a frontend.
 
 ## One-time setup
 
@@ -11,20 +11,30 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Build model artifacts
+Copy `.env.example` to `.env` and set `EXA_API_KEY` — valuation calls the Exa
+Agent to search Malaysian property portals for comparable sale prices. Without a
+key, `/valuation/predict` returns `predicted_price: null`.
 
-The notebooks train fresh on every run and don't dump models. `save_models.py` refits the production-shape models and writes them to `backend/artifacts/`:
+## Valuation: live web search, not ML
+
+`/valuation/predict` is **not** model-based. The user's property fields drive a
+comparable-listing search via the Exa Agent (`backend/valuation_comps/`), which
+returns a structured market-value estimate. Results are cached on disk
+(`backend/.cache/valuation_comps/`, 48h TTL) so repeat searches are instant.
+There is no `torch`/`xgboost` dependency.
+
+## Build the HCR artifact
+
+`save_models.py` builds only the housing-cycle regime (HCR) logit now (valuation
+needs no artifact):
 
 ```powershell
 python save_models.py
 ```
 
 What it produces:
-- `artifacts/valuation_model.joblib` — Random Forest pipeline (categorical OHE + numeric scaler). Drop-in replacement slot for FT-Transformer later — keep the artifact dict shape.
 - `artifacts/hcr_model.joblib` — logistic regression on 6 macro features. Requires `backend/hcr_quarterly.csv`; the script tells you what columns it expects. Export this from `Data Exploration & Cleaning/HCR_Logit_Regression.ipynb`.
 - `artifacts/hcr_latest.json` — most recent quarter's regime probability so `GET /hcr/current` is instant.
-
-The valuation model trains directly off `processed data/Open Transaction Data Cleaned.xlsx` — no extra export needed.
 
 ## Run
 
@@ -42,8 +52,8 @@ The frontend (`../frontend/`) is served as static files at `/app/...` from the s
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET`  | `/health` | Which artifacts loaded |
-| `POST` | `/valuation/predict` | Price prediction from property attributes |
+| `GET`  | `/health` | Service + data status (incl. whether the Exa key is set) |
+| `POST` | `/valuation/predict` | Live market-value estimate via Exa web search |
 | `GET`  | `/valuation/options` | Dropdown values for each categorical field |
 | `GET`  | `/hcr/current` | Latest precomputed regime + probability |
 | `POST` | `/hcr/predict` | Regime probability for a custom macro vector |
@@ -60,10 +70,15 @@ curl -X POST http://127.0.0.1:8000/valuation/predict \
     "mukim": "Damansara",
     "scheme": "Bandar Utama",
     "tenure": "Freehold",
-    "land": 1800,
-    "area": 2100
+    "land": 167,
+    "area": 195
   }'
 ```
+
+`land` / `area` are in **square metres** (the dataset's unit); the valuation
+agent converts them to sq ft for the web search. The response includes
+`predicted_price`, `price_low`/`price_high`, `confidence`, `listing_count`,
+`sources_used`, and `web_comparables` (sample listings with URLs).
 
 ### Frontend wiring
 
@@ -80,9 +95,11 @@ const res = await fetch("http://127.0.0.1:8000/valuation/predict", {
 const { predicted_price } = await res.json();
 ```
 
-## Swapping in FT-Transformer
+## Tuning the valuation search
 
-FT-Transformer beat Random Forest by ~15% on RMSE. To productionize it:
-1. In `Model Selection/ftTransformer.ipynb` add a final cell that saves the trained `nn.Module` state dict + the tokenizers / scalers used at inference.
-2. Replace `train_valuation()` in `save_models.py` with a function that loads those artifacts and wraps them behind a `.predict(DataFrame)` method matching the current artifact dict (`model`, `cat_cols`, `cat_categories`, `num_cols`, `target_log`).
-3. Add `torch` to `requirements.txt`. No API changes needed.
+`backend/valuation_comps/` wraps the Exa Agent. Optional `.env` knobs:
+- `VAL_EXA_EFFORT` (default `medium`) — Exa agent reasoning effort.
+- `VAL_EXA_TIMEOUT_MS` (default `180000`) — poll timeout.
+
+The search query is built in `valuation_comps/context.py` (`exa_query`) and the
+structured-output schema + response mapping live in `valuation_comps/exa.py`.

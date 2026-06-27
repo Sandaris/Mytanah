@@ -85,7 +85,8 @@ gcloud compute scp \
    restart needed.
 
    When `backend/api.py`, `backend/requirements.txt`, `backend/save_models.py`,
-   or anything in `backend/artifacts/` changes, restart:
+   anything in `backend/artifacts/`, `backend/rent_comps/`, or
+   `backend/valuation_comps/` changes, restart:
 
    ```bash
    gcloud compute ssh kw-property-valuation --zone=asia-southeast1-a \
@@ -99,16 +100,16 @@ gcloud compute scp \
      --command="/home/kaiwen_pixalink_io/fyp2/backend/.venv/bin/pip install -r /home/kaiwen_pixalink_io/fyp2/backend/requirements.txt"
    ```
 
-   The FT-Transformer model needs **CPU torch** (`torch==2.11.0+cpu`, pulled via
-   the `--extra-index-url` line in `requirements.txt`). It's a ~190 MB download
-   that imports lazily — torch only loads into the API process the first time
-   someone selects the FT-Transformer tab, so the other models are unaffected.
-   Watch VM RAM after the first FT request (single-slot model cache still holds,
-   but the torch import itself adds ~200 MB resident).
+   **Valuation needs `EXA_API_KEY`** in `backend/.env` on the VM (the same key
+   the rent-comps agent uses). `/valuation/predict` now searches property portals
+   via the Exa Agent instead of loading a trained model — there is no longer any
+   `torch`/`xgboost` dependency. It works for both Malaysia (RM) and Singapore
+   (SGD, `country: "SG"`). Without the key, valuation returns `predicted_price:
+   null` and the dashboard shows "valuation unavailable".
 
-   The `sleep 8` matters: the XGBoost-CUDA model takes a few seconds to load
-   on cold start, so an immediate `curl` will fail with `local_health=000`
-   even though the service is fine.
+   The `sleep 8` is just a safety margin for uvicorn + the dataframe load on cold
+   start, so an immediate `curl` doesn't race the boot and report
+   `local_health=000` even though the service is fine.
 
 5. **Smoke-test the live URL:**
 
@@ -131,7 +132,9 @@ gcloud compute scp \
 │   ├── api.py                    # FastAPI entrypoint (uvicorn loads api:app)
 │   ├── requirements.txt
 │   ├── save_models.py
-│   ├── artifacts/                # trained model bundle (XGBoost-CUDA, R²≈0.881)
+│   ├── artifacts/                # HCR logit bundle (hcr_model.joblib, hcr_latest.json)
+│   ├── valuation_comps/          # Exa web-search valuation agent (MY + SG)
+│   ├── rent_comps/               # Exa/Playwright rent-comps agent
 │   └── .venv/                    # Python venv — do NOT scp this
 ├── frontend/
 │   └── ui_kits/dashboard/        # the live UI

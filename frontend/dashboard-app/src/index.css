@@ -36,6 +36,13 @@
     --ring: 155 14% 19%;
 
     --radius: 0.5rem;
+
+    /* shadcn-style chart series tokens (ECharts reads via chartTheme.js) */
+    --chart-1: 26 28% 49%;   /* earth brown #A27B5C */
+    --chart-2: 155 10% 28%;  /* forest mid #3F4F44 */
+    --chart-3: 155 10% 40%;  /* forest light #5C7065 */
+    --chart-4: 152 46% 33%;  /* signal up #2D7A4F */
+    --chart-5: 4 57% 41%;    /* signal down #A63228 */
   }
 
   * {

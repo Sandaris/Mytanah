@@ -864,10 +864,22 @@ def data_query(
 
 
 @app.get("/rent-comps")
-def rent_comps_endpoint(mukim: str = Query(..., min_length=1)) -> dict:
+def rent_comps_endpoint(
+    mukim: str = Query(..., min_length=1),
+    scheme: str | None = Query(None, description="Scheme / taman / area name"),
+    district: str | None = Query(None),
+    state: str | None = Query(None),
+    property_type: str | None = Query(None, description="Property type label for comparable rentals"),
+) -> dict:
     from rent_comps import get_rent_estimate
     try:
-        estimate = get_rent_estimate(mukim)
+        estimate = get_rent_estimate(
+            mukim,
+            scheme=scheme,
+            district=district,
+            state=state,
+            property_type=property_type,
+        )
         return estimate.__dict__
     except Exception as exc:
         raise HTTPException(503, f"Rent comps unavailable: {exc}") from exc

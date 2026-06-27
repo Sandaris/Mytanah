@@ -109,11 +109,13 @@ Shared wrapper components (stat cards, section headers, etc.) live in `src/compo
 
 | Route | Component | Description |
 |---|---|---|
-| `/` | `TransactionMapPage` | Map + location search + transaction explorer (default) |
-| `/market` | `MarketOverviewPage` | National market stats + ECharts chart suite |
-| `/roi` | `RoiCalculator` | Loan simulator + earnings projection |
-| `/sentiment` | `SentimentPage` | Housing cycle regime indicator + HCR charts |
-| `/intro` | `IntroPage` | D3 globe animation (auto-redirects to `/`) |
+| `/` | `IntroPage` | D3 globe intro animation; Skip or Begin → `/dashboard?from=intro` |
+| `/dashboard` | `TransactionMapPage` | Map + location search + transaction explorer (default) |
+| `/dashboard/market` | `MarketOverviewPage` | National market stats + ECharts chart suite |
+| `/dashboard/roi` | `RoiCalculator` | Loan simulator + earnings projection |
+| `/dashboard/sentiment` | `SentimentPage` | Housing Cycle Index + HCR charts |
+
+The intro handoff uses a cream curtain + map zoom reveal on first load when `?from=intro` is present (handled in `AppShell`).
 
 ---
 
@@ -133,6 +135,10 @@ All served by FastAPI at port 8000. Vite dev proxy forwards these automatically.
 ---
 
 ## Visualization Libraries
+
+### ECharts theming
+
+All ECharts instances share a registered theme (`mypropertyiq`) and helpers in `src/lib/chartTheme.js`. Import `chartOpts` for ReactECharts and use `chartTooltip()`, `chartGrid()`, `chartSplitLine()`, etc. when building options. The theme is registered once in `main.jsx`.
 
 ### What uses ECharts
 - Quarterly transaction volume (bar)

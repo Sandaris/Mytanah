@@ -17,3 +17,4 @@ mcp
 python-dotenv
 litellm
 httpx
+exa-py

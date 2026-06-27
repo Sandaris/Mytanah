@@ -9,6 +9,9 @@ const ROI_DEFAULT_SEED = {
   rangeLow: null,
   rangeHigh: null,
   mukim: null,
+  scheme: null,
+  district: null,
+  state: null,
 };
 
 let ROI_UID = 0;
@@ -23,6 +26,17 @@ const roiClamp = (value, min, max) => {
 const roiNum = (value, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+};
+
+const roiRentSearchLabel = (source) => {
+  if (source.scheme) return source.scheme;
+  if (source.locationLabel && source.locationLabel !== 'Manual property estimate') return source.locationLabel;
+  return source.mukim || 'this area';
+};
+
+const roiRentSearchDetail = (source) => {
+  const bits = [source.propertyType, source.district, source.state].filter(Boolean);
+  return bits.join(' · ');
 };
 
 // Render an empty box instead of a literal 0 so typing starts clean — the
@@ -310,6 +324,8 @@ const RoiEarningsChart = ({ pts, breakEven, breakEvenValue, loanYears }) => {
 
 const RoiCalculator = ({ seed }) => {
   const source = seed && Number(seed.propertyPrice) > 0 ? seed : ROI_DEFAULT_SEED;
+  const rentLabel = roiRentSearchLabel(source);
+  const rentDetail = roiRentSearchDetail(source);
   const [price, setPrice] = roiUseState(Math.round(source.propertyPrice));
   const [depositPct, setDepositPct] = roiUseState(10);
   const [loanPct, setLoanPct] = roiUseState(90);
@@ -352,12 +368,18 @@ const RoiCalculator = ({ seed }) => {
   };
 
   const fetchMarketRent = () => {
-    const mukim = source.mukim;
+    const { mukim, scheme, district, state, propertyType } = source;
     if (!mukim || rentLoading) return;
     setRentLoading(true);
     setRentError(null);
     startProgress();
-    window.API.rentComps(mukim)
+    window.API.rentComps({
+      mukim,
+      scheme,
+      district,
+      state,
+      property_type: propertyType,
+    })
       .then(data => {
         setRentEstimate(data);
         const bestRent = data.median_rent_myr || data.avg_rent_myr;
@@ -561,7 +583,7 @@ const RoiCalculator = ({ seed }) => {
                     onClick={() => source.mukim && setRentMode('live')}
                     disabled={!source.mukim}
                     aria-pressed={rentMode === 'live'}
-                    title={!source.mukim ? 'Import a valuation with a location to unlock live market data' : `Live listings from ${source.mukim}`}>
+                    title={!source.mukim ? 'Import a valuation with a location to unlock live market data' : `Live listings for ${rentLabel}`}>
                     Live estimate
                   </button>
                 </div>
@@ -583,7 +605,7 @@ const RoiCalculator = ({ seed }) => {
                       <b style={{ color: C.earth, cursor: 'pointer' }} onClick={() => setRentMode('live')}>
                         Live estimate
                       </b>{' '}
-                      to auto-fill from {source.mukim} listings.
+                      to auto-fill from {rentLabel} listings.
                     </div>
                   ) : (
                     <div style={{ fontSize: 11.5, color: C.muted, fontFamily: "'DM Sans',sans-serif", lineHeight: 1.4 }}>
@@ -603,10 +625,15 @@ const RoiCalculator = ({ seed }) => {
                         <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, lineHeight: 1.4,
                           color: progressVal === 100 ? C.up : C.mid, transition: 'color 300ms ease-out' }}>
                           {progressVal === 100
-                            ? <React.Fragment>Loaded — listings from <b style={{ color: C.up }}>{source.mukim}</b></React.Fragment>
-                            : <React.Fragment>Looking up listings in <b style={{ color: C.deep }}>{source.mukim}</b>…</React.Fragment>
+                            ? <React.Fragment>Loaded — listings for <b style={{ color: C.up }}>{rentLabel}</b></React.Fragment>
+                            : <React.Fragment>Looking up listings for <b style={{ color: C.deep }}>{rentLabel}</b>…</React.Fragment>
                           }
                         </span>
+                        {rentDetail && progressVal !== 100 && (
+                          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.light, marginTop: 4, display: 'block' }}>
+                            {rentDetail}
+                          </span>
+                        )}
                         <span className={`roi-progress-pct${progressVal === 100 ? ' roi-progress-pct--complete' : ''}`}
                           aria-live="polite" aria-atomic="true">
                           {progressVal ?? 0}%
@@ -636,8 +663,13 @@ const RoiCalculator = ({ seed }) => {
                       <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(45,122,79,0.08)', border: '1px solid rgba(45,122,79,0.22)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: C.up, fontWeight: 600 }}>
-                            Market data · {source.mukim}
+                            Market data · {rentLabel}
                           </div>
+                          {rentDetail && (
+                            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.mid, marginTop: 2 }}>
+                              {rentDetail}
+                            </div>
+                          )}
                           <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10.5, color: C.mid, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                             {rentEstimate.confidence} · {rentEstimate.listing_count} listings
                           </span>
@@ -669,7 +701,7 @@ const RoiCalculator = ({ seed }) => {
                   {!rentLoading && !rentError && rentEstimate && rentEstimate.confidence === 'none' && (
                     <div className="roi-live-state" style={{ display: 'grid', gap: 8, padding: '12px 14px', borderRadius: 10, background: C.earthFaint, border: `1px solid ${C.border}` }}>
                       <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
-                        No rental listings found for <b style={{ color: C.deep }}>{source.mukim}</b>. Switch to Manual to enter your own estimate.
+                        No rental listings found for <b style={{ color: C.deep }}>{rentLabel}</b>. Switch to Manual to enter your own estimate.
                       </div>
                       <button type="button" onClick={() => setRentMode('manual')}
                         style={{ alignSelf: 'start', cursor: 'pointer', border: `1px solid ${C.earth}`, background: 'transparent', color: C.earth, fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, borderRadius: 7, padding: '6px 12px', transition: 'background 160ms' }}>
@@ -682,7 +714,7 @@ const RoiCalculator = ({ seed }) => {
                     <div className="roi-live-state" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 10, background: C.earthFaint, border: `1px solid ${C.border}` }}>
                       <span className="roi-spinner" aria-hidden="true"/>
                       <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
-                        Preparing fetch for <b style={{ color: C.deep }}>{source.mukim}</b>…
+                        Preparing fetch for <b style={{ color: C.deep }}>{rentLabel}</b>…
                       </span>
                     </div>
                   )}

@@ -1,14 +1,22 @@
 import { useState, useMemo, useEffect } from 'react'
 import ReactECharts from 'echarts-for-react'
-import * as echarts from 'echarts'
 import { Card } from '@/components/ui/card'
+import { ScrollReveal } from '@/components/shared'
 import { C } from '@/lib/colors'
 import { API } from '@/lib/api'
-
-// ---- gradient helper (uses imported echarts) --------------------------------
-const _grad = (top, bot) => new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-  { offset: 0, color: top }, { offset: 1, color: bot },
-])
+import {
+  chartAreaGrad,
+  chartAxisLine,
+  chartAxisPointerLine,
+  chartAxisPointerShadow,
+  chartCategoryAxisLabel,
+  chartDataZoomSlider,
+  chartOpts,
+  chartSplitLine,
+  chartTooltip,
+  chartValueAxisLabel,
+  withChartBase,
+} from '@/lib/chartTheme'
 
 // ---- Static data ------------------------------------------------------------
 const HCR_LATEST = {
@@ -254,16 +262,12 @@ const CycleComponentChart = () => {
     for (const p of HCR_CYCLE) if (Math.abs(p.year - yr) < Math.abs(best.year - yr)) best = p
     return best.period
   }
-  const option = useMemo(() => ({
-    backgroundColor: 'transparent',
+  const option = useMemo(() => withChartBase({
     grid: { left: 52, right: 22, top: 22, bottom: 78 },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: C.deep,
-      borderColor: C.deep,
-      padding: [10, 12],
-      textStyle: { color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 12 },
-      axisPointer: { type: 'line', lineStyle: { color: C.earth, width: 1.1, type: [3, 4] } },
+      ...chartTooltip(),
+      axisPointer: chartAxisPointerLine,
       formatter: (ps) => {
         const p = ps.find(x => x.seriesName === 'cycle') || ps[0]
         const v = +p.data
@@ -284,33 +288,20 @@ const CycleComponentChart = () => {
       type: 'category',
       data: HCR_CYCLE.map(p => p.period),
       boundaryGap: false,
-      axisLine: { lineStyle: { color: C.border } },
+      axisLine: chartAxisLine,
       axisTick: { show: false },
       axisLabel: {
-        color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 10,
+        ...chartValueAxisLabel(),
         interval: (i, v) => v.endsWith('Q1') && parseInt(v, 10) % 5 === 0,
         formatter: (v) => v.split(' ')[0],
       },
     },
     yAxis: {
       type: 'value',
-      axisLabel: {
-        color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 10,
-        formatter: (v) => (v > 0 ? '+' : '') + v,
-      },
-      splitLine: { lineStyle: { color: C.border, type: [2, 5] } },
+      axisLabel: { ...chartValueAxisLabel(), formatter: (v) => (v > 0 ? '+' : '') + v },
+      splitLine: chartSplitLine,
     },
-    dataZoom: [
-      {
-        type: 'slider', bottom: 18, height: 22, borderColor: 'transparent',
-        backgroundColor: 'rgba(200,195,184,0.16)', fillerColor: 'rgba(162,123,92,0.16)',
-        dataBackground: { lineStyle: { color: C.border }, areaStyle: { color: 'rgba(162,123,92,0.10)' } },
-        selectedDataBackground: { lineStyle: { color: C.earth }, areaStyle: { color: 'rgba(162,123,92,0.20)' } },
-        handleStyle: { color: C.cream, borderColor: C.earth },
-        moveHandleStyle: { color: C.earth },
-        textStyle: { color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 9 },
-      },
-    ],
+    dataZoom: [chartDataZoomSlider()],
     series: [
       // green fill above the zero line
       {
@@ -347,7 +338,7 @@ const CycleComponentChart = () => {
         <span className="font-display text-[22px] font-medium text-[#2C3930]">HP-filter cyclical component</span>
         <span className="text-xs text-[#3F4F44]">Mean price minus HP trend, RM '000 · drag the slider to zoom</span>
       </div>
-      <ReactECharts option={option} style={{ height: 360 }} opts={{ renderer: 'canvas' }} />
+      <ReactECharts option={option} style={{ height: 360 }} opts={chartOpts} />
     </Card>
   )
 }
@@ -365,17 +356,11 @@ const IndicatorChart = ({ ind }) => {
     const periods = vals.map(v => v.period)
     const data = vals.map(v => +v.value)
     const lastIdx = vals.length - 1
-    const common = {
-      backgroundColor: 'transparent',
+    const common = withChartBase({
       grid: { left: 8, right: 12, top: 16, bottom: 22 },
       tooltip: {
-        trigger: 'axis', backgroundColor: C.deep, borderColor: C.deep, padding: [8, 10],
-        textStyle: { color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 12 },
-        axisPointer: {
-          type: ind.chart === 'bar' ? 'shadow' : 'line',
-          lineStyle: { color: C.earth, width: 1, type: [3, 4] },
-          shadowStyle: { color: 'rgba(162,123,92,0.10)' },
-        },
+        trigger: 'axis', ...chartTooltip({ padding: [8, 10] }),
+        axisPointer: ind.chart === 'bar' ? chartAxisPointerShadow : chartAxisPointerLine,
         formatter: (ps) => {
           const p = ps[0]
           return `<div style="font-family:'JetBrains Mono',monospace;font-size:11px">${p.axisValue}</div>` +
@@ -386,19 +371,19 @@ const IndicatorChart = ({ ind }) => {
         type: 'category', data: periods, boundaryGap: ind.chart === 'bar',
         axisLine: { show: false }, axisTick: { show: false },
         axisLabel: {
-          color: C.muted, fontFamily: "'JetBrains Mono',monospace", fontSize: 9,
+          ...chartValueAxisLabel({ color: C.muted, fontSize: 9 }),
           interval: (i) => i === 0 || i === lastIdx, formatter: (v) => v,
         },
       },
       yAxis: { type: 'value', show: false, scale: true },
-    }
+    })
     if (ind.chart === 'bar') {
       return {
         ...common, series: [{
           type: 'bar', data, barWidth: '56%',
           itemStyle: {
             borderRadius: [4, 4, 0, 0],
-            color: (p) => (p.dataIndex === lastIdx ? accent : 'rgba(162,123,92,0.5)'),
+            color: (p) => (p.dataIndex === lastIdx ? accent : 'rgba(162,123,92,0.45)'),
           },
           markLine: {
             silent: true, symbol: 'none', label: { show: false },
@@ -411,7 +396,7 @@ const IndicatorChart = ({ ind }) => {
       ...common, series: [{
         type: 'line', data, smooth: true, showSymbol: false, symbol: 'circle',
         lineStyle: { color: base, width: 2 },
-        areaStyle: { color: _grad('rgba(162,123,92,0.30)', 'rgba(162,123,92,0.02)') },
+        areaStyle: { color: chartAreaGrad(C.earth, 0.30, 0.02) },
         emphasis: { focus: 'series' },
         markLine: {
           silent: true, symbol: 'none', label: { show: false },
@@ -434,7 +419,7 @@ const IndicatorChart = ({ ind }) => {
         </div>
         <span className="font-mono text-sm font-medium" style={{ color: accent }}>{hcrNum(latest.value, ind.unit)}</span>
       </div>
-      <ReactECharts option={option} style={{ height: 124 }} opts={{ renderer: 'canvas' }} />
+      <ReactECharts option={option} style={{ height: 124 }} opts={chartOpts} />
       {ind.desc && (
         <p className="mt-2.5 pt-2.5 border-t border-[#C8C3B8] text-xs text-[#3F4F44] leading-relaxed">{ind.desc}</p>
       )}
@@ -465,17 +450,27 @@ export default function SentimentPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <RegimePanel latest={latest} />
-      <CycleComponentChart />
-      <Card className="p-6">
-        <div className="flex justify-between items-baseline gap-3 mb-4">
-          <span className="font-display text-[22px] font-medium text-[#2C3930]">Recent two years of regression indicators</span>
-          <span className="text-xs text-[#3F4F44]">Latest point glows red for uptrend, green for downtrend</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {HCR_INDICATORS.map(ind => <IndicatorChart key={ind.key} ind={ind} />)}
-        </div>
-      </Card>
+      <ScrollReveal>
+        <RegimePanel latest={latest} />
+      </ScrollReveal>
+      <ScrollReveal delay={80}>
+        <CycleComponentChart />
+      </ScrollReveal>
+      <ScrollReveal delay={120}>
+        <Card className="p-6">
+          <div className="flex justify-between items-baseline gap-3 mb-4">
+            <span className="font-display text-[22px] font-medium text-[#2C3930]">Recent two years of regression indicators</span>
+            <span className="text-xs text-[#3F4F44]">Latest point glows red for uptrend, green for downtrend</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {HCR_INDICATORS.map((ind, i) => (
+              <ScrollReveal key={ind.key} delay={i * 50}>
+                <IndicatorChart ind={ind} />
+              </ScrollReveal>
+            ))}
+          </div>
+        </Card>
+      </ScrollReveal>
     </div>
   )
 }

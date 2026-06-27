@@ -1,9 +1,9 @@
 import json
-import re
 import dataclasses
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+from .context import RentContext
 from .schema import RentEstimate
 
 CACHE_DIR = Path(__file__).resolve().parent.parent / ".cache" / "rent_comps"
@@ -12,16 +12,9 @@ TTL_WITH_RESULTS = timedelta(hours=48)
 TTL_EMPTY = timedelta(hours=1)
 
 
-def _slugify(mukim: str) -> str:
-    slug = mukim.lower()
-    slug = re.sub(r"[^a-z0-9]+", "_", slug)
-    slug = slug.strip("_")
-    return slug
-
-
-def read_cache(mukim: str) -> RentEstimate | None:
+def read_cache(ctx: RentContext) -> RentEstimate | None:
     try:
-        path = CACHE_DIR / f"{_slugify(mukim)}.json"
+        path = CACHE_DIR / f"{ctx.cache_slug()}.json"
         if not path.exists():
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -49,10 +42,10 @@ def read_cache(mukim: str) -> RentEstimate | None:
         return None
 
 
-def write_cache(mukim: str, estimate: RentEstimate) -> None:
+def write_cache(ctx: RentContext, estimate: RentEstimate) -> None:
     try:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        path = CACHE_DIR / f"{_slugify(mukim)}.json"
+        path = CACHE_DIR / f"{ctx.cache_slug()}.json"
         path.write_text(
             json.dumps(dataclasses.asdict(estimate), ensure_ascii=False, indent=2),
             encoding="utf-8",

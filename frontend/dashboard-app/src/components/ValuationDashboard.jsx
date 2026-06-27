@@ -1,15 +1,10 @@
-/* eslint-disable no-undef */
-/* ValuationDashboard.jsx — the Valuation tab's result panel.
-   Shown inside the map's bottom sheet once the user has chosen a Scheme/Area.
-   Estimates the property's market value (switchable between three real,
-   API-served models — Random Forest, XGBoost, FT-Transformer) and surfaces the
-   essential market data for the chosen region, mirroring the real NAPIC
-   Open Transaction schema: average price by property type, median price,
-   price per m² (built-up), median built-up / land area (sq.m), tenure mix,
-   and the price + volume trend across 2021–2026. All figures derive from the
-   same calibrated transaction layer the map uses, so the dashboard always
-   agrees with the underlying records. */
-const { useState, useMemo, useEffect, useRef } = React;
+/* ValuationDashboard.jsx — valuation result panel */
+import { useState, useMemo, useEffect, useRef } from 'react'
+import * as echarts from 'echarts'
+import { C, Eyebrow, Display, Mono, Button, PrimitiveCard as Card } from '@/components/shared/primitives'
+import { API } from '@/lib/api'
+import { formatRM, getTransactions, getTransactionsForScope } from '@/lib/propertyData'
+import { CHART_THEME } from '@/lib/chartTheme'
 
 const STRATA_TYPES = new Set(['Condominium/Apartment', 'Flat', 'Low-Cost Flat', 'Town House']);
 const VAL_AVG_GUARD_MIN_TXNS = 3;
@@ -103,11 +98,11 @@ const RecentTxnRow = ({ r, i }) => {
    YoY % pill labels + year labels, and adds a per-year hover (avg price, volume,
    YoY %). Sits to the right of the year bar chart in the trend card. */
 const YearLineChart = ({ rows }) => {
-  const elRef = React.useRef(null);
-  const chartRef = React.useRef(null);
-  React.useEffect(() => {
-    if (!window.echarts || !elRef.current) return undefined;
-    const chart = window.echarts.init(elRef.current, null, { renderer: 'canvas' });
+  const elRef = useRef(null);
+  const chartRef = useRef(null);
+  useEffect(() => {
+    if (!echarts || !elRef.current) return undefined;
+    const chart = echarts.init(elRef.current, CHART_THEME, { renderer: 'canvas' });
     chartRef.current = chart;
     const ro = new ResizeObserver(() => chart.resize());
     ro.observe(elRef.current);
@@ -115,14 +110,14 @@ const YearLineChart = ({ rows }) => {
     const t = setTimeout(() => chart.resize(), 300);
     return () => { cancelAnimationFrame(raf); clearTimeout(t); ro.disconnect(); chart.dispose(); chartRef.current = null; };
   }, []);
-  React.useEffect(() => {
+  useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || !window.echarts) return;
+    if (!chart || !echarts) return;
     if (!rows || rows.length === 0) { chart.clear(); return; }
     const n = rows.length;
     const up = rows[n - 1].avg >= rows[0].avg;
     const color = up ? C.up : C.down;
-    const grad = new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+    const grad = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
       { offset: 0, color: up ? 'rgba(45,122,79,0.22)' : 'rgba(166,50,40,0.22)' },
       { offset: 1, color: up ? 'rgba(45,122,79,0)' : 'rgba(166,50,40,0)' },
     ]);
@@ -338,7 +333,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
 
     // 1) exact selected type — ALL matching records in the area (backend caps 1000).
     const exactReq = sel.propertyType
-      ? window.API.dataQuery({ ...area, property_type: sel.propertyType, limit: 1000 })
+      ? API.dataQuery({ ...area, property_type: sel.propertyType, limit: 1000 })
       : Promise.resolve({ rows: [] });
 
     exactReq
@@ -346,7 +341,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
         if (cancelled) return;
         if (sel.propertyType && d.rows && d.rows.length) { done(d.rows, 'exact', d.total_matched); return; }
         // 2/3) widen to the whole area, then prefer the same landed/non-landed family.
-        window.API.dataQuery({ ...area, limit: 1000 })
+        API.dataQuery({ ...area, limit: 1000 })
           .then((all) => {
             if (cancelled) return;
             const rows = all.rows || [];
@@ -368,7 +363,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
   useEffect(() => {
     if (!sel.district) { setByTypeReal(null); return; }
     let cancelled = false;
-    window.API.dataQuery({
+    API.dataQuery({
       district: sel.district, mukim: sel.mukim, scheme: sel.area, limit: 1,
     })
       .then((d) => { if (!cancelled) setByTypeReal((d.stats && d.stats.by_type) || []); })
@@ -386,7 +381,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
     let cancelled = false;
     const area = { district: sel.district, mukim: sel.mukim, scheme: sel.area };
     const toYears = (yearly) => (yearly || []).map(y => ({ y: y.year, avg: y.mean, n: y.count }));
-    window.API.dataQuery({ ...area, property_type: sel.propertyType, limit: 1 })
+    API.dataQuery({ ...area, property_type: sel.propertyType, limit: 1 })
       .then((d) => {
         if (cancelled) return;
         const yearly = (d.stats && d.stats.yearly) || [];
@@ -395,7 +390,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
           setPriceReal((d.stats && d.stats.price) || null);
           return;
         }
-        window.API.dataQuery({ ...area, limit: 1 })
+        API.dataQuery({ ...area, limit: 1 })
           .then((a) => {
             if (cancelled) return;
             setYearReal({ rows: toYears(a.stats && a.stats.yearly), scope: 'area' });
@@ -458,7 +453,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
 
     setApiLoading(true); setApiError(null);
     let cancelled = false;
-    window.API.valuationPredict({ ...payloadBase, model: key })
+    API.valuationPredict({ ...payloadBase, model: key })
       .then((r) => {
         if (cancelled) return;
         setApiResults((prev) => ({ ...(sigRef.current === payloadSig ? prev : {}), [key]: r }));
@@ -924,4 +919,4 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
   );
 };
 
-Object.assign(window, { ValuationDashboard });
+export default ValuationDashboard

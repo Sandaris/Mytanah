@@ -1,14 +1,24 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import ReactECharts from 'echarts-for-react'
-import * as echarts from 'echarts'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { C } from '@/lib/colors'
+import { ScrollReveal } from '@/components/shared'
 import { API } from '@/lib/api'
+import {
+  chartAreaGrad,
+  chartAxisLine,
+  chartAxisPointerLine,
+  chartLegend,
+  chartOpts,
+  chartSplitLine,
+  chartTooltip,
+  chartValueAxisLabel,
+  withChartBase,
+} from '@/lib/chartTheme'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,6 +39,9 @@ const ROI_DEFAULT_SEED = {
   rangeLow: null,
   rangeHigh: null,
   mukim: null,
+  scheme: null,
+  district: null,
+  state: null,
 }
 
 let ROI_UID = 0
@@ -45,6 +58,17 @@ const roiClamp = (value, min, max) => {
 const roiNum = (value, fallback = 0) => {
   const n = Number(value)
   return Number.isFinite(n) ? n : fallback
+}
+
+const roiRentSearchLabel = (source) => {
+  if (source.scheme) return source.scheme
+  if (source.locationLabel && source.locationLabel !== 'Manual property estimate') return source.locationLabel
+  return source.mukim || 'this area'
+}
+
+const roiRentSearchDetail = (source) => {
+  const bits = [source.propertyType, source.district, source.state].filter(Boolean)
+  return bits.join(' · ')
 }
 
 const roiInputValue = (value) => (roiNum(value, 0) === 0 ? '' : value)
@@ -244,24 +268,15 @@ const RoiEarningsChart = ({ pts, breakEven, breakEvenValue, loanYears }) => {
     const maxT = pts[pts.length - 1].t
     const incomeData = pts.map(p => [p.t, Math.round(p.income)])
     const paidData = pts.map(p => [p.t, Math.round(p.paid)])
-    const incGrad = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-      { offset: 0, color: 'rgba(45,122,79,0.26)' },
-      { offset: 1, color: 'rgba(45,122,79,0)' },
-    ])
+    const incGrad = chartAreaGrad(C.up, 0.26, 0)
     const sign = (v) => (v < 0 ? '−' : '') + rmCompact(Math.abs(v))
-    return {
+    return withChartBase({
       animationDuration: 1400,
-      backgroundColor: 'transparent',
       grid: { left: 8, right: 72, top: 28, bottom: 38, containLabel: true },
-      legend: {
-        top: 0, right: 0,
-        textStyle: { color: C.mid, fontFamily: "'DM Sans',sans-serif", fontSize: 11 },
-        itemWidth: 18, itemHeight: 10,
-      },
+      legend: chartLegend({ top: 0, right: 0 }),
       tooltip: {
-        trigger: 'axis', backgroundColor: C.deep, borderColor: C.deep, padding: [8, 10],
-        textStyle: { color: C.cream, fontFamily: "'DM Sans',sans-serif", fontSize: 12 },
-        axisPointer: { type: 'line', lineStyle: { color: C.earth, width: 1, type: [3, 4] } },
+        trigger: 'axis', ...chartTooltip({ padding: [8, 10] }),
+        axisPointer: chartAxisPointerLine,
         formatter: (ps) => {
           let s = `<div style="font-family:'JetBrains Mono',monospace;font-size:12px">Year ${Math.round(ps[0].value[0])}</div>`
           ps.forEach(p => { s += `<div style="margin-top:2px">${p.seriesName}: <b>${sign(p.value[1])}</b></div>` })
@@ -277,14 +292,14 @@ const RoiEarningsChart = ({ pts, breakEven, breakEvenValue, loanYears }) => {
       xAxis: {
         type: 'value', min: 0, max: maxT, name: 'years', nameLocation: 'middle', nameGap: 26,
         nameTextStyle: { color: C.mid, fontFamily: "'DM Sans',sans-serif", fontSize: 11 },
-        axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false },
-        axisLabel: { color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 10 },
+        axisLine: chartAxisLine, axisTick: { show: false },
+        axisLabel: chartValueAxisLabel(),
         splitLine: { show: false },
       },
       yAxis: {
         type: 'value', min: 0,
-        axisLabel: { color: C.mid, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, formatter: (v) => sign(v) },
-        splitLine: { lineStyle: { color: C.border, type: [2, 5] } },
+        axisLabel: { ...chartValueAxisLabel(), formatter: (v) => sign(v) },
+        splitLine: chartSplitLine,
       },
       series: [
         {
@@ -314,16 +329,18 @@ const RoiEarningsChart = ({ pts, breakEven, breakEvenValue, loanYears }) => {
           } : undefined,
         },
       ],
-    }
+    })
   }, [pts, breakEven, breakEvenValue, loanYears])
 
-  return <ReactECharts option={option} style={{ height: 300 }} opts={{ renderer: 'canvas' }} />
+  return <ReactECharts option={option} style={{ height: 300 }} opts={chartOpts} />
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RoiCalculator({ seed }) {
   const source = seed && Number(seed.propertyPrice) > 0 ? seed : ROI_DEFAULT_SEED
+  const rentLabel = roiRentSearchLabel(source)
+  const rentDetail = roiRentSearchDetail(source)
   const [price, setPrice] = useState(Math.round(source.propertyPrice))
   const [depositPct, setDepositPct] = useState(10)
   const [loanPct, setLoanPct] = useState(90)
@@ -338,37 +355,18 @@ export default function RoiCalculator({ seed }) {
   const [rentLoading, setRentLoading] = useState(false)
   const [rentError, setRentError] = useState(null)
   const [rentMode, setRentMode] = useState(source.mukim ? 'live' : 'manual')
-  const [progressVal, setProgressVal] = useState(null)
-  const progressIntervalRef = useRef(null)
-
-  const startProgress = () => {
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-    setProgressVal(0)
-    let val = 0
-    progressIntervalRef.current = setInterval(() => {
-      const remaining = 85 - val
-      val = Math.min(85, val + Math.max(0.4, remaining * 0.1))
-      setProgressVal(Math.round(val))
-      if (val >= 84.9) {
-        clearInterval(progressIntervalRef.current)
-        progressIntervalRef.current = null
-      }
-    }, 80)
-  }
-
-  const completeProgress = () => {
-    if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null }
-    setProgressVal(100)
-    setTimeout(() => setProgressVal(null), 460)
-  }
-
   const fetchMarketRent = () => {
-    const mukim = source.mukim
+    const { mukim, scheme, district, state, propertyType } = source
     if (!mukim || rentLoading) return
     setRentLoading(true)
     setRentError(null)
-    startProgress()
-    API.rentComps(mukim)
+    API.rentComps({
+      mukim,
+      scheme,
+      district,
+      state,
+      property_type: propertyType,
+    })
       .then(data => {
         setRentEstimate(data)
         const bestRent = data.median_rent_myr || data.avg_rent_myr
@@ -376,7 +374,7 @@ export default function RoiCalculator({ seed }) {
           setRentalPrice(Math.round(bestRent))
       })
       .catch(err => setRentError(err.message || 'Failed to fetch market rent'))
-      .finally(() => { setRentLoading(false); completeProgress() })
+      .finally(() => { setRentLoading(false) })
   }
 
   useEffect(() => {
@@ -498,10 +496,16 @@ export default function RoiCalculator({ seed }) {
   )
 
   return (
-    <div className="max-w-[1180px] mx-auto grid gap-[18px] animate-in fade-in slide-in-from-bottom-3 duration-300">
+    <div className="max-w-[1180px] mx-auto grid gap-[18px]">
+      <style>{`
+        @keyframes rentLookupSlide {
+          0% { transform: translateX(-120%); }
+          100% { transform: translateX(320%); }
+        }
+      `}</style>
 
-      {/* Header */}
-      <div className="flex justify-between items-end gap-[18px] flex-wrap">
+      <ScrollReveal>
+        <div className="flex justify-between items-end gap-[18px] flex-wrap">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#A27B5C]">ROI Calculator</p>
           <span className="font-display text-[30px] font-medium text-[#2C3930]">Portfolio cost &amp; income planner</span>
@@ -509,10 +513,11 @@ export default function RoiCalculator({ seed }) {
         <div className="px-[13px] py-[9px] rounded-full bg-[#2C3930] text-[#DCD7C9] text-[12.5px] font-semibold">
           Malaysia loan model
         </div>
-      </div>
+        </div>
+      </ScrollReveal>
 
-      {/* Valuation context strip */}
-      <Card className="px-[18px] py-[14px] flex justify-between items-center gap-[14px] flex-wrap">
+      <ScrollReveal delay={60}>
+        <Card className="px-[18px] py-[14px] flex justify-between items-center gap-[14px] flex-wrap">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#A27B5C]">Exported valuation</p>
           <span className="font-display text-[20px] font-medium text-[#2C3930] mt-0.5 block">{location}</span>
@@ -522,8 +527,9 @@ export default function RoiCalculator({ seed }) {
           <div>{source.sourceModel || 'Manual input'} · {rangeText}</div>
         </div>
       </Card>
+      </ScrollReveal>
 
-      {/* Income vs Cost panels */}
+      <ScrollReveal delay={100}>
       <div className="grid gap-[18px] items-stretch" style={{ gridTemplateColumns: '1fr 1fr' }}>
 
         {/* Income panel */}
@@ -549,7 +555,7 @@ export default function RoiCalculator({ seed }) {
                     <TabsTrigger
                       value="live"
                       disabled={!source.mukim}
-                      title={!source.mukim ? 'Import a valuation with a location to unlock live market data' : `Live listings from ${source.mukim}`}
+                      title={!source.mukim ? 'Import a valuation with a location to unlock live market data' : `Live listings for ${rentLabel}`}
                       className="text-[11.5px] font-medium px-[11px] py-1 data-[state=active]:bg-[#2C3930] data-[state=active]:text-[#DCD7C9] data-[state=active]:shadow-sm disabled:opacity-40"
                     >
                       Live estimate
@@ -577,7 +583,7 @@ export default function RoiCalculator({ seed }) {
                           <b className="cursor-pointer" style={{ color: C.earth }} onClick={() => setRentMode('live')}>
                             Live estimate
                           </b>{' '}
-                          to auto-fill from {source.mukim} listings.
+                          to auto-fill from {rentLabel} listings.
                         </div>
                       ) : (
                         <div className="text-[11.5px] leading-snug" style={{ color: C.muted }}>
@@ -589,34 +595,30 @@ export default function RoiCalculator({ seed }) {
 
                   <TabsContent value="live" className="mt-0">
                     <div className="grid gap-2 mt-2.5 animate-in fade-in slide-in-from-bottom-1 duration-200">
-                      {/* Progress bar */}
-                      {(rentLoading || progressVal !== null) && (
+                      {rentLoading && (
                         <div className="animate-in fade-in duration-200 p-[14px] rounded-[10px]" style={{ background: C.earthFaint, border: `1px solid ${C.border}` }}>
-                          <div className="flex justify-between items-center gap-2 mb-2.5">
-                            <span className="text-[12.5px] leading-snug transition-colors duration-300" style={{ color: progressVal === 100 ? C.up : C.mid }}>
-                              {progressVal === 100
-                                ? <><span>Loaded — listings from </span><b style={{ color: C.up }}>{source.mukim}</b></>
-                                : <><span>Looking up listings in </span><b style={{ color: C.deep }}>{source.mukim}</b><span>…</span></>
-                              }
-                            </span>
+                          <div className="flex items-start gap-2.5 mb-2.5">
                             <span
-                              className="font-mono text-[11.5px] font-medium min-w-[34px] text-right flex-shrink-0 transition-colors duration-300"
-                              style={{ color: progressVal === 100 ? C.up : C.earth }}
-                              aria-live="polite"
-                              aria-atomic="true"
-                            >
-                              {progressVal ?? 0}%
+                              className="inline-block flex-shrink-0 w-3.5 h-3.5 mt-0.5 rounded-full border-2 border-[#C8C3B8] border-t-[#A27B5C] animate-spin"
+                              aria-hidden="true"
+                            />
+                            <span className="text-[12.5px] leading-snug" style={{ color: C.mid }} aria-live="polite" aria-atomic="true">
+                              <span>Looking up listings online for </span>
+                              <b style={{ color: C.deep }}>{rentLabel}</b>
+                              <span>…</span>
                             </span>
                           </div>
-                          <Progress
-                            value={progressVal ?? 0}
-                            className={`h-1 ${progressVal === 100 ? '[&>div]:bg-[#2D7A4F] [&>div]:transition-all [&>div]:duration-300' : '[&>div]:bg-[#A27B5C]'} bg-[#C8C3B8]`}
+                          <div
+                            className="h-1 rounded-full overflow-hidden bg-[#C8C3B8]"
                             role="progressbar"
-                            aria-valuenow={progressVal ?? 0}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
+                            aria-busy="true"
                             aria-label="Fetching market rent data"
-                          />
+                          >
+                            <div
+                              className="h-full w-[38%] rounded-full bg-[#A27B5C]"
+                              style={{ animation: 'rentLookupSlide 1.4s ease-in-out infinite' }}
+                            />
+                          </div>
                         </div>
                       )}
                       {/* Error */}
@@ -635,7 +637,7 @@ export default function RoiCalculator({ seed }) {
                           <div className="p-[14px] rounded-[10px]" style={{ background: 'rgba(45,122,79,0.08)', border: '1px solid rgba(45,122,79,0.22)' }}>
                             <div className="flex justify-between items-center gap-2 flex-wrap">
                               <div className="text-[12px] font-semibold" style={{ color: C.up }}>
-                                Market data · {source.mukim}
+                                Market data · {rentLabel}
                               </div>
                               <span className="text-[10.5px] uppercase tracking-[0.08em]" style={{ color: C.mid }}>
                                 {rentEstimate.confidence} · {rentEstimate.listing_count} listings
@@ -675,7 +677,7 @@ export default function RoiCalculator({ seed }) {
                       {!rentLoading && !rentError && rentEstimate && rentEstimate.confidence === 'none' && (
                         <div className="animate-in fade-in duration-200 grid gap-2 p-[14px] rounded-[10px]" style={{ background: C.earthFaint, border: `1px solid ${C.border}` }}>
                           <div className="text-[12.5px]" style={{ color: C.mid }}>
-                            No rental listings found for <b style={{ color: C.deep }}>{source.mukim}</b>. Switch to Manual to enter your own estimate.
+                            No rental listings found for <b style={{ color: C.deep }}>{rentLabel}</b>. Switch to Manual to enter your own estimate.
                           </div>
                           <Button type="button" variant="outline" size="sm" onClick={() => setRentMode('manual')}
                             className="self-start border-[#A27B5C] text-[#A27B5C] bg-transparent hover:bg-[#A27B5C]/10">
@@ -684,14 +686,14 @@ export default function RoiCalculator({ seed }) {
                         </div>
                       )}
                       {/* Initial fallback */}
-                      {!rentLoading && !rentError && !rentEstimate && progressVal === null && (
+                      {!rentLoading && !rentError && !rentEstimate && (
                         <div className="animate-in fade-in duration-200 flex items-center gap-2.5 p-[14px] rounded-[10px]" style={{ background: C.earthFaint, border: `1px solid ${C.border}` }}>
                           <span
                             className="inline-block flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 border-[#C8C3B8] border-t-[#A27B5C] animate-spin"
                             aria-hidden="true"
                           />
                           <span className="text-[12.5px]" style={{ color: C.mid }}>
-                            Preparing fetch for <b style={{ color: C.deep }}>{source.mukim}</b>…
+                            Preparing fetch for <b style={{ color: C.deep }}>{rentLabel}</b>…
                           </span>
                         </div>
                       )}
@@ -784,8 +786,9 @@ export default function RoiCalculator({ seed }) {
           </div>
         </Card>
       </div>
+      </ScrollReveal>
 
-      {/* Monthly income vs debt comparison */}
+      <ScrollReveal>
       <Card className="p-0 overflow-hidden">
         <div className="flex items-stretch">
           <div className="flex-1 px-[18px] py-[15px]" style={{ background: 'rgba(45,122,79,0.09)' }}>
@@ -807,8 +810,9 @@ export default function RoiCalculator({ seed }) {
           </span>
         </div>
       </Card>
+      </ScrollReveal>
 
-      {/* Metrics row 1 */}
+      <ScrollReveal>
       <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <RoiMetric label="Gross yield" value={`${roi.grossYield.toFixed(1)}%`} sub="annual income ÷ price"/>
         <RoiMetric
@@ -824,8 +828,9 @@ export default function RoiCalculator({ seed }) {
           accent={roi.finalProfit >= 0 ? C.up : C.down}
         />
       </div>
+      </ScrollReveal>
 
-      {/* Income vs debt chart */}
+      <ScrollReveal>
       <Card className="p-[18px]">
         <div className="flex justify-between items-baseline gap-3 flex-wrap">
           <div>
@@ -844,8 +849,9 @@ export default function RoiCalculator({ seed }) {
           <RoiEarningsChart pts={roi.pts} breakEven={roi.breakEven} breakEvenValue={roi.breakEvenValue} loanYears={roi.loanYears}/>
         </div>
       </Card>
+      </ScrollReveal>
 
-      {/* Metrics row 2 */}
+      <ScrollReveal>
       <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <RoiMetric label="Deposit amount" value={roiFmt(deposit)} sub={`${safe.dep.toFixed(1)}% upfront`}/>
         <RoiMetric label="Loan principal" value={roiFmt(principal)} sub={`${safe.loan.toFixed(1)}% financed`}/>
@@ -854,8 +860,9 @@ export default function RoiCalculator({ seed }) {
         <RoiMetric label="Interest without extra" value={roiFmt(baseSchedule.totalInterest)} sub={roiMonthsLabel(baseSchedule.months)}/>
         <RoiMetric label="Interest with extra" value={roiFmt(extraSchedule.totalInterest)} sub={roiMonthsLabel(extraSchedule.months)} accent={safe.extra ? C.earth : C.deep}/>
       </div>
+      </ScrollReveal>
 
-      {/* Loan timeline chart */}
+      <ScrollReveal>
       <Card className="p-[18px]">
         <div className="flex justify-between items-baseline gap-3 flex-wrap">
           <div>
@@ -893,6 +900,7 @@ export default function RoiCalculator({ seed }) {
           </span>
         </div>
       </Card>
+      </ScrollReveal>
 
     </div>
   )

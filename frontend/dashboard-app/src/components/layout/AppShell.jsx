@@ -1,72 +1,97 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Home, BarChart2, Calculator, TrendingUp } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import { NavLink, Outlet, useLocation, useSearchParams } from 'react-router-dom'
+import { C } from '@/lib/colors'
+import { Display } from '@/components/shared/primitives'
+import { DASHBOARD, Icon, NAV_ITEMS, PAGE_TITLES } from '@/components/layout/NavIcons'
+import { useChrome } from '@/components/layout/ChromeContext'
 
-const NAV = [
-  { id: 'valuation', label: 'Valuation', icon: Home, path: '/' },
-  { id: 'market', label: 'Market Overview', icon: BarChart2, path: '/market' },
-  { id: 'roi', label: 'ROI Calculator', icon: Calculator, path: '/roi' },
-  { id: 'sentiment', label: 'Sentiment Index', icon: TrendingUp, path: '/sentiment' },
-]
+function FloatingSidebar() {
+  const { navOpen, setNavOpen } = useChrome()
 
-const PAGE_TITLES = {
-  '/': 'Valuation',
-  '/market': 'Market Overview',
-  '/roi': 'ROI Calculator',
-  '/sentiment': 'Sentiment Index',
+  return (
+    <>
+      <div
+        onMouseEnter={() => setNavOpen(true)}
+        className="fixed left-0 top-0 bottom-0 w-6 z-[68]"
+        aria-hidden="true"
+      />
+
+      <div
+        aria-hidden="true"
+        className="fixed left-[9px] top-1/2 -translate-y-1/2 w-1 h-12 rounded-full bg-[#2C3930] pointer-events-none z-[67] transition-opacity duration-300"
+        style={{
+          opacity: navOpen ? 0 : 0.55,
+          boxShadow: '0 2px 10px rgba(44,57,48,.3)',
+        }}
+      />
+
+      <nav
+        onMouseEnter={() => setNavOpen(true)}
+        onMouseLeave={() => setNavOpen(false)}
+        className="fixed left-3 top-3 bottom-3 w-[220px] z-[72] rounded-2xl overflow-hidden transition-transform duration-500 ease-[cubic-bezier(.16,1,.3,1)]"
+        style={{
+          transform: navOpen ? 'translateX(0)' : 'translateX(calc(-100% - 18px))',
+          boxShadow: '0 22px 60px rgba(20,28,22,.42)',
+        }}
+      >
+        <aside
+          className="flex flex-col h-full text-[#DCD7C9]"
+          style={{ background: C.deep }}
+        >
+          <div className="flex items-center gap-2.5 px-5 pt-5 pb-[18px] border-b border-white/8">
+            <Icon.HouseMark />
+            <Display size={20} color={C.cream} weight={500}>MyPropertyIQ</Display>
+          </div>
+
+          <div className="flex flex-col py-3 flex-1">
+            {NAV_ITEMS.map(({ id, label, icon: Ico, path }) => (
+              <NavLink
+                key={id}
+                to={path}
+                end={path === DASHBOARD}
+                onClick={() => setNavOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-[11px] px-5 py-3 text-left font-sans text-sm transition-all duration-150 no-underline ${
+                    isActive ? '' : ''
+                  }`
+                }
+                style={({ isActive }) => ({
+                  background: isActive ? C.mid : 'transparent',
+                  borderLeft: `3px solid ${isActive ? C.earth : 'transparent'}`,
+                  color: isActive ? C.cream : 'rgba(220,215,201,.6)',
+                })}
+              >
+                <Ico />
+                <span>{label}</span>
+              </NavLink>
+            ))}
+          </div>
+
+          <div className="px-5 pb-5 font-sans text-[10px] tracking-wide text-white/40">
+            Data: NAPIC 2021–2025
+          </div>
+        </aside>
+      </nav>
+    </>
+  )
 }
 
-function Sidebar() {
-  return (
-    <aside className="flex flex-col w-[220px] shrink-0 h-screen bg-[#2C3930]">
-      {/* Logo area */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/8">
-        <Home className="w-5 h-5 text-[#A27B5C] shrink-0" strokeWidth={1.5} />
-        <span className="font-display text-lg text-white leading-none tracking-wide">
-          MyPropertyIQ
-        </span>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex flex-col gap-0.5 flex-1 px-2 py-4">
-        {NAV.map(({ id, label, icon: Icon, path }) => (
-          <NavLink
-            key={id}
-            to={path}
-            end={path === '/'}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-sans transition-colors',
-                isActive
-                  ? 'bg-[#3F4F44] text-white border-l-2 border-[#A27B5C] pl-[10px]'
-                  : 'text-white/60 hover:text-white border-l-2 border-transparent pl-[10px]',
-              )
-            }
-          >
-            <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* Footer note */}
-      <div className="px-5 py-4 border-t border-white/8">
-        <p className="text-[10px] text-white/30 font-mono leading-relaxed">
-          Data: NAPIC 2021–2025
-        </p>
-      </div>
-    </aside>
-  )
+function formatHeaderDate(date = new Date()) {
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function Header({ title }) {
   return (
-    <header className="flex items-center justify-between h-14 shrink-0 px-6 bg-[#EDE9E1] border-b border-[#C8C3B8]">
-      <h1 className="font-display text-xl text-[#2C3930] leading-none">
-        {title}
-      </h1>
-      <span className="bg-[#2C3930] text-white/80 text-[11px] font-mono px-3 py-1 rounded-full tracking-wider">
-        Q1 2025
+    <header
+      className="flex items-center justify-between shrink-0 h-14 px-7 border-b border-[#C8C3B8]"
+      style={{ background: C.cream }}
+    >
+      <Display size={22} weight={500}>{title}</Display>
+      <span
+        className="rounded-full px-3.5 py-1.5 font-mono text-xs font-medium"
+        style={{ background: C.deep, color: C.cream }}
+      >
+        {formatHeaderDate()}
       </span>
     </header>
   )
@@ -74,17 +99,67 @@ function Header({ title }) {
 
 export default function AppShell() {
   const { pathname } = useLocation()
+  const [searchParams] = useSearchParams()
+  const { chromeShown, isMapPage } = useChrome()
+  const [firstReveal, setFirstReveal] = useState(() => searchParams.get('from') === 'intro')
   const title = PAGE_TITLES[pathname] ?? 'MyPropertyIQ'
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="relative w-screen h-screen overflow-hidden flex flex-col">
+      <div
+        className="shrink-0 overflow-hidden transition-[height] duration-700 ease-[cubic-bezier(.16,1,.3,1)]"
+        style={{ height: chromeShown ? 56 : 0 }}
+      >
         <Header title={title} />
-        <main className="flex-1 overflow-auto bg-[#EDE9E1]">
-          <Outlet />
-        </main>
       </div>
+
+      <main
+        className="flex-1 relative"
+        style={{
+          overflow: isMapPage ? 'hidden' : 'auto',
+          padding: isMapPage ? 0 : 28,
+          background: '#DCD7C9',
+        }}
+      >
+        <div
+          key={pathname}
+          style={{
+            height: isMapPage ? '100%' : 'auto',
+            animation: firstReveal && isMapPage
+              ? 'mapReveal 1.5s cubic-bezier(.16,1,.3,1) both'
+              : undefined,
+            transformOrigin: '50% 46%',
+          }}
+        >
+          <Outlet />
+        </div>
+      </main>
+
+      <FloatingSidebar />
+
+      {firstReveal && (
+        <div
+          onAnimationEnd={() => setFirstReveal(false)}
+          className="fixed inset-0 z-[90] pointer-events-none"
+          style={{
+            background: C.cream,
+            animation: 'curtainFade 1.15s cubic-bezier(.4,0,.2,1) both',
+          }}
+        />
+      )}
+
+      <style>{`
+        @keyframes mapReveal {
+          0%   { opacity: 0; transform: scale(1.12); filter: blur(6px); }
+          55%  { opacity: 1; }
+          100% { opacity: 1; transform: scale(1); filter: blur(0); }
+        }
+        @keyframes curtainFade {
+          0%   { opacity: 1; }
+          40%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
     </div>
   )
 }

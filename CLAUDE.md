@@ -13,19 +13,60 @@ Quick reference (full details in DEPLOY.md):
   `--tunnel-through-iap` (IAP currently 4033s).
 - Use **forward-slash** paths in `gcloud compute scp` on Windows.
 - Frontend-only changes are live the moment SCP finishes — no restart.
-- Backend changes (`backend/api.py`, `requirements.txt`, `save_models.py`,
-  `artifacts/`) need `sudo systemctl restart fyp2` plus an 8-second wait
-  before health-check (model load time).
-- Health: `curl http://34.87.4.244/` should return `307`.
+- Backend changes need `sudo systemctl restart fyp2` plus an 8-second wait
+  before health-check (model load time). If `requirements.txt` changed, `pip
+  install -r …` into the VM venv first.
+- Health: `curl http://34.87.4.244/` should return `307` (redirects to the
+  live dashboard).
+
+### Which frontend to deploy
+
+The repo has **two** frontends. Only sync the one that changed.
+
+| | Legacy (live today) | New (Vite migration) |
+|---|---|---|
+| Source | `frontend/ui_kits/dashboard/` | `frontend/dashboard-app/` |
+| Build step | None — JSX transpiled in the browser via CDN + Babel | `cd frontend/dashboard-app && npm run build` → output in `frontend/dist/` |
+| Served at | `/` (root) | `/app/dist/` (via the `/app` static mount) |
+| Deploy | SCP changed `.jsx`, `.html`, `.css`, and static assets under `ui_kits/dashboard/` | **Build first**, then SCP the whole `frontend/dist/` tree (hashed `assets/`, `index.html`, GeoJSON, video, etc.) |
+| Smoke test | `curl -I http://34.87.4.244/` → 307; `curl -I http://34.87.4.244/app/ui_kits/dashboard/index.html` → 200 | `curl -I http://34.87.4.244/app/dist/index.html` → 200 |
+
+The new Vite app is the active development target (`docs/dashboard-dev.md` has
+local-dev details). The legacy CDN dashboard is still what FastAPI serves at
+`/`. Switching root to the built app requires an `api.py` mount change — do not
+assume that has already happened.
+
+Do **not** SCP `node_modules`, `frontend/dashboard-app/` source to the VM (only
+`frontend/dist/` after a build), or `backend/.venv/`.
+
+### Backend deploy
+
+Restart the service when any of these change:
+
+- `backend/api.py`
+- `backend/requirements.txt` (pip install into venv first)
+- `backend/save_models.py`
+- `backend/artifacts/`
+- `backend/rent_comps/` (rent-comps AI agent)
+
+```bash
+gcloud compute ssh kw-property-valuation --zone=asia-southeast1-a \
+  --command="sudo systemctl restart fyp2 && sleep 8 && systemctl status fyp2 --no-pager | head -15"
+```
 
 ## Project shape (1-liner each)
 
-- `backend/api.py` — FastAPI app served by uvicorn. Endpoints under
-  `/valuation/*` (model inference + cascading dropdown data) and a static
-  mount for `frontend/` at `/app/`.
-- `frontend/ui_kits/dashboard/` — the live UI (vanilla React via CDN, no
-  build step). `TransactionMapPage.jsx` is the main page; `MalaysiaMap.jsx`
-  draws the country/state/district SVG map.
+- `backend/api.py` — FastAPI app served by uvicorn on port 80. Endpoints under
+  `/valuation/*`, `/hcr/*`, `/data/*`, `/rent-comps`. Static mounts: `/app` →
+  entire `frontend/` dir; `/` → legacy `frontend/ui_kits/dashboard/`.
+- `frontend/dashboard-app/` — **new** Vite + React + Tailwind + shadcn/ui SPA
+  (proper npm install). Edit here; `npm run build` writes to `frontend/dist/`.
+  Local dev: Vite on `:5173` proxies API calls to FastAPI on `:8000`.
+- `frontend/ui_kits/dashboard/` — **legacy** CDN React dashboard (no build step).
+  Still served at `/`. Kept in sync during migration; will be retired once the
+  Vite app replaces the root mount.
+- `frontend/dist/` — built output from `dashboard-app` (auto-generated; deploy
+  this, don't hand-edit).
 - `processed data/transactions.parquet` — cleaned Open Transaction Data
   (~4.4 MB). Authoritative source; the xlsx in the repo is just the input.
 - `processed data/scheme_mukim_index.csv` — Scheme/Area → Mukim mapping with

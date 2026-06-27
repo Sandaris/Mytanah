@@ -1,0 +1,55 @@
+{
+  "estimated_value_myr": 1150000.0,
+  "low_myr": 1000000.0,
+  "high_myr": 1340000.0,
+  "price_per_sqft_myr": 950.0,
+  "listing_count": 6,
+  "sources_used": [
+    "99.co",
+    "EdgeProp SG",
+    "StackProperty",
+    "SRX",
+    "PropertyGuru"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T06:56:32.141837+00:00",
+  "notes": "Blended from recent live/near-live D02 and adjacent city-fringe comparables [99.co, EdgeProp SG, StackProperty]: premium Pinnacle@Duxton 5-room sales are around S$1.58M–S$1.63M, while nearby 5-room units at 95 Havelock Road are around S$0.995M–S$1.18M and Tanjong Pagar Plaza’s latest 5-room comp is S$928k. Because the exact block/floor/lease of the subject unit is not stated, I assumed a typical mature-estate 5-room in Tanjong Pagar/Anson sized at 1,216 sqft and priced it near the middle of the observed city-fringe range. If this is actually a Pinnacle@Duxton-style premium stack, the value would be materially higher (roughly S$1.5M+). URA’s caveat portal is for private residential transactions, so HDB comps here were taken from HDB-linked portal tables and live listings on SRX/EdgeProp/StackProperty.",
+  "comparables": [
+    {
+      "price_myr": 1630000.0,
+      "title": "Pinnacle@Duxton 5-room transaction at 1B Cantonment Road — S$1.63M",
+      "url": "https://www.99.co/singapore/insider/pinnacleduxtons-first-record-of-the-year-comes-in-at-s1-63m-setting-town-district-records/",
+      "source": "99.co"
+    },
+    {
+      "price_myr": 1600000.0,
+      "title": "1G Cantonment Road, Pinnacle@Duxton — S$1.60M",
+      "url": "https://www.99.co/singapore/insider/5-room-hdb-cantonment-road-record-sale/",
+      "source": "99.co"
+    },
+    {
+      "price_myr": 1580000.0,
+      "title": "1D Cantonment Road, Pinnacle@Duxton — S$1.58M",
+      "url": "https://www.99.co/singapore/insider/pinnacle-at-duxton-hdb-price-record/",
+      "source": "99.co"
+    },
+    {
+      "price_myr": 1110000.0,
+      "title": "95 Havelock Road 5-room listing — S$1.11M",
+      "url": "https://www.edgeprop.sg/listing/hdb/5i/95-havelock-road/m_2170146",
+      "source": "EdgeProp SG"
+    },
+    {
+      "price_myr": 1180000.0,
+      "title": "95 Havelock Road 5-room transaction — S$1.18M",
+      "url": "https://stackproperty.sg/hdb/95-havelock-rd",
+      "source": "StackProperty"
+    },
+    {
+      "price_myr": 928000.0,
+      "title": "Blk 3 Tanjong Pagar Plaza 5-room transaction (Aug 2023) — S$928k",
+      "url": "https://stackproperty.sg/hdb/3-tg-pagar-plaza",
+      "source": "StackProperty"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "mukim": "Bayan Lepas",
+  "avg_rent_myr": 2094.44,
+  "min_rent_myr": 1300.0,
+  "max_rent_myr": 2500.0,
+  "median_rent_myr": 2100.0,
+  "listing_count": 18,
+  "sources_used": [
+    "https://irumah.co/taman-sri-nibong/novus/listings/for-rent",
+    "https://irumah.co/taman-sri-nibong/celesta-residency/listings/apartments/for-rent",
+    "https://irumah.co/listings/7977268/celesta-residency-taman-sri-nibong-fully-furnished-condominium-for-rent",
+    "https://irumah.co/listings/7726631/celesta-residency-taman-sri-nibong-unfurnished-condominium-for-rent",
+    "https://irumah.co/listings/7972640/pangsapuri-mawar-taman-sri-nibong-partially-furnished-condominium-for-rent",
+    "https://www.edgeprop.my/condo/taman-sri-nibong-13067",
+    "https://list.my/subsales/penang/barat-daya/12/taman-sri-nibong"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T08:09:06.751011+00:00",
+  "notes": "Based on 18 current whole-unit condo/apartment rental listings found on iRumah for Taman Sri Nibong/Sungai Nibong (mostly Novus, plus Celesta Residency and Pangsapuri Mawar). Room-only / bedspace / partition listings were excluded. All prices are monthly rents in MYR. Taman Sri Nibong is commonly referenced in property directories as being in Bayan Lepas, Barat Daya, Penang.",
+  "sample_listings": [
+    {
+      "url": "https://irumah.co/listings/7972640/pangsapuri-mawar-taman-sri-nibong-partially-furnished-condominium-for-rent",
+      "title": "Pangsapuri Mawar, Taman Sri Nibong, Sungai Nibong",
+      "source": "iRumah",
+      "rent_myr": 1300
+    },
+    {
+      "url": "https://irumah.co/listings/7726631/celesta-residency-taman-sri-nibong-unfurnished-condominium-for-rent",
+      "title": "Celesta Residency, Taman Sri Nibong, Sungai Nibong",
+      "source": "iRumah",
+      "rent_myr": 1600
+    },
+    {
+      "url": "https://irumah.co/listings/7977268/celesta-residency-taman-sri-nibong-fully-furnished-condominium-for-rent",
+      "title": "Fully Furnished Condominium For Rent At Celesta Residency, Taman Sri Nibong, Sungai Nibong",
+      "source": "iRumah",
+      "rent_myr": 2000
+    },
+    {
+      "url": "https://irumah.co/listings/7973157/novus-taman-sri-nibong-fully-furnished-condominium-for-rent",
+      "title": "Fully Furnished Condominium For Rent At Novus, Taman Sri Nibong, Sungai Nibong",
+      "source": "iRumah",
+      "rent_myr": 2000
+    },
+    {
+      "url": "https://irumah.co/listings/7600210/novus-taman-sri-nibong-fully-furnished-condominium-for-rent",
+      "title": "Fully Furnished Condominium For Rent At Novus, Taman Sri Nibong, Sungai Nibong",
+      "source": "iRumah",
+      "rent_myr": 2500
+    }
+  ]
+}

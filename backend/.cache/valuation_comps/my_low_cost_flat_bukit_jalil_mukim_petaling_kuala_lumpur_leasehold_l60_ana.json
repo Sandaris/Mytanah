@@ -1,0 +1,59 @@
+{
+  "estimated_value_myr": 190000.0,
+  "low_myr": 170000.0,
+  "high_myr": 220000.0,
+  "price_per_sqft_myr": 322.0,
+  "listing_count": 11,
+  "sources_used": [
+    "iRumah",
+    "Mudah.my",
+    "EdgeProp.my",
+    "PropMall.my",
+    "AuctionNetwork.com.my",
+    "Property.cc",
+    "iProperty Malaysia",
+    "PropertyGuru Malaysia",
+    "Brickz.my"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T06:59:10.978110+00:00",
+  "notes": "I used leasehold/low-cost Bukit Jalil comps most similar to the subject and excluded rentals and room-only ads. The strongest live asking/auction evidence clusters around RM171k-RM240k for 645-750 sq ft units in Taman LTAT / PPR Kampung Muhibbah / Seri Ceria, which works out to roughly RM274-RM372 psf; scaling those to 592 sq ft supports about RM170k-RM220k, with a central estimate near RM190k (about RM322 psf). Project pages on iProperty and PropertyGuru also show Taman LTAT asking ranges around RM225k-RM280k and RM235k-RM270k, while the EdgeProp project page shows sold prices around RM289-RM335 psf (median RM305 psf). Note: some portal project pages label Taman LTAT tenure as freehold, but leasehold-specific listings and auctions in the same Bukit Jalil pocket were prioritized for valuation.",
+  "comparables": [
+    {
+      "price_myr": 171000.0,
+      "title": "Latest Taman LTAT sale listing: Low-Cost Flat, 650 sf, RM171,000 | iRumah",
+      "url": "https://irumah.co/bukit-jalil-city/taman-ltat",
+      "source": "iRumah"
+    },
+    {
+      "price_myr": 177000.0,
+      "title": "Flat for Sale, 3 Bedroom, 645 sq.ft, PPR Kampung Muhibbah, Bukit Jalil, Kuala Lumpur 114308405 | Mudah.my",
+      "url": "https://www.mudah.my/ppr-kampung-muhibbah-100-loan-bukit-jalil-below-market-114308405.htm",
+      "source": "Mudah.my"
+    },
+    {
+      "price_myr": 215000.0,
+      "title": "Flat for Sale, 3 Bedroom, 650 sq.ft, PPR Kampung Muhibbah, Bukit Jalil, Kuala Lumpur 114973466 | Mudah.my",
+      "url": "https://www.mudah.my/ppr-muhibbah-apartment-bukit-jalil-114973466.htm",
+      "source": "Mudah.my"
+    },
+    {
+      "price_myr": 230000.0,
+      "title": "WALK UP LEVEL 2 I SELL BELOW MV I Apartment Taman LTAT, Bukit Jalil | EdgeProp.my",
+      "url": "https://www.edgeprop.my/listing/sale/2450373/kuala_lumpur/bukit_jalil/nonlanded/condominium-apartment-servicedresidence/walk-up-level-2-i-sell-below-mv-i-apartment-taman-ltat--bukit_jalil",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 240000.0,
+      "title": "PPR Kampung Muhibbah Bukit Jalil - Walking Distance to LRT Muhibbah | PropMall.my",
+      "url": "https://propmall.my/fahalilhartanah/list/ppr-kampung-muhibbah-bukit-jalil---walking-distance-to-lrt-muhibbah-64563",
+      "source": "PropMall.my"
+    },
+    {
+      "price_myr": 189000.0,
+      "title": "Apartment Seri Ceria 1, PPR Pinggiran Bukit Jalil, Jalan Bukit Jalil Indah, 57000 Bukit Jalil, Kuala Lumpur | AuctionNetwork",
+      "url": "https://www.auctionnetwork.com.my/index.php?property_id=393761&route=property%2Fproperty",
+      "source": "AuctionNetwork.com.my"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "estimated_value_myr": 560000.0,
+  "low_myr": 500000.0,
+  "high_myr": 620000.0,
+  "price_per_sqft_myr": 505.0,
+  "listing_count": 12,
+  "sources_used": [
+    "EdgeProp.my – Sungai Nibong property insights: https://www.edgeprop.my/area-outlook/penang/sungai-nibong",
+    "EdgeProp.my – Novus Condominium insights: https://www.edgeprop.my/condo/novus-condominium-29048",
+    "PenangPropertySale – Novus condo at Sungai Nibong: https://www.penangpropertysale.com/properties/sale/penang-island/sungai-nibong/condo/novus-condo-at-sungai-nibong/",
+    "PenangPropertySale – Melati Apartment – Fully Renovated – 900′ – 1 Car Park – Sungai Nibong: https://www.penangpropertysale.com/properties/sale/penang-island/sungai-nibong/condo/melati-apartment-fully-renovated-900-1-car-park-sungai-nibong/",
+    "PenangPropertySale – Lavinia Apartment – Ground Floor- 1100sf – Bukit Kecil, Tmn Sri Nibong: https://www.penangpropertysale.com/properties/sale/penang-island/sungai-nibong/condo/lavinia-apartment-ground-floor-1100sf-bukit-kecil-tmn-sri-nibong/",
+    "list.my – Taman Sri Nibong Property Prices: https://list.my/subsales/penang/barat-daya/12/taman-sri-nibong"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T08:07:33.506528+00:00",
+  "notes": "Valuation is based on live asking prices plus recent transaction/market-median evidence in Taman Sri Nibong / Sungai Nibong. The strongest anchors were Taman Sri Nibong condo subsales around 1,055–1,098 sqft at roughly RM441–RM540 psf (about RM465k–RM575k), EdgeProp’s Novus sold median at RM637 psf, and current Novus/Melati asking prices. Because the exact block/project is not specified, I treated this as a broad area valuation rather than a premium-Novus-only estimate. I excluded rentals and room-only ads.",
+  "comparables": [
+    {
+      "price_myr": 600000.0,
+      "title": "Novus condo at Sungai Nibong",
+      "url": "https://www.penangpropertysale.com/properties/sale/penang-island/sungai-nibong/condo/novus-condo-at-sungai-nibong/",
+      "source": "PenangPropertySale"
+    },
+    {
+      "price_myr": 750000.0,
+      "title": "Novus Residences",
+      "url": "https://metaproperty.com/lead/detail/11113",
+      "source": "MetaProperty"
+    },
+    {
+      "price_myr": 870000.0,
+      "title": "Novus Residences",
+      "url": "https://metaproperty.com/lead/detail/2723",
+      "source": "MetaProperty"
+    },
+    {
+      "price_myr": 420000.0,
+      "title": "Melati Apartment – Fully Renovated – 900′ – 1 Car Park – Sungai Nibong",
+      "url": "https://www.penangpropertysale.com/properties/sale/penang-island/sungai-nibong/condo/melati-apartment-fully-renovated-900-1-car-park-sungai-nibong/",
+      "source": "PenangPropertySale"
+    },
+    {
+      "price_myr": 490000.0,
+      "title": "Lavinia Apartment – Ground Floor- 1100sf – Bukit Kecil, Tmn Sri Nibong",
+      "url": "https://www.penangpropertysale.com/properties/sale/penang-island/sungai-nibong/condo/lavinia-apartment-ground-floor-1100sf-bukit-kecil-tmn-sri-nibong/",
+      "source": "PenangPropertySale"
+    },
+    {
+      "price_myr": 390000.0,
+      "title": "Krystal Villa – Taman Sri Nibong Sungai Nibong FREEHOLD",
+      "url": "https://www.penangpropertysale.com/properties/sale/penang-island/sungai-nibong/condo/krystal-villa-taman-sri-nibong-sungai-nibong-freehold/",
+      "source": "PenangPropertySale"
+    }
+  ]
+}

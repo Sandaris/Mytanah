@@ -1,0 +1,56 @@
+{
+  "estimated_value_myr": 1100000.0,
+  "low_myr": 950000.0,
+  "high_myr": 1300000.0,
+  "price_per_sqft_myr": 627.0,
+  "listing_count": 8,
+  "sources_used": [
+    "https://www.brickz.my/transactions/residential/kuala-lumpur/old-klang-road/happy-garden/landed/",
+    "https://list.my/subsales/kl/kuala-lumpur/mukim-petaling/happy-garden",
+    "https://list.my/subsales/kl/kuala-lumpur/mukim-petaling/happy-garden/roads=JALAN+NYAMAN+*",
+    "https://list.my/subsales/kl/kuala-lumpur/mukim-petaling/happy-garden/jalan-riang",
+    "https://www.edgeprop.my/listing/auction/3526035/kuala_lumpur/kuchai_lama/landed/terracehouse/happy-garden-oug-kuala-lumpur-selangor-2-sty-terrace-house-for-auction",
+    "https://www.edgeprop.my/buy/kuala-lumpur/kuchai-lama/happy-garden-(taman-gembira)/all-landed/284838"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:47:06.062829+00:00",
+  "notes": "Estimate normalized mainly on built-up size (1,755 sq ft) and cross-checked against land-area quoted comparables in Happy Garden. Recent Happy Garden 2-storey/2.5-storey terrace transactions cluster around RM768k-RM1.045m on Jalan Riang/Jalan Nyaman, while live EdgeProp asks for similar terrace homes in the same township sit around RM1.20m-RM1.29m for ~1,650-1,914 sq ft; there is also a freehold auction comp at RM810k for 1,679 sq ft. Brickz’s broader Happy Garden landed median (RM750k) reflects smaller/older stock, so I weighted the larger freehold terrace comparables more heavily. A renovated or premium-position unit could push above the range; a basic/older unit could sit below it.",
+  "comparables": [
+    {
+      "price_myr": 768000.0,
+      "title": "Jalan Riang 5, Happy Garden — 2-Sty Terrace, 1,711 sq ft (Feb-26)",
+      "url": "https://list.my/subsales/kl/kuala-lumpur/mukim-petaling/happy-garden/jalan-riang",
+      "source": "list.my"
+    },
+    {
+      "price_myr": 940000.0,
+      "title": "Jalan Nyaman 4, Happy Garden — 2-Sty Terrace, 1,604 sq ft (Dec-25)",
+      "url": "https://list.my/subsales/kl/kuala-lumpur/mukim-petaling/happy-garden/roads=JALAN+NYAMAN+*",
+      "source": "list.my"
+    },
+    {
+      "price_myr": 1045000.0,
+      "title": "Jalan Nyaman 4, Happy Garden — 2-Sty Terrace, 1,604 sq ft (Sep-23)",
+      "url": "https://list.my/subsales/kl/kuala-lumpur/mukim-petaling/happy-garden/roads=JALAN+NYAMAN+*",
+      "source": "list.my"
+    },
+    {
+      "price_myr": 810000.0,
+      "title": "Happy Garden OUG Kuala Lumpur Selangor — 2-sty Terrace House for Auction, freehold, 1,679 sq ft",
+      "url": "https://www.edgeprop.my/listing/auction/3526035/kuala_lumpur/kuchai_lama/landed/terracehouse/happy-garden-oug-kuala-lumpur-selangor-2-sty-terrace-house-for-auction",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 1200000.0,
+      "title": "Happy Garden (Taman Gembira) landed properties page — terrace house, ~1,650 sq ft, RM1.20m",
+      "url": "https://www.edgeprop.my/buy/kuala-lumpur/kuchai-lama/happy-garden-(taman-gembira)/all-landed/284838",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 1290000.0,
+      "title": "Happy Garden (Taman Gembira) landed properties page — terrace house, ~1,914 sq ft, RM1.29m",
+      "url": "https://www.edgeprop.my/buy/kuala-lumpur/kuchai-lama/happy-garden-(taman-gembira)/all-landed/284838",
+      "source": "EdgeProp.my"
+    }
+  ]
+}

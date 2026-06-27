@@ -1,0 +1,57 @@
+{
+  "estimated_value_myr": 1570000.0,
+  "low_myr": 1450000.0,
+  "high_myr": 1700000.0,
+  "price_per_sqft_myr": 858.0,
+  "listing_count": 6,
+  "sources_used": [
+    "EdgeProp Bandar Utama area outlook (median terrace price/psf)",
+    "iProperty BU1 listing",
+    "EdgeProp BU4 listing",
+    "DataHartanah / JAZ International BU12 listing",
+    "EdgeProp BU7 2.5-storey listing",
+    "MalaysiaHome BU7 2.5-storey listing",
+    "list.my BU11/9 transaction"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:12:04.087262+00:00",
+  "notes": "Estimate is based on current Bandar Utama freehold terrace asking prices and one transacted comp. The most relevant live asks cluster around RM1.35m-RM1.51m for ~1,650-1,830 sq ft land and ~2,100-2,200 sq ft built-up, while 2.5-storey units in BU7 range from RM1.35m to RM1.85m. EdgeProp’s Bandar Utama area outlook shows terrace-house median price about RM1.445m and median psf about RM828 (land-based). I applied a modest premium for the subject’s larger 1,830 sq ft land area versus common 22x75 (1,650 sq ft) lots. Price per sq ft is expressed on land area basis.",
+  "comparables": [
+    {
+      "price_myr": 1400000.0,
+      "title": "Rumah Teres untuk Dijual di Petaling Jaya, Selangor oleh Dickson Cheong (BU1, freehold, 2,150 sqft)",
+      "url": "https://www.iproperty.com.my/bm/properti/petaling-jaya/bu-1/sale-500705492/",
+      "source": "iProperty"
+    },
+    {
+      "price_myr": 1350000.0,
+      "title": "[FACE OPEN] 2 Storey BU4 Bandar Utama - Petaling Jaya",
+      "url": "https://www.edgeprop.my/listing/sale/2069879/selangor/bandar_utama/landed/terracehouse/-face-open--2-storey-bu4-bandar-utama---petaling-jaya",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 1510000.0,
+      "title": "Newly Refurbished 2 Storey Intermediate Terrace House BU12, Bandar Utama, Petaling Jaya",
+      "url": "https://datahartanah.com/property/newly-refurbished-2-storey-intermediate-terrace-house-bu12-bandar-utama-petaling-jaya/",
+      "source": "DataHartanah / JAZ International"
+    },
+    {
+      "price_myr": 1350000.0,
+      "title": "BU 7 BANDAR UTAMA (2.5-storey terrace)",
+      "url": "https://www.edgeprop.my/listing/sale/1580327/selangor/bandar_utama/landed/terracehouse/bu-7-bandar-utama",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 1850000.0,
+      "title": "Fully Renovated 2.5 Storey Terrace House in Gated & Guarded Community, Bandar Utama BU7",
+      "url": "https://malaysiahome.my/en/property/fully-renovated-2-5-storey-terrace-house/",
+      "source": "MalaysiaHome"
+    },
+    {
+      "price_myr": 1365000.0,
+      "title": "RM1.37Mil 2-Sty Terrace in Bandar Utama Damansara sold on Sep. 2022 (Jalan BU 11/9)",
+      "url": "https://list.my/subsales/property/218446",
+      "source": "list.my"
+    }
+  ]
+}

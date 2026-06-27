@@ -1,0 +1,58 @@
+{
+  "estimated_value_myr": 3300000.0,
+  "low_myr": 2850000.0,
+  "high_myr": 3850000.0,
+  "price_per_sqft_myr": 3065.0,
+  "listing_count": 6,
+  "sources_used": [
+    "https://www.99.co/singapore/condos-apartments/oue-twin-peaks",
+    "https://www.99.co/singapore/condos-apartments/urbana",
+    "https://www.99.co/singapore/condos-apartments/rivergate",
+    "https://www.edgeprop.sg/new-launches/river-green",
+    "https://proptech.amicus.sg/Condominium/pages/ProjectDetail.aspx?ID=12960&ProjectName=AVENIR%2C+THE",
+    "https://www.edgeprop.sg/condo-apartment/3-orchard-by-the-park",
+    "https://www.srx.com.sg/condo/district/orchard-river-valley",
+    "https://www.ura.gov.sg/Corporate/Property/Property-Data/Private-Residential-Properties"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T06:33:11.488100+00:00",
+  "notes": "All figures are in SGD (S$), despite the schema field names. Estimate is for a generic condominium in Orchard / River Valley (D09), sized about 1,076 sqft, using live asking prices and recent transacted prices from comparable D9/D10 condos and new-launch benchmarks. Actual value can move materially by exact project, tenure, floor, view, age, renovation, and whether the unit is freehold vs leasehold. No rentals or room-only listings were used.",
+  "comparables": [
+    {
+      "price_myr": 2500000.0,
+      "title": "OUE Twin Peaks Condo - in Orchard / River Valley | 99.co",
+      "url": "https://www.99.co/singapore/condos-apartments/oue-twin-peaks",
+      "source": "99.co / recent resale comp"
+    },
+    {
+      "price_myr": 2700000.0,
+      "title": "Urbana Condo - in Orchard / River Valley | 99.co",
+      "url": "https://www.99.co/singapore/condos-apartments/urbana",
+      "source": "99.co / SRX-linked transaction history"
+    },
+    {
+      "price_myr": 3038000.0,
+      "title": "Rivergate Condo - in Orchard / River Valley | 99.co",
+      "url": "https://www.99.co/singapore/condos-apartments/rivergate",
+      "source": "99.co / recent resale comp"
+    },
+    {
+      "price_myr": 3123000.0,
+      "title": "River Green: New Launch Condo at River Valley | EdgeProp Singapore",
+      "url": "https://www.edgeprop.sg/new-launches/river-green",
+      "source": "River Green launch price list / EdgeProp"
+    },
+    {
+      "price_myr": 3700000.0,
+      "title": "The Avenir - Project Detail / transaction history",
+      "url": "https://proptech.amicus.sg/Condominium/pages/ProjectDetail.aspx?ID=12960&ProjectName=AVENIR%2C+THE",
+      "source": "URA caveat / project transaction history"
+    },
+    {
+      "price_myr": 3900000.0,
+      "title": "3 ORCHARD BY-THE-PARK - Singapore - EdgeProp.sg",
+      "url": "https://www.edgeprop.sg/condo-apartment/3-orchard-by-the-park",
+      "source": "URA caveat / EdgeProp transaction history"
+    }
+  ]
+}

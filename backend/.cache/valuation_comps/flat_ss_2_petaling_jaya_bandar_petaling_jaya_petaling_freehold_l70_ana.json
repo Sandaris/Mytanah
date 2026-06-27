@@ -1,0 +1,12 @@
+{
+  "estimated_value_myr": null,
+  "low_myr": null,
+  "high_myr": null,
+  "price_per_sqft_myr": null,
+  "listing_count": 0,
+  "sources_used": [],
+  "confidence": "none",
+  "fetched_at": "2026-06-27T06:01:24.606032+00:00",
+  "notes": "EXA_API_KEY not set — live valuation unavailable",
+  "comparables": []
+}

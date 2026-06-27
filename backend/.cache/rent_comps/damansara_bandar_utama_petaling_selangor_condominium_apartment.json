@@ -1,0 +1,55 @@
+{
+  "mukim": "Bandar Utama / Damansara, Petaling Jaya, Selangor",
+  "avg_rent_myr": 3085.3,
+  "min_rent_myr": 1200.0,
+  "max_rent_myr": 6800.0,
+  "median_rent_myr": 2499.0,
+  "listing_count": 22,
+  "sources_used": [
+    "https://www.mudah.my/selangor-bandar-utama/apartment-condominium-for-rent/pelangi-utama",
+    "https://www.propsocial.my/rent/developments/puncak-damansara-1349/listings",
+    "https://www.edgeprop.my/listing/rental/3603620/121-residences-for-rent-by-cs-ow",
+    "https://www.edgeprop.my/listing/rental/3360556/1-bukit-utama-for-rent-by-andrea-hii",
+    "https://www.edgeprop.my/listing/rental/3873719/9-bukit-utama-for-rent-by-ivan-kok-chee-kin",
+    "https://www.edgeprop.my/listing/rental/3744041/uptown-residences-for-rent-by-jamie",
+    "https://www.edgeprop.my/listing/rental/3532841/se-terra-for-rent-by-amy-wong",
+    "https://propmall.my/silvialing/list/good-location-partially-furnished-puncak-damansara-condobandar-utama-for-rent-95745",
+    "https://www.dotproperty.com.my/4-bedroom-condo-for-rent-in-petaling-jaya-selangor_5476573",
+    "https://www.propsocial.my/rent/developments/9-bukit-utama-1130/listings"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:37:28.445839+00:00",
+  "notes": "Sampled 22 live whole-unit condo/apartment rental listings in and around Bandar Utama (including Kayu Ara/Damansara/Petaling Jaya listings marketed into the same area). Excluded room-only / bedspace / partition ads. Median is more representative than the mean because higher-end 9 Bukit Utama units pull the average up.",
+  "sample_listings": [
+    {
+      "url": "https://www.propsocial.my/rent/developments/puncak-damansara-1349/listings",
+      "title": "Puncak Damansara, Bandar Utama For Rent (whole unit)",
+      "source": "PropSocial",
+      "rent_myr": 1200
+    },
+    {
+      "url": "https://www.mudah.my/selangor-bandar-utama/apartment-condominium-for-rent/pelangi-utama",
+      "title": "Pelangi Utama, Bandar Utama — Apartment / Condominium For Rent (Jun 2026)",
+      "source": "Mudah.my",
+      "rent_myr": 2500
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3603620/121-residences-for-rent-by-cs-ow",
+      "title": "121 Residences, Kayu Ara, Selangor, 2 Bedroom Fully Furnished For Rent",
+      "source": "EdgeProp.my",
+      "rent_myr": 2200
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3360556/1-bukit-utama-for-rent-by-andrea-hii",
+      "title": "1 Bukit Utama Condominium for rent",
+      "source": "EdgeProp.my",
+      "rent_myr": 3800
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3873719/9-bukit-utama-for-rent-by-ivan-kok-chee-kin",
+      "title": "Limited Big Size Unit for Rental @RM6,800 — 9 Bukit Utama",
+      "source": "EdgeProp.my",
+      "rent_myr": 6800
+    }
+  ]
+}

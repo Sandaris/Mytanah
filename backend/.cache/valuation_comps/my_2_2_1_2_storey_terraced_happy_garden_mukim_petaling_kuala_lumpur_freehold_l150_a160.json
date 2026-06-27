@@ -1,0 +1,54 @@
+{
+  "estimated_value_myr": 900000.0,
+  "low_myr": 820000.0,
+  "high_myr": 1050000.0,
+  "price_per_sqft_myr": 526.0,
+  "listing_count": 8,
+  "sources_used": [
+    "https://www.iproperty.com.my/property-for-sale/in-happy-garden-g5xsx",
+    "https://www.edgeprop.my/listing/auction/3526035/kuala_lumpur/kuchai_lama/landed/terracehouse/happy-garden-oug-kuala-lumpur-selangor-2-sty-terrace-house-for-auction",
+    "https://list.my/subsales/kl/kuala-lumpur/mukim-petaling/happy-garden",
+    "https://www.brickz.my/transactions/residential/kuala-lumpur/old-klang-road/happy-garden/landed/"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:46:00.970928+00:00",
+  "notes": "Based on live Happy Garden / Taman Gembira terrace-house asking listings and recent subsale evidence, the market is clustering around roughly RM490–RM530 psf on a built-up basis, with a few higher-renovation outliers above RM630 psf. For the subject’s 1,711 sqft built-up, that points to about RM0.90m as a fair current value. I would treat ~RM0.82m as a practical lower bound for a basic/intermediate unit and ~RM1.05m as a realistic upper bound for a well-renovated or better-positioned unit. Happy Garden is sometimes grouped with Taman Gembira / Kuchai Lama / OUG / Sri Petaling in portal data, so I kept comparables within that same neighborhood cluster and excluded rentals.",
+  "comparables": [
+    {
+      "price_myr": 930000.0,
+      "title": "Happy Garden, Kuchai Lama, Kuala Lumpur – 2-storey terraced house (1,760 sqft)",
+      "url": "https://www.iproperty.com.my/property-for-sale/in-happy-garden-g5xsx",
+      "source": "iProperty"
+    },
+    {
+      "price_myr": 868000.0,
+      "title": "Happy Garden, Kuchai Lama, Kuala Lumpur – 2-storey terraced house (1,650 sqft)",
+      "url": "https://www.iproperty.com.my/property-for-sale/in-happy-garden-g5xsx",
+      "source": "iProperty"
+    },
+    {
+      "price_myr": 1350000.0,
+      "title": "Happy Garden, Kuchai Lama, Kuala Lumpur – 2-storey terraced house (1,955 sqft land / 2,800 sqft floor)",
+      "url": "https://www.iproperty.com.my/property-for-sale/in-happy-garden-g5xsx",
+      "source": "iProperty"
+    },
+    {
+      "price_myr": 1400000.0,
+      "title": "Happy Garden, Kuchai Lama, Kuala Lumpur – 2-storey terraced house (2,400 sqft land / 2,200 sqft floor)",
+      "url": "https://www.iproperty.com.my/property-for-sale/in-happy-garden-g5xsx",
+      "source": "iProperty"
+    },
+    {
+      "price_myr": 810000.0,
+      "title": "Happy Garden OUG Kuala Lumpur Selangor 2-sty Terrace House For Auction (1,679 sqft)",
+      "url": "https://www.edgeprop.my/listing/auction/3526035/kuala_lumpur/kuchai_lama/landed/terracehouse/happy-garden-oug-kuala-lumpur-selangor-2-sty-terrace-house-for-auction",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 940000.0,
+      "title": "Happy Garden / Jalan Nyaman 4 – double-storey terrace transaction (1,600 sqft)",
+      "url": "https://list.my/subsales/kl/kuala-lumpur/mukim-petaling/happy-garden/roads=JALAN+NYAMAN+*",
+      "source": "List.my"
+    }
+  ]
+}

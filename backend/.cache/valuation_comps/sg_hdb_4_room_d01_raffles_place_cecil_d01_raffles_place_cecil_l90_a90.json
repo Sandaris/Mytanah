@@ -1,0 +1,55 @@
+{
+  "estimated_value_myr": 1200000.0,
+  "low_myr": 1080000.0,
+  "high_myr": 1450000.0,
+  "price_per_sqft_myr": 1199.0,
+  "listing_count": 10,
+  "sources_used": [
+    "99.co",
+    "HDB Insights",
+    "StackProperty",
+    "CheckHowMuch",
+    "PropertyGuru"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T06:53:10.401204+00:00",
+  "notes": "All figures are in SGD (S$). No meaningful direct D01 HDB 4-room stock was found, so this is extrapolated from nearby Central Area / D02 / D03 HDB 4-room comparables, especially Pinnacle@Duxton and adjacent Bukit Merah/Tanjong Pagar fringe blocks. The 1,001 sqft size is effectively the same as 93 sqm. Recent prime Central Area 4-room transactions clustered around S$1.175m–S$1.20m for 93–96 sqm units, with premium high-floor deals up to S$1.55m; a live asking comp at 10B Boon Tiong Road was S$1.21m.",
+  "comparables": [
+    {
+      "price_myr": 1200000.0,
+      "title": "Blk 1D Cantonment Road, 4-room, 93 sqm, Jun 2026 resale",
+      "url": "https://hdbinsights.sg/central-area-hdb-resale-price/",
+      "source": "HDB Insights"
+    },
+    {
+      "price_myr": 1175000.0,
+      "title": "Blk 1C Cantonment Road, 4-room, 94 sqm, May 2026 resale",
+      "url": "https://checkhowmuch.sg/block/cantonment-road-block-1c/",
+      "source": "CheckHowMuch / data.gov.sg"
+    },
+    {
+      "price_myr": 1178000.0,
+      "title": "Blk 1G Cantonment Road, 4-room, 96 sqm, May 2026 resale",
+      "url": "https://checkhowmuch.sg/block/cantonment-road-block-1g/",
+      "source": "CheckHowMuch / data.gov.sg"
+    },
+    {
+      "price_myr": 1438888.0,
+      "title": "Blk 1E Cantonment Road, 4-room, 94 sqm, May 2026 resale",
+      "url": "https://checkhowmuch.sg/block/cantonment-road-block-1e/",
+      "source": "CheckHowMuch / data.gov.sg"
+    },
+    {
+      "price_myr": 1500000.0,
+      "title": "Blk 1A Cantonment Road, 4-room, 97 sqm, Jun 2026 resale",
+      "url": "https://hdbinsights.sg/central-area-hdb-resale-price/",
+      "source": "HDB Insights"
+    },
+    {
+      "price_myr": 1210000.0,
+      "title": "BLK 10B Boon Tiong Road, HDB 4A, asking price",
+      "url": "https://www.propertyguru.com.sg/listing/hdb-for-sale-10b-boon-tiong-road-25463673",
+      "source": "PropertyGuru current asking listing"
+    }
+  ]
+}

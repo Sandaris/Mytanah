@@ -1,0 +1,56 @@
+{
+  "estimated_value_myr": 235000.0,
+  "low_myr": 200000.0,
+  "high_myr": 270000.0,
+  "price_per_sqft_myr": 320.0,
+  "listing_count": 6,
+  "sources_used": [
+    "EdgeProp.my",
+    "PropertyGuru.com.my",
+    "PropMall.my",
+    "LelongTips.com.my",
+    "iRumah.co",
+    "NGChanMau.com"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T06:58:39.196177+00:00",
+  "notes": "Live portal evidence for comparable low-cost flats in Bukit Jalil/Taman LTAT clusters is concentrated around RM171k-RM250k for ~650-750 sq ft units, with current asking ranges on PropertyGuru/EdgeProp around RM235k-RM270k and sold-price snapshots around RM300-RM375 psf for Sri Rakyat Apartment and RM300-RM358 psf for Taman LTAT. I did not scale the full 3,035 sq ft figure directly because for flats that figure is likely a title/parcel or land-share measure rather than the usable built-up area that portals price against; using it literally would overstate value materially. On a built-up basis, a fair current market estimate is about RM235k, with a realistic range of RM200k-RM270k and roughly RM320 psf.",
+  "comparables": [
+    {
+      "price_myr": 185000.0,
+      "title": "Sri Rakyat Apartment Flat for Sale in Bukit Jalil",
+      "url": "https://www.edgeprop.my/listing/sale/3605689/sri-rakyat-apartment-for-sale-by-hamdan-hamidon",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 250000.0,
+      "title": "Apartment Seri Ceria 1 Bukit Jalil untuk dijual dekat LRT Alam Sutera",
+      "url": "https://propmall.my/Intansyazwani/list/apartment-seri-ceria-1-bukit-jalil-untuk-dijual-dekat-lrt-alam-sutera-135045",
+      "source": "PropMall.my"
+    },
+    {
+      "price_myr": 230000.0,
+      "title": "WALK UP LEVEL 2 I SELL BELOW MV I Apartment Taman LTAT, Bukit Jalil for Sale",
+      "url": "https://www.edgeprop.my/listing/sale/2450373/kuala_lumpur/bukit_jalil/nonlanded/condominium-apartment-servicedresidence/walk-up-level-2-i-sell-below-mv-i-apartment-taman-ltat--bukit_jalil",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 250000.0,
+      "title": "Apartment LTAT Bukit Jalil for Sale @RM250,000",
+      "url": "https://www.edgeprop.my/listing/sale/3421818/taman-ltat-bukit-jalil-for-sale-by-anne-annuar",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 216000.0,
+      "title": "Sri Rakyat Apartment",
+      "url": "https://www.lelongtips.com.my/property/Z0VrUjJuRWZDYUtMZk53S0d1L2tJQT09/Lelong-Auction-Sri-Rakyat-Apartment-in-Bukit-Jalil-Kuala-Lumpur-for-RM216000",
+      "source": "LelongTips.com.my"
+    },
+    {
+      "price_myr": 171000.0,
+      "title": "Flat Kos Rendah Untuk Lelong Di Taman LTAT, Bukit Jalil City",
+      "url": "https://irumah.co/bm/listings/7946517/taman-ltat-bukit-jalil-city-flat-kos-rendah-untuk-lelong",
+      "source": "iRumah.co"
+    }
+  ]
+}

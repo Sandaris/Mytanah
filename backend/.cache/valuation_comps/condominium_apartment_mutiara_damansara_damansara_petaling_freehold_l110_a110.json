@@ -1,0 +1,54 @@
+{
+  "estimated_value_myr": 860000.0,
+  "low_myr": 800000.0,
+  "high_myr": 930000.0,
+  "price_per_sqft_myr": 726.0,
+  "listing_count": 25,
+  "sources_used": [
+    "iProperty current sale listings in Mutiara Damansara (Jun 2026)",
+    "EdgeProp sale listings for Reflection Residences in Mutiara Damansara (2025–2026)",
+    "Brickz Surian Residences transactions in Mutiara Damansara (Oct 2024–Sep 2025)",
+    "EdgeProp Mutiara Damansara area outlook / transaction medians"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T06:09:05.057050+00:00",
+  "notes": "Live portal evidence clustered around RM680k–RM960k asks for Reflection/Surian units in Mutiara Damansara and roughly RM710–RM783 psf from recent Brickz Surian Residences transactions. After adjusting those psf levels to the subject’s 1,184 sq ft built-up, a fair estimate is about RM860k (around RM726 psf), with a realistic low–high band of RM800k–RM930k. This excludes rentals and room-only listings.",
+  "comparables": [
+    {
+      "price_myr": 960000.0,
+      "title": "Reflection Residences, Mutiara Damansara",
+      "url": "https://www.iproperty.com.my/property-for-sale/in-mutiara-damansara-xd4bk",
+      "source": "iProperty"
+    },
+    {
+      "price_myr": 810000.0,
+      "title": "Surian Condominium, Mutiara Damansara",
+      "url": "https://www.iproperty.com.my/bm/ejen-hartanah/joey-liew-741404/",
+      "source": "iProperty"
+    },
+    {
+      "price_myr": 880000.0,
+      "title": "Fully Renovated Furnished Unit Reflection Residences For Sale",
+      "url": "https://www.edgeprop.my/listing/sale/3491991/reflection-residences-for-sale-by-ikmal-hakim",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 899999.0,
+      "title": "Reflection Residence Mutiara Damansara for sale",
+      "url": "https://www.edgeprop.my/listing/sale/3247998/reflection-residences-for-sale-by-michelle-yuin",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 1400000.0,
+      "title": "Surian Residences, Mutiara Damansara transaction (09/01/2025)",
+      "url": "https://www.brickz.my/transactions/residential/selangor/mutiara-damansara/surian-residences/non-landed/",
+      "source": "Brickz"
+    },
+    {
+      "price_myr": 1000888.0,
+      "title": "Surian Residences, Mutiara Damansara transaction (29/10/2024)",
+      "url": "https://www.brickz.my/transactions/residential/selangor/mutiara-damansara/surian-residences/non-landed/",
+      "source": "Brickz"
+    }
+  ]
+}

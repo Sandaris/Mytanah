@@ -1,0 +1,54 @@
+{
+  "estimated_value_myr": 145000.0,
+  "low_myr": 120000.0,
+  "high_myr": 170000.0,
+  "price_per_sqft_myr": 135.0,
+  "listing_count": 6,
+  "sources_used": [
+    "EdgeProp.my",
+    "List.my",
+    "PropMall.my",
+    "EjenHartanahKuantan.com"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:16:01.271908+00:00",
+  "notes": "Live portal data for Taman Nusa Puteri and nearby Rompin shows a wide spread: Taman Nusa Puteri subsales cluster around RM80k-RM160k, while nearby freehold double-storey asks in Rompin are RM140k-RM240k. Exact 2-2 1/2 storey terraced comps inside Taman Nusa Puteri were scarce, so this estimate leans on the closest terrace/double-storey comparables and adjusts for the subject’s smaller 721 sqft built-up and freehold tenure. PSF quoted here is on a land-area basis; implied land PSF is about RM135 (and roughly RM201 psf on built-up).",
+  "comparables": [
+    {
+      "price_myr": 160000.0,
+      "title": "Teres Setingkat Taman Nusa Puteri Rompin, Pahang Untuk Dijual",
+      "url": "https://www.edgeprop.my/listing/sale/3244144/pahang/rompin_district/landed/terracehouse/teres-setingkat-taman-nusa-puteri-rompin-pahang-untuk-dijual",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 80000.0,
+      "title": "RM80K Terrace in TAMAN NUSA PUTERI sold on Jan. 2023",
+      "url": "https://list.my/subsales/property/95416",
+      "source": "List.my"
+    },
+    {
+      "price_myr": 140000.0,
+      "title": "Teres 2 Tingkat Low Cost Taman Wawasan Maju 2, Tanjung Gemok, Kuala Rompin, Pahang [TERMURAH]",
+      "url": "https://propmall.my/hafiesa1234/list/teres-2-tingkat-low-cost-taman-wawasan-maju-2-tanjung-gemok-kuala-rompin-pahang-termurah-72319",
+      "source": "PropMall.my"
+    },
+    {
+      "price_myr": 153000.0,
+      "title": "Endlot Teres Low Kos 2 Tingkat Di Taman Mutiara Rompin",
+      "url": "https://propmall.my/list/endlot-teres-low-kos-2-tingkat-di-taman-mutiara-rompin-147096",
+      "source": "PropMall.my"
+    },
+    {
+      "price_myr": 190000.0,
+      "title": "Teres Dua Tingkat Untuk Dijual di Taman Rompin Permai Kuala Rompin",
+      "url": "https://ejenhartanahkuantan.com/property/teres-dua-tingkat-untuk-dijual-di-taman-rompin-permai-kuala-rompin/",
+      "source": "EjenHartanahKuantan.com"
+    },
+    {
+      "price_myr": 240000.0,
+      "title": "Teres Dua Tingkat Taman Cemara Rompin Pahang",
+      "url": "https://ejenhartanahkuantan.com/property/teres-dua-tingkat-taman-cemara-rompin-pahang/",
+      "source": "EjenHartanahKuantan.com"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "mukim": "Kuala Kuantan",
+  "avg_rent_myr": 1294.4,
+  "min_rent_myr": 850.0,
+  "max_rent_myr": 2000.0,
+  "median_rent_myr": 1100.0,
+  "listing_count": 9,
+  "sources_used": [
+    "https://www.mudah.my/pahang/semi-detached-house-for-rent",
+    "https://www.mudah.my/pahang-kuantan/houses-for-rent",
+    "https://www.mudah.my/for-rent-single-storey-seri-damai-114393818.htm",
+    "https://www.mudah.my/semi-d-for-rent-at-jalan-gambang-batu-14-114964150.htm",
+    "https://www.mudah.my/semi-d-inderapura-jaya-untuk-disewakan-114988886.htm",
+    "https://ejenhartanahkuantan.com/property/teres-semi-d-setingkat-bukit-istana-kuantan/",
+    "https://ejenhartanahkuantan.com/property/semi-d-padang-maju-kuantan/",
+    "https://afzrealtylist.com/list/untuk-disewa-kemasukan-segeraunit-baru-corner-semi-d-setingkat-taman-kempadang-perdana-1-sebelah-berjaya-permai-kuantan-132345"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:23:59.057976+00:00",
+  "notes": "No exact live whole-unit rental match was found for Taman Kota Sri Ahmad Shah itself, so I used current Kuantan comparable whole-unit semi-detached rentals of the same 1-storey / setingkat type. Excluded room-only, bedspace, partition, and double-storey semi-D listings. Sample includes current live listings from Mudah.my, Ejen Hartanah Kuantan, and AFZ Realty.",
+  "sample_listings": [
+    {
+      "url": "https://www.mudah.my/semi-d-inderapura-jaya-untuk-disewakan-114988886.htm",
+      "title": "Semi-Detached House for Rent, 3 Bedroom, 2800 sq.ft, Kuantan, Pahang 114988886 | Mudah.my",
+      "source": "Mudah.my",
+      "rent_myr": 800
+    },
+    {
+      "url": "https://www.mudah.my/for-rent-single-storey-seri-damai-114393818.htm",
+      "title": "Semi-Detached House for Rent, 3 Bedroom, 2799 sq.ft, Kuantan, Pahang 114393818 | Mudah.my",
+      "source": "Mudah.my",
+      "rent_myr": 900
+    },
+    {
+      "url": "https://www.mudah.my/semi-d-for-rent-at-jalan-gambang-batu-14-114964150.htm",
+      "title": "Semi-Detached House for Rent, 3 Bedroom, 1000 sq.ft, Kuantan, Pahang 114964150 | Mudah.my",
+      "source": "Mudah.my",
+      "rent_myr": 900
+    },
+    {
+      "url": "https://ejenhartanahkuantan.com/property/semi-d-padang-maju-kuantan/",
+      "title": "Semi-D Padang Maju Kuantan Untuk Disewa",
+      "source": "Ejen Hartanah Kuantan",
+      "rent_myr": 1500
+    },
+    {
+      "url": "https://ejenhartanahkuantan.com/property/teres-semi-d-setingkat-bukit-istana-kuantan/",
+      "title": "Teres Semi D Setingkat Bukit Istana, Kuantan",
+      "source": "Ejen Hartanah Kuantan",
+      "rent_myr": 2000
+    }
+  ]
+}

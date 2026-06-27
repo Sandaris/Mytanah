@@ -1,0 +1,55 @@
+{
+  "estimated_value_myr": 490000.0,
+  "low_myr": 420000.0,
+  "high_myr": 560000.0,
+  "price_per_sqft_myr": 162.0,
+  "listing_count": 6,
+  "sources_used": [
+    "List.my",
+    "EjenHartanahKuantan",
+    "Landsworth.co",
+    "Melissa MY Real Estate",
+    "DurianProperty.com.my"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:20:39.979859+00:00",
+  "notes": "Estimated from a blend of: (1) Taman Kota Sri Ahmad Shah subsale market stats on List.my (555 transactions, median RM548k, median RM205 psf, typical range RM441k-RM655k); and (2) live Kuantan semi-D asking/auction comps that cluster around RM350k-RM470k for older/freehold single-storey semi-Ds, with premium KotaSAS auction semi-Ds at RM648k-RM800k. I adjusted downward versus the township median because the subject has a relatively small 1-1/2 storey built-up of 1,270 sq ft. Price per sq ft is computed on land area: RM490,000 / 3,025 sq ft ≈ RM162 psf. Confidence is medium because exact same-subtype live listings in the immediate Taman Kota Sri Ahmad Shah area are limited, so the estimate relies on nearby Kuantan freehold semi-D comps plus township-level subsale data.",
+  "comparables": [
+    {
+      "price_myr": 399000.0,
+      "title": "Semi-D Setingkat Taman Pandan Damai Kuantan BEBAS BANJIR",
+      "url": "https://landsworth.co/list/semi-d-setingkat-taman-pandan-damai-kuantan-bebas-banjir-137478",
+      "source": "Landsworth.co"
+    },
+    {
+      "price_myr": 420000.0,
+      "title": "Semi D Setingkat Taman Guru Kuantan Semi D Setingkat Taman Guru Kuantan 010-228 9202",
+      "url": "https://ejenhartanahkuantan.com/property/semi-d-setingkat-taman-guru-kuantan-2/",
+      "source": "EjenHartanahKuantan"
+    },
+    {
+      "price_myr": 380000.0,
+      "title": "Semi-D Setingkat Taman Kempadang Baru Kuantan Semi-D Setingkat Taman Kempadang Baru Kuantan 010-228 9202",
+      "url": "https://ejenhartanahkuantan.com/property/semi-d-setingkat-taman-kempadang-baru-kuantan/",
+      "source": "EjenHartanahKuantan"
+    },
+    {
+      "price_myr": 350000.0,
+      "title": "Semi-D Endlot Pelindung Damai Kuantan Untuk Dijual Semi-D Endlot Pelindung Damai Kuantan Untuk Dijual 010-228 9202",
+      "url": "https://ejenhartanahkuantan.com/property/semi-d-endlot-pelindung-damai-kuantan-untuk-dijual/",
+      "source": "EjenHartanahKuantan"
+    },
+    {
+      "price_myr": 470000.0,
+      "title": "1 Storey Semi-Detach, Seri Kuantan, Kuantan, PHG [SOLD]",
+      "url": "https://www.melissa-property.com/properties-listing/subsale-house",
+      "source": "Melissa MY Real Estate"
+    },
+    {
+      "price_myr": 648000.0,
+      "title": "Semi D For Auction at Kota SAS",
+      "url": "https://www2.durianproperty.com.my/classified/3300249/Kota-SAS-Semi-D-for-auction-by-Hester",
+      "source": "DurianProperty.com.my"
+    }
+  ]
+}

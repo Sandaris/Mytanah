@@ -1,0 +1,57 @@
+{
+  "estimated_value_myr": 945000.0,
+  "low_myr": 880000.0,
+  "high_myr": 1050000.0,
+  "price_per_sqft_myr": 675.0,
+  "listing_count": 6,
+  "sources_used": [
+    "CheckHowMuch (Queenstown executive HDB page)",
+    "CheckHowMuch (Clementi executive HDB page)",
+    "town.sg Clementi executive transactions",
+    "PropertyVow HDB block pages (22 Dover Crescent, 206 Clementi Ave 6)",
+    "StackProperty HDB block pages (704 West Coast Road, 206 Clementi Ave 6)",
+    "SquareFoot Research Singapore (22 Dover Crescent)",
+    "99.co HDB resale-price context pages"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:33:47.222094+00:00",
+  "notes": "D05 executive-flat evidence is thin on active asking listings, so the estimate is anchored mainly on recent D05 resale transactions and block-level portal data. I adjusted larger executive comps (146–162 sqm) down toward the subject’s 130 sqm / 1,399 sqft size. The resulting size-adjusted cluster sits roughly S$873k–S$1.04M, with premium Dover/Clementi St 13 blocks supporting the upper end. URA caveats are not the primary source for HDB resales; HDB open resale data mirrored by portal datasets was more relevant here. All figures are SGD.",
+  "comparables": [
+    {
+      "price_myr": 1170000.0,
+      "title": "Blk 22 Dover Crescent — Executive Apartment, 146 sqm, sold Feb 2026",
+      "url": "https://sg.propertyvow.com/property/hdb/detail/22-dover-cres",
+      "source": "SquareFoot Research / PropertyVow"
+    },
+    {
+      "price_myr": 1030000.0,
+      "title": "Blk 115 Clementi Street 13 — Executive Maisonette, 146 sqm, sold May 2026",
+      "url": "https://checkhowmuch.sg/block/clementi-street-13-block-115/",
+      "source": "CheckHowMuch / PropertyVow"
+    },
+    {
+      "price_myr": 1135000.0,
+      "title": "Blk 116 Clementi Street 13 — Executive Maisonette, 149 sqm, sold Mar 2026",
+      "url": "https://checkhowmuch.sg/block/clementi-street-13-block-116/",
+      "source": "CheckHowMuch / PropertyVow"
+    },
+    {
+      "price_myr": 1160000.0,
+      "title": "Blk 110 Clementi Street 13 — Executive Maisonette, 159 sqm, sold Jan 2026",
+      "url": "https://checkhowmuch.sg/block/clementi-street-13-block-110/",
+      "source": "CheckHowMuch / PropertyVow"
+    },
+    {
+      "price_myr": 1033000.0,
+      "title": "Blk 206 Clementi Avenue 6 — Executive Apartment, 154 sqm, sold Jun 2025",
+      "url": "https://sg.propertyvow.com/property/hdb/detail/206-clementi-ave-6",
+      "source": "PropertyVow / StackProperty"
+    },
+    {
+      "price_myr": 1100000.0,
+      "title": "Blk 704 West Coast Road — Executive, 162 sqm, sold Jun 2026",
+      "url": "https://stackproperty.sg/hdb/704-west-coast-rd",
+      "source": "CheckHowMuch / StackProperty"
+    }
+  ]
+}

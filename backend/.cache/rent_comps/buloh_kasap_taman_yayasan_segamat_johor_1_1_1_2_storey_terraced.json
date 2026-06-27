@@ -1,0 +1,48 @@
+{
+  "mukim": "Buloh Kasap",
+  "avg_rent_myr": 940.0,
+  "min_rent_myr": 800.0,
+  "max_rent_myr": 1100.0,
+  "median_rent_myr": 950.0,
+  "listing_count": 5,
+  "sources_used": [
+    "Mudah.my",
+    "Mitula Homes",
+    "Trovit"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T03:44:52.296471+00:00",
+  "notes": "Based on 5 usable live whole-unit 1-storey terraced-house listings in/around Taman Yayasan, Buloh Kasap, and nearby Segamat comparables. I excluded room-only/bedspace/partition ads and excluded 2-storey terraced listings. Direct Taman Yayasan stock was sparse, so nearby Segamat/Buloh Kasap comparables of the same property type were included. A separate RM600 Taman Yayasan portal snippet was not counted because the page evidence did not explicitly confirm the same terraced-house type.",
+  "sample_listings": [
+    {
+      "url": "https://www.mudah.my/rumah-sewa-kg-berata-114733614.htm",
+      "title": "1-storey Terraced House for Rent, 2 Bedroom, 900 sq.ft, Segamat, Johor 114733614",
+      "source": "Mudah.my",
+      "rent_myr": 800
+    },
+    {
+      "url": "https://www.mudah.my/johor-segamat/houses-for-rent/rent-from-500-below-1000",
+      "title": "Rumah Teres 1 Tingkat Untuk Disewa, Taman Mewah, Bukit Siput, Segamat",
+      "source": "Mudah.my",
+      "rent_myr": 850
+    },
+    {
+      "url": "https://www.mudah.my/johor-segamat/houses-for-rent/rent-from-500-below-1000",
+      "title": "Single Storey Terrace House Rent - Taman Yayasan, Segamat",
+      "source": "Mudah.my",
+      "rent_myr": 950
+    },
+    {
+      "url": "https://homes.mitula.my/homes/terraced-house-for-rent-segamat-buloh-kasap",
+      "title": "Kampung Abdullah Buloh Kasap Single Storey Terrace House For Rent",
+      "source": "Mitula Homes",
+      "rent_myr": 1000
+    },
+    {
+      "url": "https://homes.trovit.my/for-rent-segamat-terrace",
+      "title": "Taman Segar Segamat Single Storey Terrace House For Rent",
+      "source": "Trovit",
+      "rent_myr": 1100
+    }
+  ]
+}

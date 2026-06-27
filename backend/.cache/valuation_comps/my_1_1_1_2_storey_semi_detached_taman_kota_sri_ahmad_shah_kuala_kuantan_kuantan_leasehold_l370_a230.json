@@ -1,0 +1,59 @@
+{
+  "estimated_value_myr": 690000.0,
+  "low_myr": 630000.0,
+  "high_myr": 780000.0,
+  "price_per_sqft_myr": 276.0,
+  "listing_count": 6,
+  "sources_used": [
+    "https://list.my/subsales/pahang/kuantan/kuala-kuantan/taman-kota-sri-ahmad-shah",
+    "https://www.edgeprop.my/listing/sale/2784474/pahang/kuantan/landed/linkbungalow-semidetachedhouse/the-majestic-homes-1.5-storey-semi-d-kotasas-next-to-bukit-istana",
+    "https://www.edgeprop.my/listing/sale/2781803/pahang/kuantan/landed/linkbungalow-semidetachedhouse/semid-setingkat-setengah-kotasas-majestic",
+    "https://propmall.my/list/semi-d-15-storey-the-majestic-homes-kotasas-kuantan-89437",
+    "https://propmall.my/list/semi-d-15-tingkat-the-majestic-homes-kotasas-kuantan-hot-location-86612",
+    "https://protasaproperties.com/property/semi-d-setingkat-di-lakefront-presint-4-kotasas-kuantan/",
+    "https://www2.durianproperty.com.my/classified/3300640/Kota-SAS-Semi-D-for-auction-by-Hester",
+    "https://www2.durianproperty.com.my/classified/3290857/Kota-SAS-Semi-D-for-auction-by-Hester",
+    "https://www2.durianproperty.com.my/classified/3300249/Kota-SAS-Semi-D-for-auction-by-Hester"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:20:37.067970+00:00",
+  "notes": "Live portal evidence in KotaSAS / Taman Kota Sri Ahmad Shah shows 1.5-storey semi-D asking prices clustered around RM780k-RM830k for ~3,156–4,004 sqft homes, with a lower recent semi-D asking comp at RM598k for a 2,800 sqft built-up unit. DurianProperty auction reserve prices in the same township were RM648k-RM800k. List.my shows Taman Kota Sri Ahmad Shah recorded 555 subsale transactions (2021–2026), overall median RM548k and RM205 psf, with 84 single-storey semi-D and 16 double-storey semi-D transactions visible in the township summary. Because exact public transaction rows for semi-Ds are limited, this is a size-adjusted estimate anchored to current asking prices and auction reserves rather than a strict sold-comps regression. Price per sqft is based on built-up area (RM690,000 / 2,497 sqft ≈ RM276 psf).",
+  "comparables": [
+    {
+      "price_myr": 780000.0,
+      "title": "The Majestic Homes 1.5 Storey Semi D Kotasas next to Bukit Istana",
+      "url": "https://www.edgeprop.my/listing/sale/2784474/pahang/kuantan/landed/linkbungalow-semidetachedhouse/the-majestic-homes-1.5-storey-semi-d-kotasas-next-to-bukit-istana",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 815000.0,
+      "title": "Semid setingkat setengah kotasas majestic",
+      "url": "https://www.edgeprop.my/listing/sale/2781803/pahang/kuantan/landed/linkbungalow-semidetachedhouse/semid-setingkat-setengah-kotasas-majestic",
+      "source": "EdgeProp.my"
+    },
+    {
+      "price_myr": 800000.0,
+      "title": "SEMI-D 1.5 STOREY THE MAJESTIC HOMES KOTASAS KUANTAN",
+      "url": "https://propmall.my/list/semi-d-15-storey-the-majestic-homes-kotasas-kuantan-89437",
+      "source": "PropMall.my"
+    },
+    {
+      "price_myr": 830000.0,
+      "title": "Semi D 1.5 Tingkat The Majestic Homes, Kotasas, Kuantan [HOT LOCATION]",
+      "url": "https://propmall.my/list/semi-d-15-tingkat-the-majestic-homes-kotasas-kuantan-hot-location-86612",
+      "source": "PropMall.my"
+    },
+    {
+      "price_myr": 598000.0,
+      "title": "SEMI-D SETINGKAT DI LAKEFRONT PRESINT 4 KOTASAS, KUANTAN.",
+      "url": "https://protasaproperties.com/property/semi-d-setingkat-di-lakefront-presint-4-kotasas-kuantan/",
+      "source": "Protasa Properties"
+    },
+    {
+      "price_myr": 800000.0,
+      "title": "Terrace House For Auction at Kota SAS",
+      "url": "https://www2.durianproperty.com.my/classified/3300640/Kota-SAS-Semi-D-for-auction-by-Hester",
+      "source": "DurianProperty.com.my"
+    }
+  ]
+}

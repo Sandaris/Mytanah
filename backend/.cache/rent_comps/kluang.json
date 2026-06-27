@@ -1,0 +1,15 @@
+{
+  "mukim": "Kluang",
+  "avg_rent_myr": 1241,
+  "min_rent_myr": 400,
+  "max_rent_myr": 2900,
+  "median_rent_myr": 900,
+  "listing_count": 25,
+  "sources_used": [
+    "mudah.my"
+  ],
+  "confidence": "high",
+  "fetched_at": "2026-06-26T15:50:57.638484+00:00",
+  "notes": "PropertyGuru.com.my returned zero results.",
+  "sample_listings": []
+}

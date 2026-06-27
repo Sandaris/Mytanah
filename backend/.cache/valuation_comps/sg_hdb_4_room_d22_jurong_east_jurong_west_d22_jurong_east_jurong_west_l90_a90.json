@@ -1,0 +1,56 @@
+{
+  "estimated_value_myr": 530000.0,
+  "low_myr": 500000.0,
+  "high_myr": 560000.0,
+  "price_per_sqft_myr": 530.0,
+  "listing_count": 12,
+  "sources_used": [
+    "99.co resale transaction pages",
+    "SRX last transacted prices",
+    "StackProperty HDB pages",
+    "PropertyVow HDB detail pages",
+    "EdgeProp HDB analytic PDFs",
+    "PropertyGuru HDB estate pages"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T07:56:02.162212+00:00",
+  "notes": "All prices are SGD/S$ (the schema field names say MYR, but the estimate is in Singapore Dollars per your request). I used live portal data from 99.co, SRX, StackProperty, PropertyVow, and EdgeProp. For HDB, URA caveat data is not directly presented as a standalone HDB caveat feed, so I relied on portal transaction pages that cite HDB/URA sources. Recent D22 comparables for ~90–95 sqm 4-room flats cluster around S$508k–S$566k, with some newer / better-located Jurong East examples up to about S$590k and a lower nearby Jurong West listing around S$525k. For a 1,001 sqft / 93 sqm 4-room flat, a realistic current market value is about S$530k, or roughly S$530 psf. Exact block, remaining lease, floor, facing, and renovation can move the value materially.",
+  "comparables": [
+    {
+      "price_myr": 525000.0,
+      "title": "HDB 4 ROOMS FOR SALES S$525,000 — 625 Jurong West Street 61",
+      "url": "https://www.99.co/singapore/hdb/jurong-west-street-25-de7FJJ2ZvmRSiFDkrYX6Sz8W",
+      "source": "99.co nearby listing"
+    },
+    {
+      "price_myr": 550000.0,
+      "title": "HDB 4 ROOMS FOR SALES S$550,000 — 673A Jurong West Street 65",
+      "url": "https://www.99.co/singapore/hdb/608-jurong-west-street-65-adHkPi7CxhRoeYKtX6mGMitN",
+      "source": "99.co nearby listing"
+    },
+    {
+      "price_myr": 508000.0,
+      "title": "Blk 478 Jurong West Street 41 — 4 Room, 91 sqm, Jan 2026",
+      "url": "https://www.ggg.sg/hdb/7327",
+      "source": "99.co / StackProperty"
+    },
+    {
+      "price_myr": 512000.0,
+      "title": "Blk 483 Jurong West Street 41 — 4 Room, 91 sqm, Feb 2026",
+      "url": "https://www.ggg.sg/hdb/7380#new",
+      "source": "99.co / StackProperty"
+    },
+    {
+      "price_myr": 522000.0,
+      "title": "Blk 108 Jurong East Street 13 — 4 Room, 90 sqm, Mar 2026",
+      "url": "https://sg.propertyvow.com/property/hdb/detail/108-jurong-east-st-13",
+      "source": "PropertyVow / 99.co"
+    },
+    {
+      "price_myr": 560000.0,
+      "title": "Blk 105 Jurong East Street 13 — 4 Room, 92 sqm, Apr 2025",
+      "url": "https://www.stackproperty.sg/hdb/105-jurong-east-st-13",
+      "source": "StackProperty / 99.co"
+    }
+  ]
+}

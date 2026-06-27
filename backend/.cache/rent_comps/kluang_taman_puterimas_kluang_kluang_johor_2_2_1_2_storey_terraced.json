@@ -1,0 +1,52 @@
+{
+  "mukim": "Kluang",
+  "avg_rent_myr": 1186.7,
+  "min_rent_myr": 1000.0,
+  "max_rent_myr": 1500.0,
+  "median_rent_myr": 1100.0,
+  "listing_count": 15,
+  "sources_used": [
+    "https://www.mudah.my/johor-kluang/houses-for-rent",
+    "https://www.mudah.my/johor-kluang/houses-for-rent/rent-from-1000-below-1500",
+    "https://www.mudah.my/fully-furnished-double-storey-taman-delima-kluang-for-rent-114259946.htm",
+    "https://www.mudah.my/taman-sri-kluang-renovated-fully-furniture-for-rent-114948264.htm",
+    "https://www.edgeprop.my/listing/rental/3612461/johor/kluang/landed/terracehouse/taman-sri-kluang-double-storey-terrace-house-for-rent",
+    "https://drfreezerproperties.com/list/teres-2-tingkat-impiana-damai-2-bandar-seri-impian-kluang-63972",
+    "https://houselist.net/property/70788"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T04:23:25.945721+00:00",
+  "notes": "No exact current whole-unit 2–2½ storey terraced rental in Taman Puterimas surfaced in live search, so the figures are based on current Kluang whole-unit terraced-house comparables from live listing pages. Room-only/bedspace/partition ads were excluded. One Taman Puterimas result found was a single-storey/homestay-style listing and was excluded from the comp set.",
+  "sample_listings": [
+    {
+      "url": "https://www.mudah.my/taman-sri-kluang-renovated-fully-furniture-for-rent-114948264.htm",
+      "title": "Taman Sri Kluang @ Renovated & Fully Furniture for Rent",
+      "source": "Mudah.my",
+      "rent_myr": 1000
+    },
+    {
+      "url": "https://houselist.net/property/70788",
+      "title": "4BR House for Rent at Taman Sri Kluang, Kluang, Johor, Malaysia",
+      "source": "HouseList.net",
+      "rent_myr": 1100
+    },
+    {
+      "url": "https://www.edgeprop.my/listing/rental/3612461/johor/kluang/landed/terracehouse/taman-sri-kluang-double-storey-terrace-house-for-rent",
+      "title": "Taman Sri Kluang Double Storey Terrace House for Rent",
+      "source": "EdgeProp.my",
+      "rent_myr": 1200
+    },
+    {
+      "url": "https://drfreezerproperties.com/list/teres-2-tingkat-impiana-damai-2-bandar-seri-impian-kluang-63972",
+      "title": "TERES 2 TINGKAT IMPIANA DAMAI 2 BANDAR SERI IMPIAN KLUANG",
+      "source": "DrFreezerProperties.com",
+      "rent_myr": 1500
+    },
+    {
+      "url": "https://www.mudah.my/fully-furnished-double-storey-taman-delima-kluang-for-rent-114259946.htm",
+      "title": "2-storey Terraced House for Rent, 3 Bedroom, 800 sq.ft, Kluang, Johor",
+      "source": "Mudah.my",
+      "rent_myr": 800
+    }
+  ]
+}

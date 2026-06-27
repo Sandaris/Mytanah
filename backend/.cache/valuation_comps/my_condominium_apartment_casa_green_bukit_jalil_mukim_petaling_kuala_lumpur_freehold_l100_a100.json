@@ -1,0 +1,59 @@
+{
+  "estimated_value_myr": 575000.0,
+  "low_myr": 540000.0,
+  "high_myr": 630000.0,
+  "price_per_sqft_myr": 509.0,
+  "listing_count": 6,
+  "sources_used": [
+    "https://www.edgeprop.my/condo/casa-green-bukit-jalil-24955",
+    "https://www.edgeprop.my/listing/sale/3735320/casa-green-bukit-jalil-for-sale-by-ronald-loh",
+    "https://www.edgeprop.my/listing/sale/3631519/casa-green-bukit-jalil-for-sale-by-rihan-saleh",
+    "https://www.edgeprop.my/listing/sale/3729151/casa-green-bukit-jalil-for-sale-by-nick-wong",
+    "https://www.edgeprop.my/listing/sale/3300395/casa-green-for-sale-by-bernard-tay",
+    "https://propmall.my/list/walking-distance-lrt-casa-green-condominium-bukit-jalil-kuala-lumpur-111401",
+    "https://propmall.my/aleyaproperty/list/casa-green-condominiun-bukit-jalil-condo-fully-furnished-renovated-106713",
+    "https://www.mudah.my/property/properties-in-casa-green-bukit-jalil-kuala-lumpur",
+    "https://www.amberhomes.com.my/home/project/casa-green-bukit-jalil/"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T09:18:38.464164+00:00",
+  "notes": "Live sources consistently show Casa Green @ Bukit Jalil as a leasehold condominium/service-apartment project, not freehold. I valued it using same-project sale listings in the RM475k-RM600k range for 1,003 sq ft units plus EdgeProp’s transaction summary (sold price range RM494-RM509 psf, median RM499 psf over the last 48 months), then adjusted upward for the subject unit’s larger 1,130 sq ft built-up area. Rounded estimate: about RM575k, with a realistic range of RM540k-RM630k. Excluded rentals and room-only ads.",
+  "comparables": [
+    {
+      "price_myr": 550000.0,
+      "title": "Casa Green Bukit Jalil, Kuala Lumpur @ For Sale",
+      "url": "https://www.edgeprop.my/listing/sale/3735320/casa-green-bukit-jalil-for-sale-by-ronald-loh",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 530000.0,
+      "title": "BUKIT JALIL, CASA GREEN CONDOMINIUM for SALE",
+      "url": "https://www.edgeprop.my/listing/sale/3631519/casa-green-bukit-jalil-for-sale-by-rihan-saleh",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 600000.0,
+      "title": "Casa Green Bukit Jalil for Sale @RM600,000",
+      "url": "https://www.edgeprop.my/listing/sale/3729151/casa-green-bukit-jalil-for-sale-by-nick-wong",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 520000.0,
+      "title": "Fully Furnished 3 Rooms Condo LRT Casa Green Bukit Jalil Kuala Lumpur For Sale",
+      "url": "https://www.edgeprop.my/listing/sale/3300395/casa-green-for-sale-by-bernard-tay",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 475000.0,
+      "title": "Walking Distance LRT, Casa Green Condominium @ Bukit Jalil, Kuala Lumpur",
+      "url": "https://propmall.my/list/walking-distance-lrt-casa-green-condominium-bukit-jalil-kuala-lumpur-111401",
+      "source": "PropMall"
+    },
+    {
+      "price_myr": 550000.0,
+      "title": "Casa Green Condominiun @ Bukit Jalil Condo (Fully Furnished & Renovated)",
+      "url": "https://propmall.my/aleyaproperty/list/casa-green-condominiun-bukit-jalil-condo-fully-furnished-renovated-106713",
+      "source": "PropMall"
+    }
+  ]
+}

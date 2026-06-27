@@ -88,5 +88,8 @@ def get_rent_estimate(
         from .agent import _run_agent
         estimate = asyncio.run(_run_agent(mukim))
 
-    write_cache(ctx, estimate)
+    # Don't cache transient failures (see RentEstimate.error) so a temporary
+    # outage can't poison this selection for the cache TTL.
+    if not getattr(estimate, "error", False):
+        write_cache(ctx, estimate)
     return estimate

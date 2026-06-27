@@ -19,3 +19,7 @@ class ValuationEstimate:
     fetched_at: str   # ISO 8601 UTC
     notes: str | None = None
     comparables: list[dict] = field(default_factory=list)
+    # True when this is a transient failure (e.g. the Exa call raised or the run
+    # didn't complete) rather than a genuine "found nothing". Callers should NOT
+    # cache these, so a temporary outage doesn't poison results for the TTL.
+    error: bool = False

@@ -1,0 +1,56 @@
+{
+  "estimated_value_myr": 1890000.0,
+  "low_myr": 1720000.0,
+  "high_myr": 2080000.0,
+  "price_per_sqft_myr": 1582.0,
+  "listing_count": 10,
+  "sources_used": [
+    "https://list.my/subsales/kl/kuala-lumpur/kuala-lumpur-town-centre/pavilion-residences",
+    "https://www.edgeprop.my/buy/kuala-lumpur/bukit-bintang/pavilion-residences/all-residential/5204",
+    "https://irumah.co/bm/listings/7782323/pavilion-bukit-bintang-kondominium-perabot-penuh-untuk-jual",
+    "https://listing.hartamas.com/property/pavilion-residences-bukit-bintang/",
+    "https://houselist.net/ms/property/56530",
+    "https://settlers.com.my/property/unit-no-a-26-1-pavilion-residence-tower-1-jalan-raja-chulan-50200-kuala-lumpur/"
+  ],
+  "confidence": "medium",
+  "fetched_at": "2026-06-27T09:15:21.011363+00:00",
+  "notes": "Valuation is based on built-up area (1,195 sqft), which is the relevant metric for condo pricing. Recent Pavilion Residences subsales cluster around about RM1,540 psf, while current asking listings for ~1,233 to 1,509 sqft units range roughly RM1,450 to RM1,620 psf, with some higher outliers around RM1,739 to RM2,187 psf. Scaling those comparables to 1,195 sqft supports a market value around RM1.89M, with a realistic low-high band of RM1.72M to RM2.08M. Note: portal data is inconsistent on tenure; many sources describe Pavilion Residences as leasehold, while some individual listings label units as freehold, so the tenure stated by the user may not match all portal records.",
+  "comparables": [
+    {
+      "price_myr": 1802000.0,
+      "title": "Pavilion Residences subsale transaction, 1,238 sqft (May 2025)",
+      "url": "https://list.my/subsales/kl/kuala-lumpur/kuala-lumpur-town-centre/pavilion-residences",
+      "source": "List.my subsale transaction"
+    },
+    {
+      "price_myr": 2000000.0,
+      "title": "Pavilion Residences sale listing, about 1,233 sqft",
+      "url": "https://www.edgeprop.my/buy/kuala-lumpur/bukit-bintang/pavilion-residences/all-residential/5204",
+      "source": "EdgeProp"
+    },
+    {
+      "price_myr": 1900000.0,
+      "title": "Pavilion Residences, 1,307 sqft, freehold sale listing",
+      "url": "https://irumah.co/bm/listings/7782323/pavilion-bukit-bintang-kondominium-perabot-penuh-untuk-jual",
+      "source": "iRumah"
+    },
+    {
+      "price_myr": 2280000.0,
+      "title": "Pavilion Residences @ Bukit Bintang, 1,509 sqft, freehold",
+      "url": "https://listing.hartamas.com/property/pavilion-residences-bukit-bintang/",
+      "source": "Hartamas Property Listing"
+    },
+    {
+      "price_myr": 3300000.0,
+      "title": "Pavilion Residences, 1,509 sqft sale listing",
+      "url": "https://houselist.net/ms/property/56530",
+      "source": "HouseList.net"
+    },
+    {
+      "price_myr": 3000000.0,
+      "title": "Pavilion Residence, Tower 1, 2,013 sqft auction listing",
+      "url": "https://settlers.com.my/property/unit-no-a-26-1-pavilion-residence-tower-1-jalan-raja-chulan-50200-kuala-lumpur/",
+      "source": "Settlers auction"
+    }
+  ]
+}

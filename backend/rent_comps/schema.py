@@ -15,3 +15,6 @@ class RentEstimate:
     notes: str | None = None
     sample_listings: list[dict] = field(default_factory=list)
     currency: str = "RM"   # "RM" | "SGD" — the unit the *_myr amounts are in
+    # True for transient failures (Exa raised / run didn't complete). Not cached,
+    # so a temporary outage doesn't poison this selection for the cache TTL.
+    error: bool = False

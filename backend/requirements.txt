@@ -16,3 +16,4 @@ anthropic
 mcp
 python-dotenv
 litellm
+httpx

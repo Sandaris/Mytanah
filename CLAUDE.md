@@ -28,6 +28,8 @@ More detail: `docs/dashboard-dev.md`.
 - `backend/api.py` — FastAPI app served by uvicorn on port 80. Endpoints under
   `/valuation/*`, `/hcr/*`, `/data/*`, `/rent-comps`. Static mounts: `/app` →
   entire `frontend/` dir; `/` → legacy `frontend/ui_kits/dashboard/`.
+  `/valuation/predict` is Exa web-search based (see `backend/valuation_comps/`),
+  not ML — the user's fields drive a comparable-listing search.
 - `frontend/dashboard-app/` — **new** Vite + React + Tailwind + shadcn/ui SPA
   (proper npm install). Edit here; `npm run build` writes to `frontend/dist/`.
   Local dev: Vite on `:5173` proxies API calls to FastAPI on `:8000`.

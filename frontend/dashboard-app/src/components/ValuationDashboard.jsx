@@ -1,14 +1,15 @@
-/* ValuationDashboard.jsx — valuation result panel */
+/* ValuationDashboard.jsx — valuation result panel (live web-search AVM) */
 import { useState, useMemo, useEffect, useRef } from 'react'
 import * as echarts from 'echarts'
 import { C, Eyebrow, Display, Mono, Button, PrimitiveCard as Card } from '@/components/shared/primitives'
 import { API } from '@/lib/api'
 import { formatRM, getTransactions, getTransactionsForScope } from '@/lib/propertyData'
+import { sgTypeDefaults } from '@/lib/singaporeData'
 import { CHART_THEME } from '@/lib/chartTheme'
 
 const STRATA_TYPES = new Set(['Condominium/Apartment', 'Flat', 'Low-Cost Flat', 'Town House']);
 const VAL_AVG_GUARD_MIN_TXNS = 3;
-const VAL_AVG_GUARD_MAX_DELTA = 0.50;
+const VAL_AVG_GUARD_MAX_DELTA = 0.60; // web asking prices run above transacted; allow a wider gap
 
 /* ---- stats helpers ---------------------------------------------------- */
 const valMean = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
@@ -32,6 +33,22 @@ const SHORT_TYPE = {
   'Low-Cost Flat': 'Low-Cost Flat', 'Cluster House': 'Cluster House', 'Town House': 'Town House',
 };
 const shortType = (t) => SHORT_TYPE[t] || t;
+/* Human "as of" stamp from the ISO fetched_at the backend returns. */
+const fmtFetched = (iso) => {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    if (isNaN(d)) return null;
+    return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch (e) { return null; }
+};
+/* Tidy a source string into a short host-style label (drops scheme + path). */
+const cleanSource = (s) => {
+  if (!s) return '';
+  let t = String(s).trim().replace(/^https?:\/\//, '').replace(/^www\./, '');
+  t = t.split('/')[0];
+  return t || String(s).trim();
+};
 const buildAvgGuard = (point, rows, selectedType) => {
   if (!point) return { blocked: false, avg: null, n: 0, delta: 0, scope: 'none' };
   const valid = (rows || []).filter((r) => Number(r.Price) > 0);
@@ -234,18 +251,6 @@ function valComputeRegion(sel) {
   };
 }
 
-/* The three valuation models served by the backend (/valuation/predict?model=).
-   `key` is the API selector; order here = left-to-right button order. All three
-   are real, trained models — no illustrative placeholders. */
-const MODEL_DEFS = [
-  { key: 'rf', label: 'Random Forest', short: 'Forest',
-    note: 'Tuned ensemble of decision trees — robust to outliers and non-linear price drivers.' },
-  { key: 'xgboost', label: 'XGBoost', short: 'XGBoost',
-    note: 'Gradient-boosted trees with conformal prediction bands — the primary AVM model.' },
-  { key: 'ft', label: 'FT-Transformer', short: 'FT-Tx',
-    note: 'Feature-Tokenizer + Transformer — a tabular deep-learning model that turns every feature into a token and attends across them.' },
-];
-
 /* ---- small presentational bits --------------------------------------- */
 const StatTile = ({ label, value, sub, accent }) => (
   <div style={{
@@ -259,10 +264,11 @@ const StatTile = ({ label, value, sub, accent }) => (
 );
 
 const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
-  const [modelIdx, setModelIdx] = useState(1); // XGBoost default (primary model)
-  const [apiResults, setApiResults] = useState({}); // { rf, xgboost, ft } live predictions
-  const [apiSig, setApiSig] = useState(null);
-  const [apiError, setApiError]   = useState(null);
+  // Single live web-search valuation (Exa). No model selection — the backend
+  // searches Malaysian property portals for comparable sale prices.
+  const [apiResult, setApiResult] = useState(null);   // full /valuation/predict response
+  const [apiSig, setApiSig] = useState(null);         // signature the result belongs to
+  const [apiError, setApiError] = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [recentTxns, setRecentTxns] = useState(null);   // real Open Transaction Data rows
   const [recentLoading, setRecentLoading] = useState(false);
@@ -273,6 +279,19 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
   const [priceReal, setPriceReal] = useState(null);   // real server-side price stats (median, count) for the scope
   const data = useMemo(() => valComputeRegion(sel),
     [sel.state, sel.district, sel.mukim, sel.area, sel.propertyType]);
+
+  // Singapore has no NAPIC dataset: the region panels are replaced with a
+  // "coming soon" note and the valuation is shown in SGD. Everything below
+  // branches on this flag.
+  const isSG = sel.country === 'SG';
+  const money = (n) => !n ? '—' : (isSG ? 'S$ ' + Math.round(n).toLocaleString('en-SG') : formatRM(n));
+  const moneyC = (n) => {
+    if (!n) return '—';
+    if (!isSG) return rmCompact(n);
+    if (n >= 1e6) return 'S$ ' + (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return 'S$ ' + Math.round(n / 1e3) + 'k';
+    return 'S$ ' + Math.round(n).toLocaleString('en-SG');
+  };
 
   /* Real region stats from the NAPIC rows in the "Recent transactions" table
      (not the synthetic map layer): median plot/built-up size (used to size the
@@ -315,7 +334,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
      Road is NOT used to scope this list: names in the source are inconsistently
      abbreviated (LRG / JLN / JALAN / LORONG ...), which would wrongly empty it. */
   useEffect(() => {
-    if (!sel.district) { setRecentTxns(null); setRecentScope('exact'); return; }
+    if (isSG || !sel.district) { setRecentTxns(null); setRecentScope('exact'); setRecentLoading(false); return; }
     let cancelled = false;
     setRecentLoading(true);
     setRecentTxns(null);
@@ -361,7 +380,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
      tiny — we only want stats.by_type. Not filtered by type: the card shows all
      types side by side. Falls back to the calibrated layer if the API is offline. */
   useEffect(() => {
-    if (!sel.district) { setByTypeReal(null); return; }
+    if (isSG || !sel.district) { setByTypeReal(null); return; }
     let cancelled = false;
     API.dataQuery({
       district: sel.district, mukim: sel.mukim, scheme: sel.area, limit: 1,
@@ -377,7 +396,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
      The single response feeds both the yearly trend chart (stats.yearly) and the
      KPI tiles / "vs median" (stats.price). Calibrated layer is the offline fallback. */
   useEffect(() => {
-    if (!sel.district) { setYearReal(null); setPriceReal(null); return; }
+    if (isSG || !sel.district) { setYearReal(null); setPriceReal(null); return; }
     let cancelled = false;
     const area = { district: sel.district, mukim: sel.mukim, scheme: sel.area };
     const toYears = (yearly) => (yearly || []).map(y => ({ y: y.year, avg: y.mean, n: y.count }));
@@ -402,12 +421,27 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
     return () => { cancelled = true; };
   }, [sel.district, sel.mukim, sel.area, sel.propertyType]);
 
-  /* Lazy per-model valuation. The VM only holds one (memory-heavy) model in RAM
-     at a time, so the dashboard computes ONLY the selected model and fetches the
-     others when the user switches tabs. Results are cached per search via a
-     signature — switching back is instant, and a property/location/size change
-     clears the cache and recomputes just the selected model. */
+  /* Build the request payload from the selection + the real NAPIC region sizes.
+     Sizes are in m² (the dataset's unit); the backend converts to sq ft for the
+     web search. Strata types size on built-up; landed on plot. */
   const payloadBase = useMemo(() => {
+    // Singapore: no NAPIC sizes — seed from the SG type defaults and let the
+    // live web search drive the estimate. District = postal district, scheme =
+    // locality. Backend switches to SGD + Singapore portals on country: 'SG'.
+    if (isSG) {
+      if (!sel.propertyType || !sel.district) return null;
+      const def = sgTypeDefaults(sel.propertyType);
+      return {
+        country: 'SG',
+        property_type: sel.propertyType,
+        district: sel.district,
+        mukim: null,
+        scheme: sel.area || sel.district,
+        tenure: '',
+        land: Math.max(1, Math.round(def.land || def.area || 1)),
+        area: def.area ? Math.round(def.area) : null,
+      };
+    }
     if (!data.selectedType || !sel.district) return null;
     const isStrata = STRATA_TYPES.has(data.selectedType);
     const modelLand = isStrata
@@ -416,6 +450,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
     const modelArea = isStrata ? null : (realSizes.area || data.medFloor || null);
     const fhShare = realSizes.fhPct != null ? realSizes.fhPct : data.fhPct;
     return {
+      country: 'MY',
       property_type: data.selectedType,
       district: sel.district,
       mukim: sel.mukim || sel.district,
@@ -424,93 +459,80 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
       land: Math.max(1, Math.round(modelLand)),
       area: modelArea ? Math.round(modelArea) : null,
     };
-  }, [sel.district, sel.mukim, sel.area, data.selectedType, data.fhPct,
+  }, [isSG, sel.country, sel.propertyType, sel.district, sel.mukim, sel.area, data.selectedType, data.fhPct,
       data.medLand, data.medFloor, realSizes.land, realSizes.area, realSizes.fhPct]);
 
   const payloadSig = useMemo(() => payloadBase ? JSON.stringify(payloadBase) : null, [payloadBase]);
 
-  const resultsRef = useRef({});
-  const sigRef = useRef(null);
-  useEffect(() => { resultsRef.current = apiResults; }, [apiResults]);
-
+  /* Fetch the live web valuation whenever the property/selection changes. Results
+     are cached server-side per search (Exa results have a 48h TTL), so repeating a
+     selection is fast. */
   useEffect(() => {
     if (!payloadBase || !payloadSig) {
-      setApiResults({});
-      setApiSig(null);
-      sigRef.current = null;
-      setApiLoading(false);
+      setApiResult(null); setApiSig(null); setApiError(null); setApiLoading(false);
       return;
     }
-    const sigChanged = sigRef.current !== payloadSig;
-    if (sigChanged) {
-      sigRef.current = payloadSig;
-      setApiResults({});
-      setApiSig(null);
-    }  // new search -> drop stale results
-
-    const key = MODEL_DEFS[modelIdx].key;
-    if (!sigChanged && apiSig === payloadSig && resultsRef.current[key]) { setApiLoading(false); return; }  // cached
-
-    setApiLoading(true); setApiError(null);
+    setApiLoading(true); setApiError(null); setApiResult(null); setApiSig(null);
     let cancelled = false;
-    API.valuationPredict({ ...payloadBase, model: key })
-      .then((r) => {
-        if (cancelled) return;
-        setApiResults((prev) => ({ ...(sigRef.current === payloadSig ? prev : {}), [key]: r }));
-        setApiSig(payloadSig);
-      })
+    API.valuationPredict(payloadBase)
+      .then((r) => { if (!cancelled) { setApiResult(r); setApiSig(payloadSig); } })
       .catch((e) => { if (!cancelled) setApiError({ sig: payloadSig, message: e.message }); })
       .finally(() => { if (!cancelled) setApiLoading(false); });
     return () => { cancelled = true; };
-  }, [payloadBase, payloadSig, modelIdx, apiSig]);
+  }, [payloadBase, payloadSig]);
 
-  /* Build the three cards from live predictions only. Missing model results
-     stay non-live so the estimate panel can show loading instead of fallback
-     values while the server is responding. */
-  const validApiResults = apiSig === payloadSig ? apiResults : {};
-  const models = useMemo(() => MODEL_DEFS.map((def) => {
-    const r = validApiResults[def.key];
+  /* The single valuation result, scoped to the current search. */
+  const r = apiSig === payloadSig ? apiResult : null;
+  const m = useMemo(() => {
     if (r && r.predicted_price) {
       const pt = r.predicted_price;
-      const band = Math.max(0.02, (r.price_high - r.price_low) / (2 * pt));
       return {
-        ...def,
         point: pt,
-        band,
-        conf: r.confidence === 'high' ? 93 : r.confidence === 'medium' ? 88 : 78,
-        mae: r.val_mape != null ? (r.val_mape * 100).toFixed(1) + '%' : '—',
+        low: r.price_low || pt * 0.9,
+        high: r.price_high || pt * 1.1,
+        conf: r.confidence === 'high' ? 93 : r.confidence === 'medium' ? 88 : r.confidence === 'low' ? 78 : null,
+        confidenceLabel: r.confidence,
+        ppsf: r.price_per_sqft || null,
+        listingCount: r.listing_count || 0,
+        sources: r.sources_used || [],
+        webComps: (r.web_comparables || []).filter((c) => c && c.price),
+        notes: r.notes || null,
+        fetchedAt: r.fetched_at || null,
         live: true,
-        note: def.note + ' ' + (r.comparables?.length || 0) + ' NAPIC comparables anchored.',
       };
     }
-    return { ...def, point: data.baseVal, band: 0.1, conf: null, mae: '—', live: false };
-  }), [validApiResults, data.baseVal]);
-  const m = models[modelIdx];
+    return { point: data.baseVal, low: data.baseVal * 0.9, high: data.baseVal * 1.1,
+      conf: null, confidenceLabel: 'none', ppsf: null, listingCount: 0, sources: [],
+      webComps: [], notes: null, fetchedAt: null, live: false };
+  }, [r, data.baseVal]);
+
   const hasLiveEstimate = m.live;
+  const noWebData = !!(r && !r.predicted_price);  // fetch resolved but Exa had nothing usable
   const activeApiError = apiError && apiError.sig === payloadSig ? apiError.message : null;
   const avgGuard = useMemo(() => (
-    hasLiveEstimate && !recentLoading
+    hasLiveEstimate && !recentLoading && !isSG
       ? buildAvgGuard(m.point, recentTxns, sel.propertyType)
       : { blocked: false, avg: null, n: 0, delta: 0, scope: 'none' }
-  ), [hasLiveEstimate, recentLoading, recentTxns, m.point, sel.propertyType]);
+  ), [hasLiveEstimate, recentLoading, isSG, recentTxns, m.point, sel.propertyType]);
   const guardChecking = hasLiveEstimate && recentLoading;
   const avgGuardBlocked = hasLiveEstimate && !recentLoading && avgGuard.blocked;
   const hasDisplayableEstimate = hasLiveEstimate && !guardChecking && !avgGuardBlocked;
-  const estimateLoading = (!hasLiveEstimate && !activeApiError && (loading || apiLoading || !!payloadSig)) || guardChecking;
-  const estimateUnavailable = (!hasLiveEstimate && !!activeApiError) || avgGuardBlocked;
+  const estimateLoading = (!hasLiveEstimate && !activeApiError && !noWebData && (loading || apiLoading || !!payloadSig)) || guardChecking;
+  const estimateUnavailable = (!hasLiveEstimate && (!!activeApiError || noWebData)) || avgGuardBlocked;
   const unavailableMessage = avgGuardBlocked
     ? (avgGuard.avg
-        ? `Data is not available: model estimate differs by ${(avgGuard.delta * 100).toFixed(0)}% from the recent ${avgGuard.scope === 'type' ? shortType(sel.propertyType) : 'similar-property'} average (${rmCompact(avgGuard.avg)}, ${avgGuard.n} transactions).`
+        ? `Sanity check: the web estimate differs by ${(avgGuard.delta * 100).toFixed(0)}% from the recent ${avgGuard.scope === 'type' ? shortType(sel.propertyType) : 'similar-property'} average (${rmCompact(avgGuard.avg)}, ${avgGuard.n} transactions).`
         : `Data is not available: only ${avgGuard.n} recent comparable transaction${avgGuard.n === 1 ? '' : 's'} found for this selection.`)
-    : `API error: ${activeApiError}`;
+    : activeApiError
+      ? `API error: ${activeApiError}`
+      : `No comparable listings found online for this selection${r && r.notes ? ` — ${r.notes}` : '.'}`;
 
-  const low = m.point * (1 - m.band);
-  const high = m.point * (1 + m.band);
-  // Scale the comparison band over the models that have actually been computed
-  // (lazy loading means non-selected models may not be fetched yet).
-  const bandModels = models.filter(x => x.live || x === m);
-  const dLow = Math.min(...bandModels.map(x => x.point * (1 - x.band)));
-  const dHigh = Math.max(...bandModels.map(x => x.point * (1 + x.band)));
+  const low = m.low;
+  const high = m.high;
+  // A single estimate band: low–high with a little padding on each side.
+  const span = Math.max(1, high - low);
+  const dLow = low - span * 0.18;
+  const dHigh = high + span * 0.18;
   const pct = (v) => Math.max(0, Math.min(100, ((v - dLow) / (dHigh - dLow)) * 100));
 
   // Region KPIs from REAL NAPIC data (server-side price stats + recent-txn
@@ -559,13 +581,14 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
       ? `No ${shortType(sel.propertyType)} or similar ${recentFamily} sales — showing all recent sales in ${recentArea}.`
       : null;
   const displayedPoint = Math.round(m.point / 1000) * 1000;
+  const fetchedLabel = fmtFetched(m.fetchedAt);
   const exportRoi = () => {
     if (!hasDisplayableEstimate || !onExportRoi) return;
     onExportRoi({
       propertyPrice: displayedPoint,
       locationLabel: [sel.area || sel.mukim || sel.district, sel.district, sel.state].filter(Boolean).join(', '),
       propertyType: data.selectedType || sel.propertyType || '',
-      sourceModel: m.label,
+      sourceModel: 'Live web search',
       rangeLow: low,
       rangeHigh: high,
       mukim: sel.mukim || null,
@@ -583,7 +606,9 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 2, flexWrap: 'wrap' }}>
           <Display size={21} weight={500}>{sel.area || sel.district}</Display>
           <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
-            {[sel.district, sel.state].filter(Boolean).join(', ')} · {regCount.toLocaleString('en-MY')} comparable transactions · NAPIC 2021–2026
+            {isSG
+              ? `${[sel.district, sel.state].filter(Boolean).join(' · ')} · Singapore · live web valuation`
+              : `${[sel.district, sel.state].filter(Boolean).join(', ')} · ${regCount.toLocaleString('en-MY')} comparable transactions · NAPIC 2021–2026`}
           </span>
         </div>
       </div>
@@ -593,29 +618,11 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
         flex: fullpage ? 'none' : 1, overflowY: fullpage ? 'visible' : 'auto', padding: fullpage ? 24 : 18,
         display: 'grid', gridTemplateColumns: 'minmax(300px, 350px) 1fr', gap: 18, alignContent: 'start',
       }}>
-        {/* ===== LEFT — estimate + model switcher ===== */}
+        {/* ===== LEFT — live web-search estimate ===== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <Eyebrow style={{ marginBottom: 7 }}>Valuation model</Eyebrow>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
-              {models.map((x, i) => {
-                const on = i === modelIdx;
-                return (
-                  <button key={x.label} onClick={() => setModelIdx(i)} style={{
-                    padding: '9px 4px', borderRadius: 8, cursor: 'pointer',
-                    border: `1px solid ${on ? C.deep : C.border}`,
-                    background: on ? C.deep : C.cream, color: on ? C.cream : C.mid,
-                    fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600,
-                    transition: 'all .18s',
-                  }}>{x.short}</button>
-                );
-              })}
-            </div>
-          </div>
-
           <Card borderTop={C.earth} style={{ padding: 20 }}>
             <Eyebrow>
-              Estimated Market Value · {m.label}
+              Estimated Market Value · Live Web Search
               {hasDisplayableEstimate && (
                 <span style={{
                   marginLeft: 8, padding: '1px 7px', borderRadius: 9999,
@@ -628,11 +635,11 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
                   marginLeft: 8, padding: '1px 7px', borderRadius: 9999,
                   background: C.down + '18', color: C.down, fontSize: 9,
                   letterSpacing: '.12em', fontWeight: 600,
-                }}>DATA UNAVAILABLE</span>
+                }}>SANITY CHECK</span>
               )}
               {estimateLoading && (
                 <span style={{ marginLeft: 8, color: C.muted, fontSize: 9, letterSpacing: '.12em' }}>
-                  FETCHING…
+                  SEARCHING…
                 </span>
               )}
             </Eyebrow>
@@ -647,7 +654,7 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
                   border: `2px solid ${C.border}`, borderTopColor: C.earth, display: 'inline-block',
                 }}/>
                 <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13 }}>
-                  {guardChecking ? 'Checking recent transaction average...' : 'Loading valuation from server...'}
+                  {guardChecking ? 'Checking recent transaction average...' : 'Searching property listings online…'}
                 </span>
               </div>
             )}
@@ -658,31 +665,29 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
               }}>{unavailableMessage}</div>
             )}
             <div style={{ marginTop: 8, display: hasDisplayableEstimate ? 'block' : 'none' }}>
-              <Mono size={34} color={C.deep}>{formatRM(displayedPoint)}</Mono>
+              <Mono size={34} color={C.deep}>{money(displayedPoint)}</Mono>
             </div>
             <div style={{ marginTop: 4, display: hasDisplayableEstimate ? 'flex' : 'none', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>
-                Likely range {rmCompact(low)} – {rmCompact(high)}
+                Likely range {moneyC(low)} – {moneyC(high)}
               </span>
-              {valPerSqm && <Mono size={12} color={C.earth}>≈ RM {valPerSqm.toLocaleString()}/m²</Mono>}
+              {m.ppsf
+                ? <Mono size={12} color={C.earth}>≈ {isSG ? 'S$' : 'RM'} {Math.round(m.ppsf).toLocaleString()}/sq ft</Mono>
+                : (valPerSqm && <Mono size={12} color={C.earth}>≈ {isSG ? 'S$' : 'RM'} {valPerSqm.toLocaleString()}/m²</Mono>)}
             </div>
 
-            {/* confidence band across all models */}
+            {/* estimate band (low – high) */}
             <div style={{ position: 'relative', height: 46, marginTop: 18, display: hasDisplayableEstimate ? 'block' : 'none' }}>
               <div style={{ position: 'absolute', top: 20, left: 0, right: 0, height: 4,
                 background: C.cream, borderRadius: 2, border: `1px solid ${C.border}` }}/>
               <div style={{ position: 'absolute', top: 19, height: 6, borderRadius: 3,
                 left: pct(low) + '%', width: (pct(high) - pct(low)) + '%',
                 background: C.earth + '55', border: `1px solid ${C.earth}`, transition: 'left .35s, width .35s' }}/>
-              {models.map((x, i) => i !== modelIdx && x.live && (
-                <div key={x.label} style={{ position: 'absolute', top: 16, width: 2, height: 12,
-                  left: pct(x.point) + '%', background: C.muted, transform: 'translateX(-50%)' }}/>
-              ))}
               <div style={{ position: 'absolute', top: 12, left: pct(m.point) + '%', transform: 'translateX(-50%)', transition: 'left .35s' }}>
                 <div style={{ width: 14, height: 14, borderRadius: '50%', background: C.earth, border: `2px solid ${C.raised}`, boxShadow: '0 2px 6px rgba(44,57,48,.3)' }}/>
               </div>
-              <div style={{ position: 'absolute', bottom: 0, left: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.muted }}>{rmCompact(dLow)}</div>
-              <div style={{ position: 'absolute', bottom: 0, right: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.muted }}>{rmCompact(dHigh)}</div>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.muted }}>{moneyC(low)}</div>
+              <div style={{ position: 'absolute', bottom: 0, right: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.muted }}>{moneyC(high)}</div>
             </div>
 
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.border}`,
@@ -692,20 +697,73 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
                 <Mono size={15} color={C.up}>{m.conf != null ? m.conf + '%' : '—'}</Mono>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }} title="Median absolute % error on the 2025 hold-out">MdAPE</Eyebrow>
-                <Mono size={15}>{m.mae}</Mono>
+                <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }} title="Comparable listings found online">Comparables</Eyebrow>
+                <Mono size={15}>{m.listingCount || '—'}</Mono>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }}>vs median</Eyebrow>
-                <Mono size={15} color={m.point >= regMedian ? C.up : C.down}>
-                  {(m.point >= regMedian ? '+' : '') + ((m.point / regMedian - 1) * 100).toFixed(1)}%
-                </Mono>
-              </div>
+              {isSG ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }}>Price / sq ft</Eyebrow>
+                  <Mono size={15}>{m.ppsf ? 'S$ ' + Math.round(m.ppsf).toLocaleString() : '—'}</Mono>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <Eyebrow style={{ fontSize: 9.5, whiteSpace: 'nowrap' }}>vs median</Eyebrow>
+                  <Mono size={15} color={m.point >= regMedian ? C.up : C.down}>
+                    {(m.point >= regMedian ? '+' : '') + ((m.point / regMedian - 1) * 100).toFixed(1)}%
+                  </Mono>
+                </div>
+              )}
             </div>
+
+            {/* sources used */}
+            {hasDisplayableEstimate && m.sources.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <Eyebrow style={{ fontSize: 9.5, marginBottom: 6 }}>Sources</Eyebrow>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {m.sources.map((s, i) => (
+                    <span key={i} style={{
+                      padding: '2px 8px', borderRadius: 9999, background: C.cream,
+                      border: `1px solid ${C.border}`, color: C.mid,
+                      fontFamily: "'DM Sans',sans-serif", fontSize: 10.5,
+                    }}>{cleanSource(s)}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* sample comparable listings from the web */}
+            {hasDisplayableEstimate && m.webComps.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <Eyebrow style={{ fontSize: 9.5, marginBottom: 6 }}>Sample listings</Eyebrow>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {m.webComps.slice(0, 5).map((c, i) => {
+                    const label = c.title || cleanSource(c.source) || 'Listing';
+                    const inner = (
+                      <>
+                        <span style={{
+                          flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          fontFamily: "'DM Sans',sans-serif", fontSize: 11.5,
+                          color: c.url ? C.earth : C.mid,
+                        }}>{label}</span>
+                        <Mono size={11.5} color={C.deep}>{moneyC(c.price)}</Mono>
+                      </>
+                    );
+                    return c.url ? (
+                      <a key={i} href={c.url} target="_blank" rel="noreferrer"
+                        style={{ display: 'flex', alignItems: 'baseline', gap: 8, textDecoration: 'none' }}>{inner}</a>
+                    ) : (
+                      <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>{inner}</div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div style={{ marginTop: 12, display: hasDisplayableEstimate ? 'block' : 'none', fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: C.mid, lineHeight: 1.45, fontStyle: 'italic' }}>
-              {m.note}
+              Live estimate from comparable sale listings on Malaysian property portals
+              {fetchedLabel ? ` · as of ${fetchedLabel}` : ''}.
             </div>
-            {hasDisplayableEstimate && onExportRoi && (
+            {hasDisplayableEstimate && onExportRoi && !isSG && (
               <Button variant="cta" onClick={exportRoi} style={{ marginTop: 14, width: '100%' }}>
                 Export to ROI Calculator
               </Button>
@@ -713,8 +771,46 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
           </Card>
         </div>
 
-        {/* ===== RIGHT — region data ===== */}
+        {/* ===== RIGHT — region data (Malaysia) / coming-soon (Singapore) ===== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+          {isSG ? (
+            <Card style={{ padding: 22 }}>
+              <Display size={16} weight={500}>Recent transactions &amp; market analytics</Display>
+              <div style={{
+                marginTop: 12, padding: '16px 16px', borderRadius: 10,
+                background: C.earthFaint, border: `1px solid ${C.earth}33`,
+                fontFamily: "'DM Sans',sans-serif", fontSize: 13, lineHeight: 1.55, color: C.deep,
+              }}>
+                <strong>Coming soon for Singapore.</strong> Recent-transaction tables,
+                price-by-type and yearly trends here are powered by Malaysia's NAPIC
+                Open Transaction Data. We're a Malaysian team — there's no Singapore
+                feed wired in yet. We'll add these the moment we get Singapore's open
+                property transaction data (e.g. URA caveats / data.gov.sg).
+                <div style={{ marginTop: 10, color: C.mid }}>
+                  For now the valuation on the left is sourced <strong>live</strong> from
+                  Singapore property portals (PropertyGuru, 99.co, EdgeProp SG, SRX) in S$.
+                </div>
+              </div>
+              <div style={{ marginTop: 14, display: 'grid', gap: 9 }}>
+                {['Recent transactions', 'Average price by property type', 'Price trend by year'].map((t) => (
+                  <div key={t} style={{
+                    display: 'flex', alignItems: 'center', gap: 9, padding: '11px 13px',
+                    borderRadius: 9, border: `1px dashed ${C.border}`, background: C.cream,
+                  }}>
+                    <span style={{
+                      width: 7, height: 7, borderRadius: '50%', background: C.earth, opacity: 0.5,
+                      flexShrink: 0,
+                    }}/>
+                    <span style={{ flex: 1, fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, color: C.mid }}>{t}</span>
+                    <span style={{
+                      fontFamily: "'DM Sans',sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: '.1em',
+                      color: C.earth, background: C.earth + '18', borderRadius: 9999, padding: '2px 8px',
+                    }}>PENDING DATA</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : (<>
           <div className="val-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
             <StatTile label="Median price" value={rmCompact(regMedian)} sub={`${regCount.toLocaleString('en-MY')} sales`}/>
             <StatTile label="Median RM/m²" value={regPpsm ? 'RM ' + regPpsm.toLocaleString() : '—'} sub="built-up"/>
@@ -895,8 +991,9 @@ const ValuationDashboard = ({ sel, loading, fullpage, onExportRoi }) => {
           </Card>
 
           <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: C.muted, fontStyle: 'italic' }}>
-            Indicative AVM estimate based on NAPIC 2021–2026 comparable transactions. Areas in sq.m. Not a formal valuation.
+            Estimate sourced live from comparable sale listings on Malaysian property portals via Exa. Region stats from NAPIC 2021–2026 transactions. Areas in sq.m. Not a formal valuation.
           </div>
+          </>)}
         </div>
       </div>
 

@@ -59,7 +59,7 @@ _MAX_PRICE = 200_000_000
 def call_exa(ctx: ValuationContext) -> ValuationEstimate:
     api_key = os.environ.get("EXA_API_KEY", "").strip()
     if not api_key:
-        return _fallback(ctx, "EXA_API_KEY not set")
+        return _fallback(ctx, "EXA_API_KEY not set", error=True)
 
     effort = os.environ.get("VAL_EXA_EFFORT", "medium").strip() or "medium"
     timeout_ms = int(os.environ.get("VAL_EXA_TIMEOUT_MS", "180000"))
@@ -79,15 +79,15 @@ def call_exa(ctx: ValuationContext) -> ValuationEstimate:
             timeout_ms=timeout_ms,
         )
     except Exception as e:
-        return _fallback(ctx, f"Exa call failed: {e}")
+        return _fallback(ctx, f"Exa call failed: {e}", error=True)
 
     if run.status != "completed":
         msg = run.error.message if run.error else f"run status: {run.status}"
-        return _fallback(ctx, f"Exa run did not complete: {msg}")
+        return _fallback(ctx, f"Exa run did not complete: {msg}", error=True)
 
     data = run.output.structured if run.output else None
     if not isinstance(data, dict):
-        return _fallback(ctx, "Exa returned no structured output")
+        return _fallback(ctx, "Exa returned no structured output", error=True)
 
     return _map_response(ctx, data)
 
@@ -178,7 +178,7 @@ def _map_response(ctx: ValuationContext, data: dict) -> ValuationEstimate:
     )
 
 
-def _fallback(ctx: ValuationContext, notes: str) -> ValuationEstimate:
+def _fallback(ctx: ValuationContext, notes: str, error: bool = False) -> ValuationEstimate:
     return ValuationEstimate(
         estimated_value_myr=None,
         low_myr=None,
@@ -190,4 +190,5 @@ def _fallback(ctx: ValuationContext, notes: str) -> ValuationEstimate:
         fetched_at=datetime.now(timezone.utc).isoformat(),
         notes=notes,
         comparables=[],
+        error=error,
     )

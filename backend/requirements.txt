@@ -13,4 +13,4 @@ mcp
 python-dotenv
 litellm
 httpx
-exa-py
+exa-py>=2.14.0

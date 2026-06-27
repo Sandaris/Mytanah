@@ -75,6 +75,7 @@ def _unavailable(notes: str) -> ValuationEstimate:
         fetched_at=datetime.now(timezone.utc).isoformat(),
         notes=notes,
         comparables=[],
+        error=True,
     )
 
 
@@ -117,5 +118,10 @@ def get_valuation(
     else:
         estimate = _unavailable("EXA_API_KEY not set — live valuation unavailable")
 
-    write_cache(ctx, estimate)
+    # Only persist genuine results (a real estimate, or a confirmed "found
+    # nothing"). Transient failures (Exa raised, run didn't complete, key
+    # missing) are NOT cached, so a temporary outage can't poison this property
+    # for the cache TTL — the next request retries Exa instead.
+    if not estimate.error:
+        write_cache(ctx, estimate)
     return estimate

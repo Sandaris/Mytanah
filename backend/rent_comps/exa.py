@@ -76,15 +76,15 @@ def call_exa(ctx: RentContext) -> RentEstimate:
             timeout_ms=timeout_ms,
         )
     except Exception as e:
-        return _fallback(ctx, f"Exa call failed: {e}")
+        return _fallback(ctx, f"Exa call failed: {e}", error=True)
 
     if run.status != "completed":
         msg = run.error.message if run.error else f"run status: {run.status}"
-        return _fallback(ctx, f"Exa run did not complete: {msg}")
+        return _fallback(ctx, f"Exa run did not complete: {msg}", error=True)
 
     data = run.output.structured if run.output else None
     if not isinstance(data, dict):
-        return _fallback(ctx, "Exa returned no structured output")
+        return _fallback(ctx, "Exa returned no structured output", error=True)
 
     return _map_response(ctx, data)
 
@@ -155,7 +155,7 @@ def _map_response(ctx: RentContext, data: dict) -> RentEstimate:
     )
 
 
-def _fallback(ctx: RentContext, notes: str) -> RentEstimate:
+def _fallback(ctx: RentContext, notes: str, error: bool = False) -> RentEstimate:
     return RentEstimate(
         mukim=ctx.mukim,
         avg_rent_myr=None,
@@ -169,4 +169,5 @@ def _fallback(ctx: RentContext, notes: str) -> RentEstimate:
         notes=notes,
         sample_listings=[],
         currency=ctx.currency_code,
+        error=error,
     )

@@ -1,0 +1,14 @@
+{
+  "mukim": "Mukim Batu",
+  "avg_rent_myr": null,
+  "min_rent_myr": null,
+  "max_rent_myr": null,
+  "median_rent_myr": null,
+  "listing_count": 0,
+  "sources_used": [],
+  "confidence": "none",
+  "fetched_at": "2026-06-27T09:06:48.491795+00:00",
+  "notes": "Exa call failed: 'Exa' object has no attribute 'agent'",
+  "sample_listings": [],
+  "currency": "RM"
+}

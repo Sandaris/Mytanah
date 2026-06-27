@@ -76,11 +76,13 @@ function FloatingSidebar() {
   )
 }
 
+const HCR_PREDICTION_PERIOD = '2025 Q3'
+
 function formatHeaderDate(date = new Date()) {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function Header({ title }) {
+function Header({ title, badge }) {
   return (
     <header
       className="flex items-center justify-between shrink-0 h-14 px-7 border-b border-[#C8C3B8]"
@@ -91,7 +93,7 @@ function Header({ title }) {
         className="rounded-full px-3.5 py-1.5 font-mono text-xs font-medium"
         style={{ background: C.deep, color: C.cream }}
       >
-        {formatHeaderDate()}
+        {badge}
       </span>
     </header>
   )
@@ -110,7 +112,10 @@ export default function AppShell() {
         className="shrink-0 overflow-hidden transition-[height] duration-700 ease-[cubic-bezier(.16,1,.3,1)]"
         style={{ height: chromeShown ? 56 : 0 }}
       >
-        <Header title={title} />
+        <Header
+          title={title}
+          badge={pathname === '/dashboard/sentiment' ? HCR_PREDICTION_PERIOD : formatHeaderDate()}
+        />
       </div>
 
       <main

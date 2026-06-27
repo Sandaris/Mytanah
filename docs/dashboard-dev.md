@@ -62,9 +62,8 @@ npm run build
 # Output lands in frontend/dist/
 ```
 
-FastAPI serves `frontend/dist/` at the `/app` route. The built output is what gets deployed to the VM.
-
-> **Before deploying:** always run `npm run build` first so `frontend/dist/` is up-to-date.
+FastAPI serves `frontend/dist/` at the `/app` route. Run `npm run build` before
+serving so `frontend/dist/` is up-to-date.
 
 ---
 

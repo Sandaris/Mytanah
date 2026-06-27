@@ -121,7 +121,7 @@ system)
   `verdict`, `gap_summary`, `comparables: {transactions: [...], median_price, median_psf,
   count, widened}`, `household_income: {median_myr, source, year}`,
   `recommendation`, `sources: [...]`).
-- `ANTHROPIC_API_KEY` read from environment (document in DEPLOY.md / `.env`, do not
+- `ANTHROPIC_API_KEY` read from environment (document in `.env`, do not
   commit). New module-level constant alongside other config in `api.py`.
 - Simple in-memory cache (mirror the existing `_MODEL_CACHE` LRU pattern already in
   `api.py`) keyed by `(scheme, district, declared_price_bucket)` so repeated/demo clicks
